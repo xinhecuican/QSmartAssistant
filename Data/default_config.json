@@ -1,0 +1,17 @@
+{
+	"wakeup": {
+		"detectSlient": 800,
+		"undetectSlient": 4000
+	},
+	"porcupine": {
+		"keyword": "xxxxx",
+		"model": "xxxx",
+		"key": "xxxxx",
+		"sensitivity": "0.5"
+	},
+	"cobra":{
+		"confidence": "0.5"
+	}
+
+}
+

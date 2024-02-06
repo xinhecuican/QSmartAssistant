@@ -1,0 +1,6 @@
+
+DEFINES += \
+# wakeup
+WAKEUP_PROCUPINE\
+#vad
+VAD_COBRA
