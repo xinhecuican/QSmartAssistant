@@ -1,0 +1,11 @@
+prefix=/home/lizilin/projects/lowpower_robot/lib/fvad
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libfvad
+Description: Voice activity detection (VAD) library
+URL: https://github.com/dpirch/libfvad
+Version: 1.0
+Libs: -L${libdir} -lfvad
+Cflags: -I${includedir}
