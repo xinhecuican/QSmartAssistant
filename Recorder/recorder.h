@@ -14,6 +14,8 @@ public:
     void stopRecord();
     void pause();
     void resume();
+    void clearCache();
+    void setChunkSize(int size);
     QAudioFormat getFormat();
 signals:
     void dataArrive(QByteArray data);
@@ -22,12 +24,14 @@ private:
     QAudioInput* input;
     QIODevice* buffer;
     int chunkSize;
-//    QThread thread;
+    QThread thread;
 //    RecordHandler* handler;
 
 //signals:
 //    void start();
 //    void stop();
+//    void pauseHandler();
+//    void resumeHandler();
 };
 
 #endif // RECORDER_H

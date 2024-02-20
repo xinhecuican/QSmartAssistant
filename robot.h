@@ -2,6 +2,7 @@
 #define ROBOT_H
 #include <QObject>
 #include "Wakeup/wakeup.h"
+#include "Conversation/conversation.h"
 
 class Robot : public QObject
 {
@@ -11,6 +12,7 @@ public:
     void stop();
 private:
     Wakeup* wakeup;
+    Conversation* conversation;
 };
 
 #endif // ROBOT_H

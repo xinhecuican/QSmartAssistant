@@ -11,10 +11,12 @@ Recorder::Recorder(int chunkSize, QObject* parent) :
     format.setSampleSize(16);
     format.setSampleType(QAudioFormat::SignedInt);
 
-//    handler = new RecordHandler(notifyInterval, chunkSize, format);
+//    handler = new RecordHandler(chunkSize, format);
 //    handler->moveToThread(&thread);
 //    connect(this, &Recorder::start, handler, &RecordHandler::startRecord);
 //    connect(this, &Recorder::stop, handler, &RecordHandler::stopRecord);
+//    connect(this, &Recorder::pauseHandler, handler, &RecordHandler::pause);
+//    connect(this, &Recorder::resumeHandler, handler, &RecordHandler::resume);
 //    connect(handler, &RecordHandler::dataArrive, this, [=](QByteArray data){
 //        emit dataArrive(data);
 //    });
@@ -24,17 +26,9 @@ Recorder::Recorder(int chunkSize, QObject* parent) :
     if(!devInfo.isFormatSupported(format))
         format = devInfo.nearestFormat(format);
     input = new QAudioInput(devInfo, format, this);
-//    input->setNotifyInterval(400);
     connect(input, &QAudioInput::stateChanged, this, [=](QAudio::State state){
         qDebug() << state;
     });
-//    connect(input, &QAudioInput::notify, this, [=](){
-//        int bytesReady = input->bytesReady();
-//        while(bytesReady > chunkSize){
-//            emit dataArrive(buffer->read(chunkSize));
-//            bytesReady -= chunkSize;
-//        }
-//    });
 }
 
 void Recorder::startRecord(){
@@ -59,9 +53,20 @@ QAudioFormat Recorder::getFormat(){
 }
 
 void Recorder::pause(){
+//    emit pauseHandler();
     input->suspend();
 }
 
 void Recorder::resume(){
+//    emit resumeHandler();
     input->resume();
+}
+
+
+void Recorder::setChunkSize(int size){
+    this->chunkSize = size;
+}
+
+void Recorder::clearCache(){
+    buffer->read(input->bytesReady());
 }

@@ -20,13 +20,11 @@ PorcupineWakeup::PorcupineWakeup(QObject* parent) : WakeupModel(parent),valid(fa
     if(status != PV_STATUS_SUCCESS){
         qCritical() << "porcupine init error" << status;
     }
-    valid = true;
+    chunkSize = pv_porcupine_frame_length() * 2;
 }
 
 PorcupineWakeup::~PorcupineWakeup(){
-    if(valid){
-        pv_porcupine_delete(porcupine);
-    }
+	stop();
 }
 
 void PorcupineWakeup::detect(const QByteArray &data){
@@ -39,6 +37,7 @@ void PorcupineWakeup::detect(const QByteArray &data){
     }
     if (keyword_index != -1) {
         emit detected(false);
+        return;
     }
 }
 
@@ -47,4 +46,8 @@ void PorcupineWakeup::stop(){
         pv_porcupine_delete(porcupine);
         valid = false;
     }
+}
+
+int PorcupineWakeup::getChunkSize(){
+    return chunkSize;
 }

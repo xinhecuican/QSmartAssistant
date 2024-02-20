@@ -2,10 +2,9 @@
 #include <QDebug>
 #include <QThread>
 
-RecordHandler::RecordHandler(int notifyInterval, int chunkSize, QAudioFormat format, QObject* parent)
+RecordHandler::RecordHandler(int chunkSize, QAudioFormat format, QObject* parent)
     : QObject(parent),
       format(format),
-      notifyInterval(notifyInterval),
       chunkSize(chunkSize),
       start(false)
 {
@@ -22,20 +21,27 @@ void RecordHandler::startRecord(){
     if(!devInfo.isFormatSupported(format))
         format = devInfo.nearestFormat(format);
     input = new QAudioInput(devInfo, format, this);
-    input->setNotifyInterval(notifyInterval);
     connect(input, &QAudioInput::stateChanged, this, [=](QAudio::State state){
         qDebug() << state;
     });
-    connect(input, &QAudioInput::notify, this, [=](){
-        int bytesReady = input->bytesReady();
-        while(bytesReady > chunkSize){
-            emit dataArrive(buffer->read(chunkSize));
-            bytesReady -= chunkSize;
-        }
-    });
     buffer = input->start();
+        connect(buffer, &QIODevice::readyRead, this, [=](){
+            int bytesReady = input->bytesReady();
+            while(bytesReady > chunkSize){
+                emit dataArrive(buffer->read(chunkSize));
+                bytesReady -= chunkSize;
+            }
+        });
 }
 
 void RecordHandler::stopRecord(){
     input->stop();
+}
+
+void RecordHandler::pause(){
+    input->suspend();
+}
+
+void RecordHandler::resume(){
+    input->resume();
 }

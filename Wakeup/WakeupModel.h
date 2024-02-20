@@ -6,8 +6,8 @@
 class WakeupModel : public QObject{
     Q_OBJECT
 public:
-    WakeupModel(QObject* parent=nullptr): QObject(parent){}
-    virtual ~WakeupModel(){}
+    WakeupModel(QObject* parent=nullptr): QObject(parent){valid=false;}
+    virtual ~WakeupModel(){stop();}
 
     /**
      * @brief detect command
@@ -17,8 +17,21 @@ public:
 
     virtual void stop(){}
 
+    /**
+     * @brief startDetect
+     */
+    virtual void startDetect(){}
+
+    /**
+     * @brief get model frame length
+     * @return
+     */
+    virtual int getChunkSize()=0;
+
 signals:
     void detected(bool stop);
+protected:
+	bool valid;
 };
 
 #endif // WAKEUPMODEL_H

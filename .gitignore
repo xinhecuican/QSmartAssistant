@@ -71,3 +71,7 @@ Thumbs.db
 *.dll
 *.exe
 
+Data/
+lib/
+build*/
+.vscode/

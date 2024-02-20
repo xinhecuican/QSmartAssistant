@@ -9,16 +9,13 @@ class CobraVad : public VadModel
 public:
     CobraVad(QObject* parent=nullptr);
     ~CobraVad();
-    void detect(const QByteArray& data) override;
+    bool detectVoice(const QByteArray& data) override;
     void stop() override;
-    void startDetect() override;
+    int getChunkSize() override;
 private:
     pv_cobra_t* cobra;
     float confidence;
-    int detectSlient;
-    QTimer* undetectTimer;
-    qint64 currentSlient;
-    bool valid;
+    int chunkSize;
 };
 
 #endif // COBRAVAD_H

@@ -52,6 +52,24 @@ public:
         file.write(array);
         file.close();
     }
+
+    static WAVHEADER getHeader(int sampleRate, int dataLength){
+        WAVHEADER wavHeader;
+        qstrcpy(wavHeader.RiffName, "RIFF");
+        qstrcpy(wavHeader.WavName, "WAVE");
+        qstrcpy(wavHeader.FmtName, "fmt ");
+        qstrcpy(wavHeader.DATANAME, "data");
+        wavHeader.nFmtLength = 16;
+        wavHeader.nAudioFormat = 1;
+        wavHeader.nSampleRate = sampleRate;
+        wavHeader.nChannelNumber = 1;
+        wavHeader.nBytesPerSample = 2;
+        wavHeader.nBytesPerSecond = sampleRate * 2;
+        wavHeader.nBitsPerSample = 16;
+        wavHeader.nRiffLength = dataLength - 8 + sizeof(wavHeader);
+        wavHeader.nDataLength = dataLength;
+        return wavHeader;
+    }
 };
 
 #endif // AUDIOWRITER_H

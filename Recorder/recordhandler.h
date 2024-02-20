@@ -7,11 +7,13 @@ class RecordHandler : public QObject
 {
     Q_OBJECT
 public:
-    RecordHandler(int notifyInterVal, int chunkSize, QAudioFormat format, QObject* parent=nullptr);
+    RecordHandler(int chunkSize, QAudioFormat format, QObject* parent=nullptr);
 
 public slots:
     void startRecord();
     void stopRecord();
+    void pause();
+    void resume();
 signals:
     void dataArrive(QByteArray data);
 
@@ -19,7 +21,6 @@ private:
     QAudioInput* input;
     QIODevice* buffer;
     QAudioFormat format;
-    int notifyInterval;
     int chunkSize;
     bool start;
 };

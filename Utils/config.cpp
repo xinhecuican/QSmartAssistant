@@ -7,7 +7,9 @@ Config::Config()
 }
 
 void Config::serialized(QJsonObject *json){
-    Q_UNUSED(json)
+    for(auto iter=configs.begin(); iter!=configs.end(); iter++){
+        json->insert(iter.key(), iter.value());
+    }
 }
 
 void Config::deserialized(QJsonObject *json){
@@ -33,4 +35,11 @@ QJsonObject Config::getConfig(const QString& name){
 
 QString Config::getDataPath(const QString &path){
     return "Data/" + path;
+}
+
+void Config::saveConfig(const QString& name, const QString& configName, const QVariant& value){
+    QJsonObject config = configs.value(name);
+    config[configName] = QJsonValue::fromVariant(value);
+    configs[name] = config;
+    Serialize::serialize("Data/config.json", instance());
 }

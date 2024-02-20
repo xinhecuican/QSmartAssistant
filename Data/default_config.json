@@ -1,17 +1,60 @@
 {
 	"wakeup": {
+		"chunkSize": 640,
 		"detectSlient": 800,
-		"undetectSlient": 4000
+		"undetectSlient": 4000,
+		"minChunk": 3
+	},
+	"plugin":{
+		"orderFile": "plugin_order.txt"
 	},
 	"porcupine": {
-		"keyword": "xxxxx",
-		"model": "xxxx",
-		"key": "xxxxx",
-		"sensitivity": "0.5"
+		"keyword": "小云_zh.ppn",
+		"model": "porcupine_params_zh.pv",
+                "key": "xxx",
+                "sensitivity": "0.5"
 	},
 	"cobra":{
 		"confidence": "0.5"
+	},
+	"koala":{
+		"model": "koala_params.pv"
+	},
+	"speex":{
+		"frame_size": 320
+	},
+	"openwakeup":{
+		"model": "nihao_wenwen.tflite"
+	},
+	"sherpa":{
+		"model": "sherpa-onnx-streaming-paraformer-bilingual-zh-en/%1.int8.onnx",
+		"tokens": "sherpa-onnx-streaming-paraformer-bilingual-zh-en/tokens.txt",
+		"stream": true
+	},
+	"sherpa_tts":{
+		"model": "vits-zh-aishell3/vits-aishell3.int8.onnx",
+		"lexicon": "vits-zh-aishell3/lexicon.txt",
+		"tokens": "vits-zh-aishell3/tokens.txt",
+		"rules": "vits-zh-aishell3/rule.fst",
+		"noise": 0.667,
+		"noise-w": 0.2,
+		"length": 1,
+		"speakerid": 66
+	},
+	"unit":{
+		"apiKey": "c6AcEFLAYjp7jAezYekKlCI2",
+		"secret": "IMLmMjXajZlF5FpDlAcyBGVN3XrzuINX",
+		"unitId": "S83040",
+		"confThresh": 50
+	},
+	"silero":{
+		"model": "silero_vad.onnx",
+		"chunkSize": 640
+	},
+	"netease_cloud":{
+		"phone": "xxx",
+		"password": "xxx",
+		"cookie": "",
+		"volumeStep": 10
 	}
-
 }
-

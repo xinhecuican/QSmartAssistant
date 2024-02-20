@@ -10,9 +10,11 @@ public:
     ~PorcupineWakeup();
     void detect(const QByteArray& data) override;
     void stop() override;
+    int getChunkSize() override;
 private:
     pv_porcupine* porcupine;
     bool valid;
+    int chunkSize;
 };
 
 #endif // PORCUPINEWAKEUP_H
