@@ -1,12 +1,11 @@
 #include "voicecontrol.h"
 #include "../Recorder/player.h"
-#include "../Conversation/conversation.h"
 #include "PluginReflector.h"
 #include "../Utils/Utils.h"
 REG_CLASS(VoiceControl)
 
-VoiceControl::VoiceControl(QObject* parent)
-    : Plugin(parent){
+VoiceControl::VoiceControl(IPluginHelper* helper, QObject* parent)
+    : Plugin(helper, parent){
 
 }
 
@@ -55,11 +54,11 @@ bool VoiceControl::handle(const QString& text,
                 Player::instance()->modifyVolume(changeDir==1?volumeStep:-volumeStep);
             }
             else if(text.contains("当前音量")){
-                conversation->say("当前音量为" + QString::number(Player::instance()->getVolume()));
+                helper->say("当前音量为" + QString::number(Player::instance()->getVolume()));
                 return true;
             }
         }
-        conversation->say("音量为" + QString::number(Player::instance()->getVolume()));
+        helper->say("音量为" + QString::number(Player::instance()->getVolume()));
         return true;
     }
     return false;

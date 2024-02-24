@@ -18,6 +18,14 @@ static int16_t float2int16(float f){
 
 static qint64 chineseToNum(const QString &chinese)
 {
+    QString str = chinese;
+    int pos = chinese.indexOf("之");
+    if(pos != -1){
+        str = chinese.mid(pos+1);
+    }
+    if(str.endsWith("%")){
+        str.remove(str.size()-1, 1);
+    }
     bool success = false;
     int res = chinese.toInt(&success);
     if(success){
@@ -60,11 +68,6 @@ static qint64 chineseToNum(const QString &chinese)
     qint64 secondUnit = 1;
     qint64 tempUnit = 1;
     QChar ch;
-    QString str = chinese;
-    int pos = chinese.indexOf("之");
-    if(pos != -1){
-        str = chinese.mid(pos+1);
-    }
     if (str.length() == 0) {
         return 0;
     } else if (str.length() == 1) {

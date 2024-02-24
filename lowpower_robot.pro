@@ -16,6 +16,7 @@ SOURCES += \
         Plugins/hass.cpp \
         Plugins/neteasemusic.cpp \
         Plugins/pluginmanager.cpp \
+        Plugins/systeminfo.cpp \
         Plugins/voicecontrol.cpp \
         Recorder/audiobuffer.cpp \
         Recorder/audioplaylist.cpp \
@@ -31,8 +32,9 @@ SOURCES += \
         robot.cpp
 
 # Default rules for deployment.
+OUTPUT_PATH = ~/software/${TARGET}
 qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
+else: unix:!android: target.path = $$OUTPUT_PATH
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
@@ -40,11 +42,13 @@ HEADERS += \
     Conversation/NLU/nlumodel.h \
     Conversation/TTS/TTSModel.h \
     Conversation/conversation.h \
+    Plugins/IPluginHelper.h \
     Plugins/Plugin.h \
     Plugins/PluginReflector.h \
     Plugins/hass.h \
     Plugins/neteasemusic.h \
     Plugins/pluginmanager.h \
+    Plugins/systeminfo.h \
     Plugins/voicecontrol.h \
     Recorder/audiobuffer.h \
     Recorder/audioplaylist.h \
@@ -70,17 +74,22 @@ HEADERS += \
 config.files = $$PWD/Data
 unix:!macx: config.path = $$OUT_PWD
 COPIES += config
+install_config.files = $$PWD/Data
+install_config.path = $$OUTPUT_PATH
+INSTALLS += install_config
 
 contains(DEFINES, TEST){
     HEADERS += Test/tst_sherpa.h
 }
+
+unix:!macx: libs.path = $$OUT_PWD
 
 INCLUDEPATH += $$PWD/lib/porcupine/include
 DEPENDPATH += $$PWD/lib/porcupine/include
 contains(DEFINES, WAKEUP_PROCUPINE) {
     SOURCES += Wakeup/porcupinewakeup.cpp
     HEADERS += Wakeup/porcupinewakeup.h
-
+    libs.files += $$PWD/lib/porcupine/lib/libpv_porcupine.so
     unix:!macx: LIBS += -L$$PWD/lib/porcupine/lib/ -lpv_porcupine
 
 }
@@ -90,7 +99,7 @@ DEPENDPATH += $$PWD/lib/cobra/include
 contains(DEFINES, VAD_COBRA) {
     SOURCES += Wakeup/cobravad.cpp
     HEADERS += Wakeup/cobravad.h
-
+    libs.files += $$PWD/lib/cobra/lib/libpv_cobra.so
     unix:!macx: LIBS += -L$$PWD/lib/cobra/lib/ -lpv_cobra
 
 }
@@ -100,6 +109,7 @@ DEPENDPATH += $$PWD/lib/koala/include
 contains(DEFINES, PROCESS_KOALA) {
     SOURCES += Wakeup/koalaaudioprocess.cpp
     HEADERS += Wakeup/koalaaudioprocess.h
+    libs.files += $$PWD/lib/koala/lib/libpv_koala.so
     unix:!macx: LIBS += -L$$PWD/lib/koala/lib/ -lpv_koala
 
 }
@@ -109,7 +119,8 @@ DEPENDPATH += $$PWD/lib/speexdsp/include
 contains(DEFINES, PROCESS_SPEEX) {
     SOURCES += Wakeup/speexaudioprocess.cpp
     HEADERS += Wakeup/speexaudioprocess.h
-    unix:!macx: LIBS += -L$$PWD/lib/koala/lib/ -lspeexdsp
+    libs.files += $$PWD/lib/speexdsp/lib/libspeexdsp.so
+    unix:!macx: LIBS += -L$$PWD/lib/speexdsp/lib/ -lspeexdsp
 }
 
 INCLUDEPATH += $$PWD/lib/fvad/include
@@ -119,6 +130,7 @@ contains(DEFINES, VAD_F) {
         Wakeup/fvadmodel.cpp
     HEADERS += \
         Wakeup/fvadmodel.h
+    libs.files += $$PWD/lib/fvad/lib/libfvad.so
 }
 
 INCLUDEPATH += $$PWD/lib/sherpa_onnx/include
@@ -126,6 +138,7 @@ DEPENDPATH += $$PWD/lib/sherpa_onnx/include
 contains(DEFINES, ASR_SHERPA){
 SOURCES += Conversation/ASR/sherpaasr.cpp
 HEADERS += Conversation/ASR/sherpaasr.h
+libs.files += $$PWD/lib/sherpa_onnx/lib/lib*
 unix:!macx: LIBS += -L$$PWD/lib/sherpa_onnx/lib/ -lcargs -lkaldi-native-fbank-core -lonnxruntime -lsherpa-onnx-c-api \
 -lsherpa-onnx-core
 }
@@ -133,6 +146,7 @@ unix:!macx: LIBS += -L$$PWD/lib/sherpa_onnx/lib/ -lcargs -lkaldi-native-fbank-co
 contains(DEFINES, TTS_SHERPA){
 SOURCES += Conversation/TTS/sherpatts.cpp
 HEADERS += Conversation/TTS/sherpatts.h
+libs.files += $$PWD/lib/sherpa_onnx/lib/lib*
 unix:!macx: LIBS += -L$$PWD/lib/sherpa_onnx/lib/ -lcargs -lkaldi-native-fbank-core -lonnxruntime -lsherpa-onnx-c-api \
 -lsherpa-onnx-core
 }
@@ -148,17 +162,20 @@ contains(DEFINES, NLU_RASA){
 }
 
 LIBS += -L$$PWD/lib/ssl/ -lssl -lcrypto
+libs.files += $$PWD/lib/ssl/libssl.so $$PWD/lib/ssl/libcrypto.so
 
 INCLUDEPATH += $$PWD/lib/silerovad/include
 DEPENDPATH += $$PWD/lib/silerovad/include
 contains(DEFINES, VAD_SILERO){
     SOURCES += Wakeup/silerovad.cpp
     HEADERS += Wakeup/silerovad.h
+    libs.files += $$PWD/lib/silerovad/lib/libonnxruntime.so
     unix:!macx: LIBS += -L$$PWD/lib/silerovad/lib/ -lonnxruntime
 }
 
 INCLUDEPATH += $$PWD/lib/netease_music/include
 DEPENDPATH += $$PWD/lib/netesase_music/include
+libs.files += $$PWD/lib/netease_music/lib/libCApi.so $$PWD/lib/netease_music/lib/libQCloudMusicApi.so
 unix:!macx: LIBS += -L$$PWD/lib/netease_music/lib/ -lCApi -lQCloudMusicApi
 
 
@@ -167,18 +184,24 @@ DEPENDPATH += $$PWD/lib/duilite/include
 contains(DEFINES, WAKEUP_DUILITE){
     SOURCES += Wakeup/duilitewakeup.cpp
     HEADERS += Wakeup/duilitewakeup.h
+    libs.files += $$PWD/lib/duilite/lib/libauth_linux.so $$PWD/lib/duilite/lib/libupload_linux.so \
+    $$PWD/lib/duilite/lib/libduilite.so
     unix:!macx: LIBS += -L$$PWD/lib/duilite/lib/ -lauth_linux -lupload_linux
 }
 
 contains(DEFINES, ASR_DUILITE){
     SOURCES += Conversation/ASR/duiliteasr.cpp
     HEADERS += Conversation/ASR/duiliteasr.h
-        unix:!macx: LIBS += -L$$PWD/lib/duilite/lib/ -lauth_linux -lupload_linux
+    libs.files += $$PWD/lib/duilite/lib/libauth_linux.so $$PWD/lib/duilite/lib/libupload_linux.so \
+    $$PWD/lib/duilite/lib/libduilite.so
+    unix:!macx: LIBS += -L$$PWD/lib/duilite/lib/ -lauth_linux -lupload_linux
 }
 
 contains(DEFINES, VAD_DUILITE){
     SOURCES += Wakeup/duilitevad.cpp
     HEADERS += Wakeup/duilitevad.h
+    libs.files += $$PWD/lib/duilite/lib/libauth_linux.so $$PWD/lib/duilite/lib/libupload_linux.so \
+    $$PWD/lib/duilite/lib/libduilite.so
     unix:!macx: LIBS += -L$$PWD/lib/duilite/lib/ -lauth_linux -lupload_linux
 }
 
@@ -187,5 +210,9 @@ DEPENDPATH += $$PWD/lib/webrtc/include $$PWD/lib/webrtc/include/webrtc_audio_pro
 contains(DEFINES, PROCESS_WEBRTC){
     SOURCES += Wakeup/webrtcprocessing.cpp
     HEADERS += Wakeup/webrtcprocessing.h
+    libs.files += $$PWD/lib/webrtc/lib/x86_64-linux-gnu/libwebrtc_audio_processing.so
     unix:!macx: LIBS += -L$$PWD/lib/webrtc/lib/x86_64-linux-gnu -lwebrtc_audio_processing
 }
+COPIES += libs
+libs.path = $$OUTPUT_PATH
+INSTALLS += libs

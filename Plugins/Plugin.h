@@ -2,13 +2,14 @@
 #define PLUGIN_H
 #include "../Utils/ParsedIntent.h"
 #include <QObject>
+#include "IPluginHelper.h"
 
 class Conversation;
 
 class Plugin : public QObject{
     Q_OBJECT
 public:
-    Plugin(QObject* parent=nullptr);
+    Plugin(IPluginHelper* helper, QObject* parent=nullptr);
     virtual ~Plugin();
 
     virtual QString getName();
@@ -16,9 +17,8 @@ public:
     virtual bool handle(const QString& text,
                         const ParsedIntent& parsedIntent,
                         bool& isImmersive)=0;
-    void setConversation(Conversation* conversation);
 protected:
-    Conversation* conversation;
+    IPluginHelper* helper;
 };
 
 #endif // PLUGIN_H

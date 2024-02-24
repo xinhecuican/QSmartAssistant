@@ -3,17 +3,18 @@
 #include <QObject>
 #include "Plugin.h"
 #include "../Utils/ParsedIntent.h"
+#include "IPluginHelper.h"
 
 class Conversation;
 class PluginManager : public QObject
 {
 public:
-    PluginManager(Conversation* conversation);
+    PluginManager(IPluginHelper* helper, QObject* parent=nullptr);
     void loadPlugin();
     void handlePlugin(const QString& text, const ParsedIntent& parsedIntent);
 private:
     QList<Plugin*> plugins;
-    Conversation* conversation;
+    IPluginHelper* helper;
     bool immersive;
     Plugin* immersivePlugin;
 };

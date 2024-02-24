@@ -134,7 +134,10 @@ Wakeup::Wakeup(QObject* parent)
             else {
                 detectState = IDLE;
                 qInfo() << "wakeup";
-                Player::instance()->pause();
+                isPlaying = Player::instance()->isPlaying();
+                if(isPlaying) {
+                    Player::instance()->pause();
+                }
                 Player::instance()->playSoundEffect(Config::getDataPath("start.wav"), true);
                 vadModel->startDetect();
                 detectState = VAD;
@@ -145,7 +148,7 @@ Wakeup::Wakeup(QObject* parent)
         if(detectState == VAD){
             if(stop) detectState = WAKEUP;
             else {
-                recorder->pause();
+                if(isPlaying) recorder->pause();
                 // if(audioProcess != nullptr) audioProcess->postProcess(detectData);
                 detectState = IDLE;
             }

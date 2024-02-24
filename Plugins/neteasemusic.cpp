@@ -1,14 +1,13 @@
 #include "neteasemusic.h"
-#include "../Conversation/conversation.h"
 #include "../Utils/config.h"
 #include "PluginReflector.h"
 #include "../Recorder/player.h"
 #include <QJsonArray>
 REG_CLASS(NeteaseMusic)
 
-NeteaseMusic::NeteaseMusic(QObject* parent)
-    :Plugin(parent),
-    voiceControl(new VoiceControl(this)){
+NeteaseMusic::NeteaseMusic(IPluginHelper* helper, QObject* parent)
+    :Plugin(helper, parent),
+    voiceControl(new VoiceControl(helper, this)){
     QJsonObject neteaseConfig = Config::instance()->getConfig("netease_cloud");
     QVariantMap params;
     params["phone"] = neteaseConfig.value("phone").toString();
@@ -46,7 +45,7 @@ bool NeteaseMusic::handle(const QString& text,
                           const ParsedIntent& parsedIntent,
                           bool& isImmersive){
     if(!login) return false;
-    bool isSearchTrigger = false;
+    isSearchTrigger = false;
     for(auto& trigger : searchTrigger){
         if(text.contains(trigger)){
             isSearchTrigger = true;
@@ -54,7 +53,7 @@ bool NeteaseMusic::handle(const QString& text,
         }
     }
     isSearch = false;
-    float conf;
+    float conf=0;
     for(auto& intent : parsedIntent.intents){
         if(intent.name == "MUSICRANK" ||
             intent.name == "MUSICINFO" ||
@@ -98,12 +97,13 @@ void NeteaseMusic::doHandle(const QString& text,
     else if(parsedIntent.hasIntent("CHNAGE_TO_LAST")){
         Player::instance()->previous();
     }
-    else if(isSearch){
+    else if(isSearch && isSearchTrigger){
         searchAlbum(parsedIntent);
     }
     else{
         qInfo() << "netease can't understand" << text;
         parsedIntent.toString();
+        isImmersive = false;
     }
 }
 

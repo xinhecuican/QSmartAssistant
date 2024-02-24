@@ -1,16 +1,16 @@
-#ifndef VOICECONTROL_H
-#define VOICECONTROL_H
+#ifndef SYSTEMINFO_H
+#define SYSTEMINFO_H
 #include "Plugin.h"
 
-class VoiceControl : public Plugin
+class SystemInfo : public Plugin
 {
     Q_OBJECT
 public:
-    Q_INVOKABLE explicit VoiceControl(IPluginHelper* helper, QObject* parent=nullptr);
+    Q_INVOKABLE explicit SystemInfo(IPluginHelper* helper, QObject* parent=nullptr);
     QString getName() override;
     bool handle(const QString& text,
                 const ParsedIntent& parsedIntent,
                 bool& isImmersive) override;
 };
 
-#endif // VOICECONTROL_H
+#endif // SYSTEMINFO_H

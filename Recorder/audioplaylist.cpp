@@ -43,14 +43,16 @@ void AudioPlaylist::playNext(){
                 }
                 else{
                     int deleteSize = current.list.size() - 30;
-                    for(int i=0; i<deleteSize; i++){
-                        current.list.removeFirst();
-                    }
-                    if(current.index < deleteSize){
-                        current.index = 0;
-                    }
-                    else{
-                        current.index -= deleteSize;
+                    if(deleteSize > 0){
+                        for(int i=0; i<deleteSize; i++){
+                            current.list.removeFirst();
+                        }
+                        if(current.index < deleteSize){
+                            current.index = 0;
+                        }
+                        else{
+                            current.index -= deleteSize;
+                        }
                     }
                 }
                 if(currentPriority != 0){

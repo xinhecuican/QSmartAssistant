@@ -9,11 +9,12 @@ class AudioBuffer : public QIODevice
 {
     Q_OBJECT
 public:
-    enum State{Playing, Stopped};
-    AudioBuffer(const QString& fileName, QObject* parent=nullptr);
+    enum State{Idle, Playing, Stopped};
+    AudioBuffer(QObject* parent=nullptr);
     virtual bool atEnd() const override;
     State getState() const {return state;}
     QAudioFormat getFormat();
+    void start(const QString& fileName);
 
 signals:
     void stateChange(State state);

@@ -5,8 +5,9 @@
 #include "TTS/TTSModel.h"
 #include "NLU/nlumodel.h"
 #include "../Plugins/pluginmanager.h"
+#include "../Plugins/IPluginHelper.h"
 
-class Conversation : public QObject
+class Conversation : public QObject, public IPluginHelper
 {
     Q_OBJECT
 public:
@@ -17,7 +18,7 @@ public:
      * @param stop if true then stop dialog and clear data
      */
     void dialog(bool stop);
-    void say(const QString& text);
+    void say(const QString& text) override;
     void stop();
 signals:
     void finish();

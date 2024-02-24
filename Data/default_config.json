@@ -11,8 +11,8 @@
 	"porcupine": {
 		"keyword": "小云_zh.ppn",
 		"model": "porcupine_params_zh.pv",
-                "key": "xxx",
-                "sensitivity": "0.5"
+		"key": "xxx",
+		"sensitivity": "0.5"
 	},
 	"cobra":{
 		"confidence": "0.5"
@@ -27,16 +27,16 @@
 		"model": "nihao_wenwen.tflite"
 	},
 	"sherpa":{
-		"model": "sherpa-onnx-streaming-paraformer-bilingual-zh-en/%1.int8.onnx",
-		"tokens": "sherpa-onnx-streaming-paraformer-bilingual-zh-en/tokens.txt",
-		"stream": true
+		"model": "sherpa_paraformer/model.int8.onnx",
+		"tokens": "sherpa_paraformer/tokens.txt",
+		"stream": false
 	},
 	"sherpa_tts":{
 		"model": "vits-zh-aishell3/vits-aishell3.int8.onnx",
 		"lexicon": "vits-zh-aishell3/lexicon.txt",
 		"tokens": "vits-zh-aishell3/tokens.txt",
 		"rules": "vits-zh-aishell3/rule.fst",
-		"noise": 0.667,
+		"noise": 0.3,
 		"noise-w": 0.2,
 		"length": 1,
 		"speakerid": 66
@@ -56,5 +56,51 @@
 		"password": "xxx",
 		"cookie": "",
 		"volumeStep": 10
+	},
+	"duilite":{
+		"login": "duilite_login.json",
+		"res": "wakeup_far.bin",
+		"wakeword": "ni hao wen wen",
+		"thresh": "0.06",
+		"chunkSize": 640,
+		"asrRes": "ngram_lasr_v1.16_221218_dymc_oneshot_multidecoder.bin",
+		"gram": "gram.gram",
+		"asrEnv": "use_frame_split=1;use_filler=1;filler_penalty_score=2.0;",
+		"vadRes": "vad_aicar_v0.16.bin"
+	},
+	"rasa": {
+		"model": "Data/rasa/models/nlu-20240222-204000-radiant-quay.tar.gz"
+	},
+	"hass":{
+		"url": "http://127.0.0.1:8123",
+		"key": "Bearer xxx",
+		"services": [
+			{
+				"intent": "OPEN_FURNITURE",
+				"pattern": ".*热水器.*",
+				"path": "/api/services/switch/turn_on",
+				"params": {
+					"entity_id": "switch.cuco_cp2d_46fc_switch"
+				}
+			},
+			{
+				"intent": "CLOSE_FURNITURE",
+				"slotName": "furniture",
+				"slotValue": "热水器",
+				"path": "/api/services/switch/turn_off",
+				"params": {
+					"entity_id": "switch.cuco_cp2d_46fc_switch"
+				}
+			}
+		]
+	},
+	"webrtc":{
+		"aec": true,
+		"deviceName": "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor",
+		"ns": true,
+		"agc": true,
+		"delay": 200,
+		"ns_level": 1,
+		"agc_level": 1
 	}
 }

@@ -2,7 +2,7 @@
 #include <QAudioDeviceInfo>
 #include <QFileInfo>
 
-AudioBuffer::AudioBuffer(const QString& fileName, QObject* parent)
+AudioBuffer::AudioBuffer(QObject* parent)
     :QIODevice(parent),
     decoder(new QAudioDecoder(parent)),
     buffer(&data),
@@ -10,8 +10,7 @@ AudioBuffer::AudioBuffer(const QString& fileName, QObject* parent)
     isFinish(false){
     buffer.open(QIODevice::WriteOnly);
     output.open(QIODevice::ReadOnly);
-    QFileInfo info(fileName);
-    decoder->setSourceFilename(info.absoluteFilePath());
+
     setOpenMode(QIODevice::ReadOnly);
     connect(decoder, &QAudioDecoder::bufferReady, this, [=](){
         const QAudioBuffer& buffer = decoder->read();
@@ -29,14 +28,9 @@ AudioBuffer::AudioBuffer(const QString& fileName, QObject* parent)
         emit stateChange(state);
     });
     QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
-    QAudioFormat desire_audio_romat = device.preferredFormat();
-    decoder->setAudioFormat(desire_audio_romat);
-
-    decoder->start();
-    if(!isFinish){
-        state = Playing;
-        emit stateChange(state);
-    }
+    QAudioFormat format = device.preferredFormat();
+    decoder->setAudioFormat(format);
+    state = Idle;
 }
 
 bool AudioBuffer::atEnd() const{
@@ -46,13 +40,17 @@ bool AudioBuffer::atEnd() const{
 qint64 AudioBuffer::readData(char* data, qint64 size) {
     memset(data, 0, size);
     if(state == Playing){
-    output.read(data, size);
-    if(atEnd()){
-        decoder->stop();
-        this->data.clear();
-        state = Stopped;
-        emit stateChange(state);
+        size = output.read(data, size);
+        if(atEnd()){
+            decoder->stop();
+            this->data.clear();
+            state = Stopped;
+            emit stateChange(state);
+            return -1;
+        }
     }
+    else{
+        return -1;
     }
     return size;
 }
@@ -67,4 +65,13 @@ qint64 AudioBuffer::writeData(const char* data, qint64 len)
 
 QAudioFormat AudioBuffer::getFormat(){
     return decoder->audioFormat();
+}
+
+void AudioBuffer::start(const QString& fileName){
+    QFileInfo info(fileName);
+    decoder->setSourceFilename(info.absoluteFilePath());
+    isFinish = false;
+    state = Playing;
+    decoder->start();
+    emit stateChange(state);
 }

@@ -1,13 +1,9 @@
 #include "Plugin.h"
-#include "../Conversation/conversation.h"
 
-Plugin::Plugin(QObject* parent)
-    :QObject(parent){
+Plugin::Plugin(IPluginHelper* helper, QObject* parent)
+    :QObject(parent),
+    helper(helper){
 }
 Plugin::~Plugin(){}
 
 QString Plugin::getName(){return "";}
-
-void Plugin::setConversation(Conversation* conversation){
-    this->conversation = conversation;
-}

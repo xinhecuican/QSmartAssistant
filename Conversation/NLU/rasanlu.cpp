@@ -2,12 +2,32 @@
 #include "../Utils/config.h"
 
 RasaNLU::RasaNLU(QObject* parent) : NLUModel(parent) {
-    request.setUrl(QUrl("http://127.0.0.1:5005/"));
+    request.setUrl(QUrl("http://127.0.0.1:5005/status"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QNetworkReply* reply = manager.get(request);
     connect(reply, &QNetworkReply::finished, this, [=](){
         if(reply->error() == QNetworkReply::NoError){
-
+            QByteArray data = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            QJsonObject obj = doc.object();
+            QString currentModel = obj.value("model_file").toString();
+            QJsonObject rasaConfg = Config::instance()->getConfig("rasa");
+            QString newModel = rasaConfg.value("model").toString();
+            QFileInfo info(newModel);
+            if(currentModel != info.fileName()){
+                request.setUrl(QUrl("http://127.0.0.1:5005/model"));
+                QNetworkReply* modelReply = manager.deleteResource(request);
+                QEventLoop eventLoop;
+                connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
+                eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+                modelReply->deleteLater();
+                QVariantMap args;
+                args["model_file"] = info.absoluteFilePath();
+                modelReply = manager.put(request, QJsonDocument::fromVariant(args).toJson());
+                connect(modelReply,&QNetworkReply::finished, this, [=](){
+                    modelReply->deleteLater();
+                });
+            }
         }
         else{
             process.setProgram("Data/start-rasa.sh");

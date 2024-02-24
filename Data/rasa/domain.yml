@@ -1,0 +1,30 @@
+version: '3.1'
+intents:
+- CHANGE_TO_LAST
+- CHANGE_TO_NEXT
+- CHANGE_VOL:
+    use_entities:
+    - number
+    - trend
+- CLOSE_MUSIC
+- CONTINUE
+- MUSICINFO:
+    use_entities:
+    - human
+    - song
+- PAUSE
+- OPEN_FURNITURE
+- CLOSE_FURNITURE
+- SYS_INFO
+entities:
+- human:
+    roles:
+    - singer
+- number
+- trend
+- song
+- location
+- furniture
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

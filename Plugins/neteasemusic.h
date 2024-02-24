@@ -8,7 +8,7 @@ class NeteaseMusic : public Plugin
 {
     Q_OBJECT
 public:
-    Q_INVOKABLE explicit NeteaseMusic(QObject*parent=nullptr);
+    Q_INVOKABLE explicit NeteaseMusic(IPluginHelper* helper, QObject*parent=nullptr);
     QString getName() override;
     bool handle(const QString& text,
                 const ParsedIntent& parsedIntent,
@@ -42,6 +42,7 @@ private:
     bool login;
     int volumeStep;
     bool isSearch;
+    bool isSearchTrigger;
 };
 
 #endif // NETEASEMUSIC_H

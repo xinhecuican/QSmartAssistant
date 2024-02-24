@@ -1,11 +1,10 @@
 #include "hass.h"
-#include "../Conversation/conversation.h"
 #include "PluginReflector.h"
 #include "../Utils/config.h"
 REG_CLASS(Hass)
 
-Hass::Hass(QObject* parent)
-    :Plugin(parent){
+Hass::Hass(IPluginHelper* helper, QObject* parent)
+    :Plugin(helper, parent){
     QJsonObject hassConfig = Config::instance()->getConfig("hass");
     urlPrefix = hassConfig.value("url").toString();
     request.setRawHeader("Authorization", hassConfig.value("key").toString().toLatin1());
@@ -64,9 +63,15 @@ bool Hass::handle(const QString& text,
 void Hass::executeService(const QString& path, const QJsonObject& params){
     request.setUrl(QUrl(urlPrefix + path));
     QJsonDocument doc(params);
-    qDebug() << doc.toJson();
     QNetworkReply* reply = manager.post(request, doc.toJson());
     connect(reply, &QNetworkReply::finished, this, [=](){
+        if(reply->error() != QNetworkReply::NoError){
+            qWarning() << "requst fail" << reply->error();
+        }
+        else{
+            helper->say("执行成功");
+        }
+        // qDebug() << reply->readAll();
         reply->deleteLater();
     });
 }

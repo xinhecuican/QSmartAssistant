@@ -1,0 +1,121 @@
+version: "3.1"
+nlu:
+- regex: number
+  examples: |
+    - (?:百分之)?(?:[一二三四五六七八九十百千万亿零壹贰叁肆伍陆柒捌玖拾佰仟0123456789]+(?:\.\d+)?|\d+(?:\.\d+)?)(?:%|)
+- intent: CHANGE_VOL
+  examples: |
+    - [增大](trend)音量
+    - 获得当前音量
+    - 调节当前音量至[50](number)\%
+    - 调节音量至[百分之七十](number)
+    - 调节音量至[百分之五十](number)
+    - [增大](trend)当前音量
+    - [减小](trend)当前音量
+    - [减小](trend)音量
+    - 音量[小](trend)一点
+    - 音量[大](trend)一点
+    - 把音量[调大](trend)一点
+    - 把音量[调小](trend)一点
+    - 当前音量[增大](trend)[20]\%
+    - 当前音量[减小](trend)[百分之三十](number)
+    - [增大](trend)当前音量到[百分之九十](number)
+    - 音量调节至[百分之四十五](number)
+    - 音量[增大](trend)[25](number)\%
+- intent: MUSICINFO
+  examples: |
+    - 播放音乐
+    - 播放[孤勇者](song)
+    - 播放[海阔天空](song)
+    - 播放[想你](song)
+    - 我想听[林志炫]{"entity": "human", "role": "singer"}的[袖手旁观](song)
+    - 播放[张学友]{"entity": "human", "role": "singer"}的[耐人寻味](song)
+    - 播放[张雨生]{"entity": "human", "role": "singer"}的歌
+    - 播放[张雨生]{"entity": "human", "role": "singer"}的[CAPPUCCINO](song)
+    - 播放[张雨生]{"entity": "human", "role": "singer"}的[口是心非](song)
+    - 播放[拥有](song)
+    - 播放[张学友]{"entity": "human", "role": "singer"}的[Something Only Love Can Do](song)
+    - 播放[张学友]{"entity": "human", "role": "singer"}的[温馨](song)
+    - 播放[刺客](song)
+    - 播放[谭咏麟]{"entity": "human", "role": "singer"}的[梦想的幻彩](song)
+    - 播放[魔鬼之女](song)
+    - 播放[冷傲的化妆](song)
+    - 播放[都市猎人](song)
+    - 播放[谭咏麟]{"entity": "human", "role": "singer"}的[午夜皇后](song)
+    - 播放[谭咏麟]{"entity": "human", "role": "singer"}的[Where are you now?](song)
+    - 播放[say you love me](song)
+    - 播放[Take My Hand](song)
+    - 放[陈慧珊]{"entity": "human", "role": "singer"}的[撒旦与天使](song)
+    - 放[陈明]{"entity": "human", "role": "singer"}的[为了爱](song)
+    - 放[逃之夭夭](song)
+    - 找[刘德华]{"entity": "human", "role": "singer"}的[笨小孩](song)
+    - 找[刘德华]{"entity": "human", "role": "singer"}的[不该爱上你](song)
+    - 播放[田震]{"entity": "human", "role": "singer"}的[逍遥游](song)
+    - 播放[田震]{"entity": "human", "role": "singer"}的[为你而歌](song)
+    - 播放[郭富城]{"entity": "human", "role": "singer"}的[寂寞天堂](song)
+    - 播放[将进酒](song)
+    - 播放[周杰伦](human)的歌
+- intent: PAUSE
+  examples: |
+    - 暂停
+    - 暂停播放
+    - 暂停播放音乐
+    - 停一会
+- intent: CLOSE_MUSIC
+  examples: |
+    - 退出网易云
+    - 退出播放
+    - 停止播放
+    - 关闭
+    - 退出
+- intent: CONTINUE
+  examples: |
+    - 继续播放
+    - 继续进行
+    - 继续
+    - 接着
+- intent: CHANGE_TO_NEXT
+  examples: |
+    - 下一首
+    - 下一首歌
+    - 播放下一首歌
+    - 播放下一首
+- intent: CHANGE_TO_LAST
+  examples: |
+    - 上一首
+    - 上一首歌
+    - 播放上一首歌
+- intent: OPEN_FURNITURE
+  examples: |
+    - 打开[空调](furniture)
+    - 打开[灯泡](furniture)
+    - 开 [灯](furniture)
+    - 开 [门](furniture)
+    - 开 [热水器](furniture)
+    - 打开[热水器](furniture)
+    - 开[电风扇](furniture)
+    - 打开[卧室](location)的[灯](furniture)
+    - 打开[扫地机器人](furniture)
+- intent: CLOSE_FURNITURE
+  examples: |
+    - 关闭[空调](furniture)
+    - 关闭[灯泡](furniture)
+    - 关 [灯](furniture)
+    - 关 [门](furniture)
+    - 关 [热水器](furniture)
+    - 关闭[热水器](furniture)
+    - 关[电风扇](furniture)
+    - 关闭[卧室](location)的[灯](furniture)
+    - 关闭[扫地机器人](furniture)
+- intent: SYS_INFO
+  examples: |
+    - 当前系统信息
+    - 汇报系统信息
+    - 系统信息
+    - cpu利用率多少
+    - 内存占用多少
+- synonym: 灯
+  examples: |
+    - 灯
+    - 灯泡
+    - 电灯

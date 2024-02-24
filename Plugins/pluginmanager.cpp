@@ -1,16 +1,16 @@
 #include "pluginmanager.h"
-#include "../Conversation/conversation.h"
 #include "../Utils/config.h"
 #include <QFile>
 #include "PluginReflector.h"
 
-PluginManager::PluginManager(Conversation* conversation)
-    :QObject(conversation),
-    conversation(conversation),
+PluginManager::PluginManager(IPluginHelper* helper, QObject* parent)
+    :QObject(parent),
+    helper(helper),
     immersive(false){
 }
 
 void PluginManager::loadPlugin(){
+    qRegisterMetaType<IPluginHelper*>("IPluginHelper*");
     QJsonObject pluginConfig = Config::instance()->getConfig("plugin");
     QString pluginOrderFile = Config::getDataPath(pluginConfig.value("orderFile").toString());
     QFile file(pluginOrderFile);
@@ -20,8 +20,7 @@ void PluginManager::loadPlugin(){
     }
     while(!file.atEnd()){
         QString pluginName = file.readLine().trimmed();
-        Plugin* plugin = qobject_cast<Plugin*>(PluginReflector::newInstance(pluginName, Q_ARG(QObject*, this)));
-        plugin->setConversation(conversation);
+        Plugin* plugin = qobject_cast<Plugin*>(PluginReflector::newInstance(pluginName, Q_ARG(IPluginHelper*, helper), Q_ARG(QObject*, this)));
         qInfo() << "load plugin" << pluginName;
         plugins.append(plugin);
     }

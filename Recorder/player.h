@@ -5,9 +5,9 @@
 #include "../Utils/Template.h"
 #include <QObject>
 #include <QEventLoop>
-#include <QSoundEffect>
 #include "audiobuffer.h"
 #include <QAudioOutput>
+#include <QProcess>
 
 class Player : public QObject
 {
@@ -21,19 +21,23 @@ public:
     void resume();
     void playSoundEffect(const QString& fileName, bool blockThread=false);
     void setVolume(int volume);
-    int getVolume() const;
+    int getVolume() ;
     void modifyVolume(int value);
     void next();
     void previous();
+    bool isPlaying() const;
 
 private:
     QMediaPlayer* player;
     AudioPlaylist* playlist;
-    QSoundEffect sound;
     QEventLoop eventLoop;
     bool playerPlaying;
     bool isBlockThread;
     bool isPause;
+    QAudioOutput* output;
+    AudioBuffer* decoder;
+    QProcess getVolumeProcess;
+    int volume;
 };
 
 #endif // PLAYER_H

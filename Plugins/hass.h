@@ -7,7 +7,7 @@ class Hass : public Plugin
 {
     Q_OBJECT
 public:
-    Q_INVOKABLE explicit Hass(QObject* parent=nullptr);
+    Q_INVOKABLE explicit Hass(IPluginHelper* helper, QObject* parent=nullptr);
     QString getName() override;
     bool handle(const QString& text,
                 const ParsedIntent& parsedIntent,

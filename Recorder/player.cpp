@@ -7,14 +7,30 @@ Player::Player(QObject* parent)
     : QObject(parent)
 {
     player = new QMediaPlayer(this);
-    player->setVolume(50);
     playlist = new AudioPlaylist(player);
-    connect(&sound, &QSoundEffect::playingChanged, this, [=](){
-        if(!sound.isPlaying()){
+    decoder = new AudioBuffer(this);
+    QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
+    QAudioFormat decoderFormat = decoder->getFormat();
+    if(!defaultDev.isFormatSupported(decoderFormat))
+        decoderFormat = defaultDev.nearestFormat(decoderFormat);
+    output = new QAudioOutput(defaultDev, decoderFormat, this);
+    connect(output, &QAudioOutput::stateChanged, this, [=](QAudio::State state){
+        if(state == QAudio::IdleState){
+            decoder->close();
+            output->reset();
+            output->stop();
             if(isBlockThread) eventLoop.quit();
             else if(playerPlaying) player->play();
         }
+        else if(state == QAudio::StoppedState){
+            if(output->error() != QAudio::NoError){
+                qWarning() << output->error();
+            }
+        }
     });
+    getVolumeProcess.setProgram("amixer");
+    getVolumeProcess.setArguments({"get", "Master"});
+    volume = 0;
 }
 
 void Player::play(const QString& fileName, AudioPlaylist::AudioPriority priority){
@@ -47,24 +63,15 @@ void Player::playSoundEffect(const QString& fileName, bool blockThread){
     if(playerPlaying){
         player->pause();
     }
-    AudioBuffer* decoder = new AudioBuffer(fileName, this);
+    decoder->start(fileName);
     if(decoder->getState() == AudioBuffer::Stopped){
-        decoder->deleteLater();
         isBlockThread = false;
         if(playerPlaying){
             player->play();
         }
+        return;
     }
-    QAudioOutput* output = new QAudioOutput(decoder->getFormat(), this);
-    output->setVolume(player->volume()/100.);
-    connect(decoder, &AudioBuffer::stateChange, this, [=](AudioBuffer::State state){
-        if(state == AudioBuffer::Stopped){
-            if(blockThread) eventLoop.quit();
-            else if(playerPlaying) player->play();
-            decoder->deleteLater();
-            output->deleteLater();
-        }
-    });
+    output->setVolume(0.8);
     decoder->open(QIODevice::ReadOnly);
     output->start(decoder);
     if(blockThread){
@@ -74,15 +81,29 @@ void Player::playSoundEffect(const QString& fileName, bool blockThread){
 }
 
 void Player::setVolume(int volume){
-    player->setVolume(volume);
+    QProcess::execute("amixer", {"set", "Master", QString::number(volume) + "%"});
+    // player->setVolume(volume);
 }
 
-int Player::getVolume() const{
-    return player->volume();
+int Player::getVolume() {
+    getVolumeProcess.start();
+    getVolumeProcess.waitForFinished(1000);
+    QByteArray data = getVolumeProcess.readAllStandardOutput();
+    QString str = data;
+    int index = str.indexOf('[');
+    int index2 = str.indexOf(']');
+    volume = str.mid(index+1, index2-index-2).toInt();
+    return volume;
 }
 
 void Player::modifyVolume(int value){
-    player->setVolume(player->volume()+value);
+    if(value > 0){
+        QProcess::execute("amixer", {"set", "Master", QString::number(value) + "%+"});
+    }
+    else{
+        value = -value;
+        QProcess::execute("amixer", {"set", "Master", QString::number(value) + "%-"});
+    }
 }
 
 void Player::next(){
@@ -95,4 +116,8 @@ void Player::previous(){
 
 void Player::playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority){
     playlist->addRaw(data, sampleRate, priority);
+}
+
+bool Player::isPlaying() const{
+    return player->state() == QMediaPlayer::PlayingState;
 }

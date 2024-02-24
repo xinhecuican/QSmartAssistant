@@ -39,6 +39,7 @@ private:
 #endif
     QByteArray cacheData;
     int cachePos;
+    bool isPlaying;
 };
 
 #endif // WAKEUP_H
