@@ -28,8 +28,8 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer* player) {
     });
 }
 
-void AudioPlaylist::playNext(){
-    if(player->state() != QMediaPlayer::PlayingState){
+void AudioPlaylist::playNext(bool abandonCurrent){
+    if(player->state() != QMediaPlayer::PlayingState || abandonCurrent){
         Playlist& current = audiolist[currentPriority];
         if(current.block){
             current.block = false;
@@ -79,9 +79,9 @@ void AudioPlaylist::playPrevious(){
     }
 }
 
-void AudioPlaylist::addAudio(const QString& fileName, AudioPriority priority){
+void AudioPlaylist::addAudio(const QString& fileName, AudioPriority priority, const QVariant& meta){
     QUrl url = getUrl(fileName);
-    audiolist[priority].append(url);
+    audiolist[priority].append(url, meta);
     if(priority > currentPriority){
         if(player->state() == QMediaPlayer::PlayingState){
             player->pause();
@@ -97,7 +97,7 @@ void AudioPlaylist::addAudio(const QString& fileName, AudioPriority priority){
 void AudioPlaylist::addRaw(const QByteArray& data, int sampleRate, AudioPriority priority){
     QString fileName = FileCache::instance()->writeWav(data, sampleRate);
     QUrl url = getUrl(fileName);
-    audiolist[priority].append(url);
+    audiolist[priority].append(url, QVariant());
     if(priority > currentPriority){
         if(player->state() == QMediaPlayer::PlayingState){
             player->pause();
@@ -131,4 +131,8 @@ QUrl AudioPlaylist::getUrl(const QString& fileName){
 void AudioPlaylist::setMedia(const AudioMedia& media){
     player->setMedia(media.url);
     player->play();
+}
+
+QVariant AudioPlaylist::getCurrentMeta() const{
+    return audiolist[currentPriority].getCurrent().meta;
 }

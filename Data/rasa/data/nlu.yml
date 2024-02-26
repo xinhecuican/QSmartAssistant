@@ -94,7 +94,7 @@ nlu:
     - 开 [热水器](furniture)
     - 打开[热水器](furniture)
     - 开[电风扇](furniture)
-    - 打开[卧室](location)的[灯](furniture)
+    - 打开[卧室]{"entity": "location","role": "home"}的[灯](furniture)
     - 打开[扫地机器人](furniture)
 - intent: CLOSE_FURNITURE
   examples: |
@@ -114,6 +114,13 @@ nlu:
     - 系统信息
     - cpu利用率多少
     - 内存占用多少
+- intent: Weather
+  examples: |
+    - 今天天气怎么样
+    - 说说[江西]{"entity": "location","role":"city"}的天气
+    - 说说[北京]{"entity":"location","role":"city"}的天气
+    - [南京]{"entity":"location","role":"city"}的天气怎么样
+    - [上海]{"entity":"location","role":"city"}的天气怎么样
 - synonym: 灯
   examples: |
     - 灯

@@ -121,6 +121,13 @@ Intent RasaNLU::entity2Slot(const Intent& entityIntent){
             }
         }
     }
+    else if(entityIntent.name == "Weather"){
+        for(auto& slot: entityIntent.intentSlots){
+            if(slot.name == "location"){
+                slotIntent.appendSlot(slot);
+            }
+        }
+    }
     return slotIntent;
 }
 

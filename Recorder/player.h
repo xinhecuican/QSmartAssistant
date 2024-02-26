@@ -14,7 +14,7 @@ class Player : public QObject
     DECLARE_INSTANCE(Player)
 public:
     Player(QObject* parent=nullptr);
-    void play(const QString& fileName, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL);
+    void play(const QString& fileName, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL, QVariant meta=QVariant());
     void playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL);
     void pause();
     void stop();
@@ -26,6 +26,7 @@ public:
     void next();
     void previous();
     bool isPlaying() const;
+    QVariant getCurrentMeta() const;
 
 private:
     QMediaPlayer* player;

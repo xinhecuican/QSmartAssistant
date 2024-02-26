@@ -1,4 +1,5 @@
 NeteaseMusic
 Hass
+Weather
 SystemInfo
 VoiceControl

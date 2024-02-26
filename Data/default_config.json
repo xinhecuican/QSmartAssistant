@@ -60,8 +60,8 @@
 	"duilite":{
 		"login": "duilite_login.json",
 		"res": "wakeup_far.bin",
-		"wakeword": "ni hao wen wen",
-		"thresh": "0.06",
+		"wakeword": "ni hao xiao zhi",
+		"thresh": "0.15",
 		"chunkSize": 640,
 		"asrRes": "ngram_lasr_v1.16_221218_dymc_oneshot_multidecoder.bin",
 		"gram": "gram.gram",
@@ -102,5 +102,9 @@
 		"delay": 200,
 		"ns_level": 1,
 		"agc_level": 1
+	},
+	"Weather":{
+		"key": "xxx",
+		"home": "xxx"
 	}
 }

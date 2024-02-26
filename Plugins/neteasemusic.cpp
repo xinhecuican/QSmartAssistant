@@ -108,7 +108,12 @@ void NeteaseMusic::doHandle(const QString& text,
 }
 
 void NeteaseMusic::getCurrentTrack(){
-
+    QVariantMap meta = Player::instance()->getCurrentMeta().toMap();
+    if(meta.contains("type") && meta["type"] == "song"){
+        qint64 id = meta["id"].toLongLong();
+        MusicInfo musicInfo = musicInfoMap[id];
+        helper->say("这首歌叫" + musicInfo.name + ".歌手是" + musicInfo.artist);
+    }
 }
 
 void NeteaseMusic::searchAlbum(const ParsedIntent& parsedIntent){
@@ -185,7 +190,11 @@ void NeteaseMusic::setPlaylist(const QList<QString>& singerName, const QList<QSt
                         musicInfo.name = song["name"].toString();
                         musicInfo.artist = getArtist(song);
                         musicInfoMap.insert(ids[i], musicInfo);
-                        Player::instance()->play(musicInfo.url);
+                        QVariantMap meta = {
+                            {"type", "song"},
+                            {"id", musicInfo.id}
+                        };
+                        Player::instance()->play(musicInfo.url, AudioPlaylist::NORMAL, meta);
                         qDebug() << "play" << musicInfo.name << musicInfo.url;
                         break;
                     }

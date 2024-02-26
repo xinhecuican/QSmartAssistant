@@ -13,11 +13,12 @@ public:
     enum AudioPriority{NORMAL, NOTIFY, URGENT, PriorityNum};
 public:
     AudioPlaylist(QMediaPlayer* player);
-    void addAudio(const QString& fileName, AudioPriority priority);
+    void addAudio(const QString& fileName, AudioPriority priority, const QVariant& meta);
     void addRaw(const QByteArray& data, int sampleRate, AudioPriority priority);
-    void playNext();
+    void playNext(bool abandonCurrent=false);
     void playPrevious();
     void clear();
+    QVariant getCurrentMeta() const;
 
 private:
     QUrl getUrl(const QString& fileName);
@@ -26,9 +27,11 @@ private:
 private:
     struct AudioMedia{
         QUrl url;
+        QVariant meta;
         AudioMedia(){}
-        AudioMedia(const QUrl& url){
+        AudioMedia(const QUrl& url, const QVariant& meta){
             this->url = url;
+            this->meta = meta;
         }
     };
     struct Playlist{
@@ -36,8 +39,15 @@ private:
         int index;
         bool block;
         qint64 position;
-        void append(const QUrl& url){
-            list.append(AudioMedia(url));
+        void append(const QUrl& url, const QVariant& meta){
+            list.append(AudioMedia(url, meta));
+        }
+        AudioMedia get(int index){
+            return list[index];
+        }
+
+        AudioMedia getCurrent()const{
+            return list[index];
         }
 
         void clear(){

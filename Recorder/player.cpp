@@ -33,8 +33,8 @@ Player::Player(QObject* parent)
     volume = 0;
 }
 
-void Player::play(const QString& fileName, AudioPlaylist::AudioPriority priority){
-    playlist->addAudio(fileName, priority);
+void Player::play(const QString& fileName, AudioPlaylist::AudioPriority priority, QVariant meta){
+    playlist->addAudio(fileName, priority, meta);
 }
 
 void Player::pause(){
@@ -107,7 +107,7 @@ void Player::modifyVolume(int value){
 }
 
 void Player::next(){
-    playlist->playNext();
+    playlist->playNext(true);
 }
 
 void Player::previous(){
@@ -120,4 +120,8 @@ void Player::playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::Audi
 
 bool Player::isPlaying() const{
     return player->state() == QMediaPlayer::PlayingState;
+}
+
+QVariant Player::getCurrentMeta() const{
+    return playlist->getCurrentMeta();
 }

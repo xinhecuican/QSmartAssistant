@@ -16,6 +16,7 @@ intents:
 - OPEN_FURNITURE
 - CLOSE_FURNITURE
 - SYS_INFO
+- Weather
 entities:
 - human:
     roles:
@@ -24,6 +25,9 @@ entities:
 - trend
 - song
 - location
+  roles:
+  - home
+  - city
 - furniture
 session_config:
   session_expiration_time: 60

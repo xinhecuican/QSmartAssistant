@@ -18,6 +18,7 @@ SOURCES += \
         Plugins/pluginmanager.cpp \
         Plugins/systeminfo.cpp \
         Plugins/voicecontrol.cpp \
+        Plugins/weather.cpp \
         Recorder/audiobuffer.cpp \
         Recorder/audioplaylist.cpp \
         Recorder/player.cpp \
@@ -50,6 +51,7 @@ HEADERS += \
     Plugins/pluginmanager.h \
     Plugins/systeminfo.h \
     Plugins/voicecontrol.h \
+    Plugins/weather.h \
     Recorder/audiobuffer.h \
     Recorder/audioplaylist.h \
     Recorder/player.h \
