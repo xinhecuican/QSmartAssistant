@@ -83,3 +83,7 @@ void Conversation::stop(){
     nlu->stop();
     tts->stop();
 }
+
+void Conversation::quitImmersive(const QString& name){
+    pluginManager->quitImmerSive(name);
+}

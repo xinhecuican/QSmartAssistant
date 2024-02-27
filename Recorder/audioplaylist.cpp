@@ -5,7 +5,7 @@
 #include <QDateTime>
 #include "../Utils/FileCache.h"
 
-AudioPlaylist::AudioPlaylist(QMediaPlayer* player) {
+AudioPlaylist::AudioPlaylist(QMediaPlayer* player) : QObject(player){
     this->player = player;
     currentPriority = NORMAL;
     for(int i=0; i<PriorityNum; i++){
@@ -13,6 +13,7 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer* player) {
     }
     player->connect(player, &QMediaPlayer::mediaStatusChanged, player, [=](QMediaPlayer::MediaStatus status){
         if(status == QMediaPlayer::EndOfMedia){
+            emit playEnd();
             playNext();
 
         }
@@ -135,4 +136,8 @@ void AudioPlaylist::setMedia(const AudioMedia& media){
 
 QVariant AudioPlaylist::getCurrentMeta() const{
     return audiolist[currentPriority].getCurrent().meta;
+}
+
+bool AudioPlaylist::normalEnd(){
+    return currentPriority == NORMAL && player->state() != QMediaPlayer::PlayingState && audiolist[currentPriority].isLast();
 }

@@ -29,8 +29,19 @@ void PluginManager::loadPlugin(){
 
 void PluginManager::handlePlugin(const QString& text, const ParsedIntent& parsedIntent){
     if(immersive){
-        immersivePlugin->handle(text, parsedIntent, immersive);
-        qInfo() << "hit plugin immersive" << immersivePlugin->getName();
+        bool hit = immersivePlugin->handle(text, parsedIntent, immersive);
+        if(hit) qInfo() << "hit plugin immersive" << immersivePlugin->getName();
+        else{
+            bool end = false;
+            bool immersiveTmp = false;
+            for(auto& plugin : plugins){
+                end = plugin->handle(text, parsedIntent, immersiveTmp);
+                if(end){
+                    qInfo() << "hit plugin" << plugin->getName();
+                    break;
+                }
+            }
+        }
     }
     else{
         bool end = false;
@@ -42,5 +53,11 @@ void PluginManager::handlePlugin(const QString& text, const ParsedIntent& parsed
                 break;
             }
         }
+    }
+}
+
+void PluginManager::quitImmerSive(const QString& name){
+    if(immersive && immersivePlugin->getName() == name){
+        immersive = false;
     }
 }

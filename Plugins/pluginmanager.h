@@ -12,6 +12,7 @@ public:
     PluginManager(IPluginHelper* helper, QObject* parent=nullptr);
     void loadPlugin();
     void handlePlugin(const QString& text, const ParsedIntent& parsedIntent);
+    void quitImmerSive(const QString& name);
 private:
     QList<Plugin*> plugins;
     IPluginHelper* helper;

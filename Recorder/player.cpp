@@ -8,6 +8,9 @@ Player::Player(QObject* parent)
 {
     player = new QMediaPlayer(this);
     playlist = new AudioPlaylist(player);
+    connect(playlist, &AudioPlaylist::playEnd, this, [=](){
+        emit playEnd();
+    });
     decoder = new AudioBuffer(this);
     QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
     QAudioFormat decoderFormat = decoder->getFormat();
@@ -124,4 +127,8 @@ bool Player::isPlaying() const{
 
 QVariant Player::getCurrentMeta() const{
     return playlist->getCurrentMeta();
+}
+
+bool Player::normalEnd(){
+    return playlist->normalEnd();
 }

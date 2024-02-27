@@ -35,6 +35,11 @@ NeteaseMusic::NeteaseMusic(IPluginHelper* helper, QObject* parent)
         }
     }
     searchTrigger = {"搜索","找","播放","听","放","来","唱", "再来"};
+    connect(Player::instance(), &Player::playEnd, this, [=](){
+        if(Player::instance()->normalEnd()){
+            helper->quitImmersive(getName());
+        }
+    });
 }
 
 QString NeteaseMusic::getName(){

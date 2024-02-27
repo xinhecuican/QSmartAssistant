@@ -20,6 +20,7 @@ public:
     void dialog(bool stop);
     void say(const QString& text) override;
     void stop();
+    void quitImmersive(const QString& name) override;
 signals:
     void finish();
 public slots:

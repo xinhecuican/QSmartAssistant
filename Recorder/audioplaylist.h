@@ -6,9 +6,11 @@
 #include "../Utils/AudioWriter.h"
 #include <QTemporaryFile>
 #include <QDir>
+#include <QObject>
 
-class AudioPlaylist
+class AudioPlaylist : public QObject
 {
+    Q_OBJECT
 public:
     enum AudioPriority{NORMAL, NOTIFY, URGENT, PriorityNum};
 public:
@@ -19,7 +21,9 @@ public:
     void playPrevious();
     void clear();
     QVariant getCurrentMeta() const;
-
+    bool normalEnd();
+signals:
+    void playEnd();
 private:
     QUrl getUrl(const QString& fileName);
 
@@ -54,6 +58,9 @@ private:
             list.clear();
             block = false;
             index = 0;
+        }
+        bool isLast(){
+            return list.size() == index-1;
         }
     };
     void setMedia(const AudioMedia& media);
