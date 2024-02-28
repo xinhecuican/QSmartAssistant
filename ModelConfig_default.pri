@@ -1,4 +1,3 @@
-
 DEFINES += \
 # TEST \
 # DEBUG_PROCESS \
@@ -18,7 +17,7 @@ VAD_DUILITE \
 # asr
 ASR_SHERPA \
 # ASR_DUILITE \
-#tts
+# tts
 TTS_SHERPA \
 # nlu
 # NLU_BAIDU \

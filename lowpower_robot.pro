@@ -163,8 +163,8 @@ contains(DEFINES, NLU_RASA){
     HEADERS += Conversation/NLU/rasanlu.h
 }
 
-LIBS += -L$$PWD/lib/ssl/ -lssl -lcrypto
-libs.files += $$PWD/lib/ssl/libssl.so $$PWD/lib/ssl/libcrypto.so
+LIBS += -L$$PWD/lib/ssl/lib -lssl -lcrypto
+libs.files += $$PWD/lib/ssl/lib/libssl.so $$PWD/lib/ssl/lib/libcrypto.so
 
 INCLUDEPATH += $$PWD/lib/silerovad/include
 DEPENDPATH += $$PWD/lib/silerovad/include
