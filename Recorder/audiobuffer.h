@@ -15,6 +15,7 @@ public:
     State getState() const {return state;}
     QAudioFormat getFormat();
     void start(const QString& fileName);
+    qint64 bytesAvailable() const override;
 
 signals:
     void stateChange(State state);

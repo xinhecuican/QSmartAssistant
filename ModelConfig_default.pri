@@ -1,5 +1,5 @@
 DEFINES += \
-# TEST \
+TEST \
 # DEBUG_PROCESS \
 # wakeup
 # WAKEUP_PROCUPINE \

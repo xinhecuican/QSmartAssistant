@@ -17,6 +17,7 @@ AudioBuffer::AudioBuffer(QObject* parent)
         const int length = buffer.byteCount();
         const char *data = buffer.constData<char>();
         this->buffer.write(data, length);
+        emit readyRead();
     });
     connect(decoder, &QAudioDecoder::finished, this, [=](){
         isFinish = true;
@@ -74,4 +75,8 @@ void AudioBuffer::start(const QString& fileName){
     state = Playing;
     decoder->start();
     emit stateChange(state);
+}
+
+qint64 AudioBuffer::bytesAvailable() const{
+    return output.size() + QIODevice::bytesAvailable();
 }

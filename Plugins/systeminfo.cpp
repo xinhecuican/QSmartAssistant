@@ -1,6 +1,7 @@
 #include "systeminfo.h"
 #include <QProcess>
 #include "PluginReflector.h"
+#include <QFile>
 REG_CLASS(SystemInfo)
 
 SystemInfo::SystemInfo(IPluginHelper* helper, QObject* parent)
@@ -19,16 +20,16 @@ bool SystemInfo::handle(const QString& text,
     Q_UNUSED(isImmersive)
     for(auto& intent : parsedIntent.intents){
         if(intent.name == "SYS_INFO"){
-            QProcess cpuUsage1;
-            cpuUsage1.start("top -n1");
-            cpuUsage1.waitForFinished(2000);
-            cpuUsage1.kill();
-            QString cpu = cpuUsage1.readAllStandardOutput();
-            QRegExp cpuRegex(".*Cpu(s):.*(\\d+\\.\\d*).*");
-            cpuRegex.indexIn(cpu);
-            cpu = cpuRegex.cap(1);
+            QFile temperature("/sys/class/thermal/thermal_zone0/temp");
+            float temp = 0;
+            if(!temperature.open(QIODevice::ReadOnly)){
+                qWarning() << "can't read cpu temp";
+            }
+            else{
+                temp = temperature.readAll().toInt() / 1000.;
+            }
             QProcess memUsage;
-            memUsage.start("free -m");
+            memUsage.start("free", {"-m"});
             memUsage.waitForFinished(2000);
             QString memInfo = memUsage.readAllStandardOutput();
             QString memSplit = memInfo.split('\n').at(1);
@@ -45,14 +46,14 @@ bool SystemInfo::handle(const QString& text,
                     break;
                 }
             }
-            helper->say("cpu利用率为" + cpu);
+            helper->say("内核温度为" + QString::number(temp));
             if((mem / 1024) == 0){
-                helper->say("剩余内存为" + QString::number(mem) + "M");
+                helper->say("剩余内存为" + QString::number(mem) + "兆");
             }
             else{
                 QString memG = QString::number(mem / 1024);
                 QString memM = QString::number(mem % 1024);
-                helper->say("剩余内存为" + memG + "G" + memM + "M");
+                helper->say("剩余内存为" + memG + "吉" + memM + "兆");
             }
             return true;
         }

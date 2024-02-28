@@ -14,16 +14,16 @@ NeteaseMusic::NeteaseMusic(IPluginHelper* helper, QObject* parent)
     params["password"] = neteaseConfig.value("password").toString();
     cookie = neteaseConfig.value("cookie").toString();
     volumeStep = neteaseConfig.value("volumeStep").toInt();
-    QVariantMap result = api.login_status(params);
+    QVariantMap result = invokeMethod("login_status", params);
     login = true;
     if(cookie == "" || (result["status"] != 200)){
-        result = api.login_cellphone(params);
+        result = invokeMethod("login_cellphone", params);
         if(result["status"] == 200){
             cookie = result["cookie"].toString();
             Config::instance()->saveConfig("netease_cloud", "cookie", cookie);
         }
         else{
-            result = api.register_anonimous(params);
+            result = invokeMethod("register_anonimous", params);
             if(result["status"] == 200){
                 cookie = result["cookie"].toString();
                 Config::instance()->saveConfig("netease_cloud", "cookie", cookie);
@@ -176,7 +176,7 @@ void NeteaseMusic::setPlaylist(const QList<QString>& singerName, const QList<QSt
     params["keywords"] = searchWord;
     params["cookie"] = cookie;
     if(songValid || singerValid){
-        QVariantMap result = api.cloudsearch(params);
+        QVariantMap result = invokeMethod("cloudsearch", params);
         if(result["status"] == 200){
             QList<QVariant> songs = result["body"].toMap()["result"].toMap()["songs"].toList();
             if(songs.size() > 0){
@@ -218,7 +218,7 @@ QList<QString> NeteaseMusic::getAudio(QList<qint64> ids){
     }
     params["id"] = idList;
     params["level"] = "lossless";
-    QVariantMap result = api.song_url_v1(params);
+    QVariantMap result = invokeMethod("song_url_v1", params);
     QList<QString> urls;
     QMap<qint64, QString> idUrlMap;
     QVariantMap body = result["body"].toMap();
@@ -243,4 +243,13 @@ QString NeteaseMusic::getArtist(const QVariantMap& song){
         result += artist["name"].toString() + ",";
     }
     return result;
+}
+
+QVariantMap NeteaseMusic::invokeMethod(const QString& name, const QVariantMap& args){
+    QVariantMap ret;
+    QMetaObject::invokeMethod(&api, name.toUtf8()
+                              , Qt::DirectConnection
+                              , Q_RETURN_ARG(QVariantMap, ret)
+                              , Q_ARG(QVariantMap, args));
+    return ret;
 }

@@ -57,6 +57,7 @@ HEADERS += \
     Recorder/player.h \
     Recorder/recorder.h \
     Recorder/recordhandler.h \
+    Test/TestPluginHelper.h \
     Utils/AudioWriter.h \
     Utils/FileCache.h \
     Utils/ParsedIntent.h \

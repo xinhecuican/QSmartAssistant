@@ -10,6 +10,8 @@
 #include "duilite.h"
 #include <QLibrary>
 #include "../Utils/wavfilereader.h"
+#include "Plugins/systeminfo.h"
+#include "TestPluginHelper.h"
 using namespace AC;
 
 class tst_sherpa: public QObject
@@ -89,5 +91,14 @@ private slots:
     //     std::string cfg2S = cfg2.toStdString();
     //     ((int(*)(struct duilite_gram*, char*))lib.resolve("duilite_gram_start"))(grammer, (char*)cfg2S.c_str());
     // }
+    void plugin(){
+        SystemInfo* info = new SystemInfo(new TestPluginHelper);
+        ParsedIntent parsedIntent;
+        Intent intent;
+        intent.name = "SYS_INFO";
+        parsedIntent.append(intent);
+        bool immersive = false;
+        info->handle("系统信息", parsedIntent, immersive);
+    }
 };
 #endif // TST_SHERPA_H
