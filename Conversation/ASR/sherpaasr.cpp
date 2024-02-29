@@ -1,5 +1,5 @@
 #include "sherpaasr.h"
-#include "../Utils/config.h"
+#include "../../Utils/config.h"
 
 SherpaASR::SherpaASR(QObject* parent) : ASRModel(parent) {
 

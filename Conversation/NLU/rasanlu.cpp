@@ -1,5 +1,5 @@
 #include "rasanlu.h"
-#include "../Utils/config.h"
+#include "../../Utils/config.h"
 
 RasaNLU::RasaNLU(QObject* parent) : NLUModel(parent) {
     recordSamples = Config::instance()->getConfig("rasa").value("record_samples").toBool();

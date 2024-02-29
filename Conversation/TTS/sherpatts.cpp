@@ -1,7 +1,7 @@
 #include "sherpatts.h"
-#include "../Utils/config.h"
-#include "../Utils/Utils.h"
-#include "../Utils/AudioWriter.h"
+#include "../../Utils/config.h"
+#include "../../Utils/Utils.h"
+#include "../../Utils/AudioWriter.h"
 
 SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     SherpaOnnxOfflineTtsConfig config;
