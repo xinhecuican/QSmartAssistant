@@ -11,11 +11,11 @@ assistant_id: 20240216-173501-hard-tenement
 language: zh
 
 pipeline:
-- name: "MitieNLP"
-  model: "data/total_word_feature_extractor_zh.dat"
+# - name: "MitieNLP"
+#   model: "data/total_word_feature_extractor_zh.dat"
 - name: components.jieba_tokenizer.JiebaTokenizer
   dicionary_path: "data/jieba_userdict"
-- name: "MitieFeaturizer" 
+# - name: "MitieFeaturizer" 
 - name: "LexicalSyntacticFeaturizer"
 - name: "CountVectorsFeaturizer"
   OOV_token: "_oov_"

@@ -178,7 +178,7 @@ contains(DEFINES, VAD_SILERO){
 INCLUDEPATH += $$PWD/lib/netease_music/include
 DEPENDPATH += $$PWD/lib/netesase_music/include
 libs.files += $$PWD/lib/netease_music/lib/libCApi.so $$PWD/lib/netease_music/lib/libQCloudMusicApi.so
-unix:!macx: LIBS += -L$$PWD/lib/netease_music/lib/ -lCApi -lQCloudMusicApi
+unix:!macx: LIBS += -L$$PWD/lib/netease_music/lib/ -lCApi -lQCloudMusicApi -lssl -lcrypto
 
 
 INCLUDEPATH += $$PWD/lib/duilite/include
@@ -215,6 +215,5 @@ contains(DEFINES, PROCESS_WEBRTC){
     libs.files += $$PWD/lib/webrtc/lib/x86_64-linux-gnu/libwebrtc_audio_processing.so
     unix:!macx: LIBS += -L$$PWD/lib/webrtc/lib/x86_64-linux-gnu -lwebrtc_audio_processing
 }
-COPIES += libs
 libs.path = $$OUTPUT_PATH
 INSTALLS += libs

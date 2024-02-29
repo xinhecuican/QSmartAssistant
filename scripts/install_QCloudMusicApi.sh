@@ -10,8 +10,10 @@ cd build
 cmake ..
 make -j `nproc`
 make install
+rm -r ${lib_path}/lib
 mv bin ${lib_path}/lib
 cp lib/lib* ${lib_path}/lib/
+rm -r ${lib_path}/include
 mv include ${lib_path}/include
 
 popd

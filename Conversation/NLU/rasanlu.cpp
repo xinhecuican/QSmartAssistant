@@ -16,14 +16,14 @@ RasaNLU::RasaNLU(QObject* parent) : NLUModel(parent) {
             QFileInfo info(newModel);
             if(currentModel != info.fileName()){
                 request.setUrl(QUrl("http://127.0.0.1:5005/model"));
-                QNetworkReply* modelReply = manager.deleteResource(request);
-                QEventLoop eventLoop;
-                connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-                eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
-                modelReply->deleteLater();
+//                QNetworkReply* modelReply = manager.deleteResource(request);
+//                QEventLoop eventLoop;
+//                connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
+//                eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+//                modelReply->deleteLater();
                 QVariantMap args;
                 args["model_file"] = info.absoluteFilePath();
-                modelReply = manager.put(request, QJsonDocument::fromVariant(args).toJson());
+                QNetworkReply* modelReply = manager.put(request, QJsonDocument::fromVariant(args).toJson());
                 connect(modelReply,&QNetworkReply::finished, this, [=](){
                     modelReply->deleteLater();
                 });

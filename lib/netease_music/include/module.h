@@ -405,6 +405,8 @@ public:
     // 重复昵称检测
     Q_INVOKABLE QVariantMap nickname_check(QVariantMap);
 
+    Q_INVOKABLE QVariantMap recommend_resource(QVariantMap);
+
     // 游客登录
     Q_INVOKABLE QVariantMap register_anonimous(QVariantMap);
 
@@ -433,6 +435,8 @@ public:
 
     // 所有榜单介绍
     Q_INVOKABLE QVariantMap toplist(QVariantMap);
+
+    Q_INVOKABLE QVariantMap top_playlist(QVariantMap);
 
     // 专辑简要百科信息
     Q_INVOKABLE QVariantMap ugc_album_get(QVariantMap);
@@ -515,14 +519,5 @@ public:
 
     // 云贝
     Q_INVOKABLE QVariantMap yunbei(QVariantMap);
-
-    /**
-     * @brief 获得对应曲风的歌曲
-     * @param tagId
-     * @param size
-     * @param cursor
-     * @return
-     */
-    Q_INVOKABLE QVariantMap  style_playlist(QVariantMap);
 };
 #endif // MODULE_H

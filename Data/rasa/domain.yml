@@ -24,10 +24,10 @@ entities:
 - number
 - trend
 - song
-- location
-  roles:
-  - home
-  - city
+- location:
+    roles:
+    - home
+    - city
 - furniture
 session_config:
   session_expiration_time: 60

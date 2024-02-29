@@ -47,7 +47,7 @@ private slots:
         // QMediaPlayer* player = new QMediaPlayer;
         // QFileInfo fileInfo("Tmp/1708062224936.wav");
         // player->setMedia(QMediaContent(QUrl::fromLocalFile(fileInfo.absoluteFilePath())));
-        Player::instance()->playSoundEffect("Data/short_test.wav");
+        Player::instance()->playSoundEffect("Data/start.wav");
         QTest::qWait(4000);
     }
     // void tts(){
