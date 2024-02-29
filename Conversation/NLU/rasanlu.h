@@ -15,6 +15,7 @@ private:
     QNetworkAccessManager manager;
     QNetworkRequest request;
     QProcess process;
+    bool recordSamples;
 };
 
 #endif // RASANLU_H

@@ -247,9 +247,11 @@ QString NeteaseMusic::getArtist(const QVariantMap& song){
 
 QVariantMap NeteaseMusic::invokeMethod(const QString& name, const QVariantMap& args){
     QVariantMap ret;
+#ifndef NETEASE_USE_JS
     QMetaObject::invokeMethod(&api, name.toUtf8()
                               , Qt::DirectConnection
                               , Q_RETURN_ARG(QVariantMap, ret)
                               , Q_ARG(QVariantMap, args));
+#endif
     return ret;
 }

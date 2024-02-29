@@ -69,7 +69,7 @@
 		"vadRes": "vad_aicar_v0.16.bin"
 	},
 	"rasa": {
-		"model": "Data/rasa/models/nlu-20240222-204000-radiant-quay.tar.gz"
+		"model": "Data/rasa/models/default.tar.gz"
 	},
 	"hass":{
 		"url": "http://127.0.0.1:8123",

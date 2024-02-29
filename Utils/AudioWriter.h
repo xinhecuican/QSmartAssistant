@@ -5,6 +5,7 @@
 #include <QAudioFormat>
 #include <QFile>
 #include <QDebug>
+#include <math.h>
 
 class AudioWriter{
 public:
@@ -69,6 +70,18 @@ public:
         wavHeader.nRiffLength = dataLength - 8 + sizeof(wavHeader);
         wavHeader.nDataLength = dataLength;
         return wavHeader;
+    }
+
+    static void changeVol(QByteArray& data, int db){
+        char* rawData = const_cast<char*>(data.data());
+        int16_t* intData = reinterpret_cast<int16_t*>(rawData);
+        float multiplier = pow(10, db/20.);
+        for(int i=0; i<data.size()/2; i++){
+            int value = intData[i] * multiplier;
+            if(value > 32767) value = 32767;
+            else if(value < -32768) value = -32768;
+            intData[i] = value;
+        }
     }
 };
 

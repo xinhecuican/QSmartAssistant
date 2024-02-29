@@ -2,6 +2,7 @@
 #include "../Utils/config.h"
 
 RasaNLU::RasaNLU(QObject* parent) : NLUModel(parent) {
+    recordSamples = Config::instance()->getConfig("rasa").value("record_samples").toBool();
     request.setUrl(QUrl("http://127.0.0.1:5005/status"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QNetworkReply* reply = manager.get(request);
@@ -53,6 +54,7 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
     QEventLoop eventLoop;
     connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
     eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+    bool writeSample = false;
     if(!reply->error()){
         Intent intent;
         QByteArray replyData = reply->readAll();
@@ -61,6 +63,15 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
         QJsonObject intentObj = obj.value("intent").toObject();
         intent.name = intentObj.value("name").toString();
         intent.conf = intentObj.value("confidence").toDouble();
+        QFile file("Data/Tmp/rasa/" + intent.name + ".yml");
+        if(recordSamples){
+            QDir dir;
+            dir.mkpath("Data/Tmp/rasa");
+            if(file.open(QIODevice::WriteOnly | QIODevice::Append)){
+                writeSample = true;
+            }
+        }
+        int samplePos = 0;
         QJsonArray entities = obj.value("entities").toArray();
         for(auto iter=entities.begin(); iter!=entities.end(); iter++){
             QJsonObject entity = iter->toObject();
@@ -68,7 +79,29 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
             slot.name = entity.value("entity").toString();
             slot.value = entity.value("value").toString();
             slot.conf = entity.value("confidence").toDouble();
+            if(writeSample){
+                int start = entity.value("start").toInt();
+                if(start > samplePos){
+                    int end = entity.value("end").toInt();
+                    file.write(text.mid(samplePos, start-samplePos).toLatin1());
+                    QString slotText;
+                    if(entity.contains("role")){
+                        slotText = "[" + text.mid(start, end-start) + "]{\"entity\": \"" + slot.name + "\",\"role\":\"" + entity.value("role").toString() +"\"}";
+                    }
+                    else{
+                        slotText = "[" + text.mid(start, end-start) + "](" + slot.name + ")";
+                    }
+                    file.write(slotText.toLatin1());
+                    samplePos = end;
+                }
+            }
             intent.appendSlot(slot);
+        }
+        if(writeSample){
+            if(samplePos < text.size()){
+                file.write(text.mid(samplePos).toLatin1());
+            }
+            file.close();
         }
         Intent slotIntent = entity2Slot(intent);
         if(slotIntent.conf > 0.3){

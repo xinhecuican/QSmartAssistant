@@ -91,14 +91,36 @@ private slots:
     //     std::string cfg2S = cfg2.toStdString();
     //     ((int(*)(struct duilite_gram*, char*))lib.resolve("duilite_gram_start"))(grammer, (char*)cfg2S.c_str());
     // }
-    void plugin(){
-        SystemInfo* info = new SystemInfo(new TestPluginHelper);
-        ParsedIntent parsedIntent;
-        Intent intent;
-        intent.name = "SYS_INFO";
-        parsedIntent.append(intent);
-        bool immersive = false;
-        info->handle("系统信息", parsedIntent, immersive);
+    // void plugin(){
+    //     SystemInfo* info = new SystemInfo(new TestPluginHelper);
+    //     ParsedIntent parsedIntent;
+    //     Intent intent;
+    //     intent.name = "SYS_INFO";
+    //     parsedIntent.append(intent);
+    //     bool immersive = false;
+    //     info->handle("系统信息", parsedIntent, immersive);
+    // }
+    void volume(){
+        WavFileReader reader;
+        reader.OpenWavFile("Data/short_test.wav");
+        QByteArray cache;
+        int size = 0;
+        do{
+            char buf[1024];
+            size = reader.ReadData(buf, 640);
+            if(size > 0){
+                cache.append(buf, size);
+            }
+        } while(size);
+        AudioWriter::changeVol(cache, 16);
+        QAudioFormat format;
+        format.setByteOrder(QAudioFormat::LittleEndian);
+        format.setChannelCount(1);
+        format.setCodec("audio/pcm");
+        format.setSampleRate(8000);
+        format.setSampleSize(16);
+        format.setSampleType(QAudioFormat::SignedInt);
+        AudioWriter::writeWav("short_test16.wav", cache, format);
     }
 };
 #endif // TST_SHERPA_H

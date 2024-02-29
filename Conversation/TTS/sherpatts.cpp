@@ -1,6 +1,7 @@
 #include "sherpatts.h"
 #include "../Utils/config.h"
 #include "../Utils/Utils.h"
+#include "../Utils/AudioWriter.h"
 
 SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     SherpaOnnxOfflineTtsConfig config;
@@ -41,6 +42,7 @@ void SherpaTTS::detect(const QString& text){
         data[(i<<1)] = sample;
         data[(i<<1)+1] = (sample >> 8);
     }
+    AudioWriter::changeVol(data, 16);
     emit dataArrive(data, audio->sample_rate);
 }
 
