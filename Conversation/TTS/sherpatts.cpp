@@ -12,8 +12,10 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     std::string model = Config::getDataPath(ttsConfig.value("model").toString()).toStdString();
     std::string lexicon = Config::getDataPath(ttsConfig.value("lexicon").toString()).toStdString();
     std::string tokens = Config::getDataPath(ttsConfig.value("tokens").toString()).toStdString();
+    std::string dataDir = Config::getDataPath(ttsConfig.value("data_dir").toString()).toStdString();
+    std::string dataPath = Config::getDataPath("").toStdString();
     config.max_num_sentences = 50;
-    config.rule_fsts = rules.c_str();
+    if(rules != dataPath) config.rule_fsts = rules.c_str();
     config.model.debug = 0;
     config.model.num_threads = 2;
     config.model.provider = "cpu";
@@ -21,7 +23,8 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     config.model.vits.length_scale = ttsConfig.value("length").toDouble();
     config.model.vits.noise_scale = ttsConfig.value("noise").toDouble();
     config.model.vits.noise_scale_w = ttsConfig.value("noise-w").toDouble();
-    config.model.vits.lexicon = lexicon.c_str();
+    if(lexicon != dataPath) config.model.vits.lexicon = lexicon.c_str();
+    if(dataDir != dataPath) config.model.vits.data_dir = dataDir.c_str();
     config.model.vits.tokens = tokens.c_str();
     tts = SherpaOnnxCreateOfflineTts(&config);
 }
