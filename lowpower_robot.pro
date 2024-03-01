@@ -10,7 +10,7 @@ CONFIG += c++11
 
 include(ModelConfig.pri)
 
-QMAKE_RPATHDIR += :\'\$\$ORIGING\'
+QMAKE_LFLAGS += -Wl,--rpath=.
 
 SOURCES += \
         Conversation/conversation.cpp \

@@ -5,17 +5,15 @@
 AudioBuffer::AudioBuffer(QObject* parent)
     :QIODevice(parent),
     decoder(new QAudioDecoder(parent)),
-    buffer(&data),
-    output(&data),
+    buffer(96000),
     isFinish(false){
-    buffer.open(QIODevice::WriteOnly);
-    output.open(QIODevice::ReadOnly);
 
     setOpenMode(QIODevice::ReadOnly);
     connect(decoder, &QAudioDecoder::bufferReady, this, [=](){
+
         const QAudioBuffer& buffer = decoder->read();
         const int length = buffer.byteCount();
-        const char *data = buffer.constData<char>();
+        const char *data = buffer.data<char>();
         this->buffer.write(data, length);
         emit readyRead();
     });
@@ -35,23 +33,21 @@ AudioBuffer::AudioBuffer(QObject* parent)
 }
 
 bool AudioBuffer::atEnd() const{
-    return isFinish && output.size() && output.atEnd();
+    return isFinish && buffer.empty();
 }
 
 qint64 AudioBuffer::readData(char* data, qint64 size) {
     memset(data, 0, size);
     if(state == Playing){
-        size = output.read(data, size);
+        size = buffer.read(data, size);
         if(atEnd()){
             decoder->stop();
-            this->data.clear();
             state = Stopped;
             emit stateChange(state);
-            return -1;
         }
     }
     else{
-        return -1;
+        size = 0;
     }
     return size;
 }
@@ -73,10 +69,11 @@ void AudioBuffer::start(const QString& fileName){
     decoder->setSourceFilename(info.absoluteFilePath());
     isFinish = false;
     state = Playing;
+    buffer.reset();
     decoder->start();
     emit stateChange(state);
 }
 
-qint64 AudioBuffer::bytesAvailable() const{
-    return output.size() + QIODevice::bytesAvailable();
+void AudioBuffer::setBufferSize(int size){
+    buffer.resize(size);
 }
