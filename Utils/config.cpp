@@ -19,7 +19,7 @@ void Config::deserialized(QJsonObject *json){
 }
 
 void Config::loadConfig(){
-    if(!Serialize::deserialize("Data/config.json", instance())){
+    if(!Serialize::deserialize(getDataPath("config.json"), instance())){
         qWarning() << "config load error";
     }
 }
@@ -34,12 +34,12 @@ QJsonObject Config::getConfig(const QString& name){
 }
 
 QString Config::getDataPath(const QString &path){
-    return "Data/" + path;
+    return QDir::homePath() + "/.config/lowpower_robot/Data/" + path;
 }
 
 void Config::saveConfig(const QString& name, const QString& configName, const QVariant& value){
     QJsonObject config = configs.value(name);
     config[configName] = QJsonValue::fromVariant(value);
     configs[name] = config;
-    Serialize::serialize("Data/config.json", instance());
+    Serialize::serialize(getDataPath("config.json"), instance());
 }

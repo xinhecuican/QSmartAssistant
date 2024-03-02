@@ -17,6 +17,7 @@ intents:
 - CLOSE_FURNITURE
 - SYS_INFO
 - Weather
+- QUIT_ROBOT
 entities:
 - human:
     roles:

@@ -18,6 +18,7 @@ SOURCES += \
         Plugins/hass.cpp \
         Plugins/neteasemusic.cpp \
         Plugins/pluginmanager.cpp \
+        Plugins/quitrobot.cpp \
         Plugins/systeminfo.cpp \
         Plugins/voicecontrol.cpp \
         Plugins/weather.cpp \
@@ -51,6 +52,7 @@ HEADERS += \
     Plugins/hass.h \
     Plugins/neteasemusic.h \
     Plugins/pluginmanager.h \
+    Plugins/quitrobot.h \
     Plugins/systeminfo.h \
     Plugins/voicecontrol.h \
     Plugins/weather.h \
@@ -77,11 +79,8 @@ HEADERS += \
     robot.h
 
 config.files = $$PWD/Data
-unix:!macx: config.path = $$OUT_PWD
+unix:!macx: config.path = ~/.config/lowpower_robot
 COPIES += config
-install_config.files = $$PWD/Data
-install_config.path = $$OUTPUT_PATH
-INSTALLS += install_config
 
 contains(DEFINES, TEST){
     HEADERS += Test/tst_sherpa.h

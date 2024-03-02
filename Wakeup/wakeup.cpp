@@ -34,7 +34,8 @@
 Wakeup::Wakeup(QObject* parent)
     : QObject(parent),
       detectState(IDLE),
-      cachePos(0)
+      cachePos(0),
+      isResponse(false)
 {
     QJsonObject wakeupConfig = Config::instance()->getConfig("wakeup");
     int chunkSize = wakeupConfig.find("chunkSize")->toInt();
@@ -134,10 +135,7 @@ Wakeup::Wakeup(QObject* parent)
             else {
                 detectState = IDLE;
                 qInfo() << "wakeup";
-                isPlaying = Player::instance()->isPlaying();
-                if(isPlaying) {
-                    Player::instance()->pause();
-                }
+                Player::instance()->pause();
                 Player::instance()->playSoundEffect(Config::getDataPath("start.wav"), true);
                 vadModel->startDetect();
                 detectState = VAD;
@@ -145,10 +143,17 @@ Wakeup::Wakeup(QObject* parent)
         }
     });
     connect(vadModel, &VadModel::detected, this, [=](bool stop){
+        if(isResponse){
+            isResponse = false;
+            recorder->pause();
+            detectState = IDLE;
+            emit detected(stop);
+            return;
+        }
         if(detectState == VAD){
             if(stop) detectState = WAKEUP;
             else {
-                if(isPlaying) recorder->pause();
+                recorder->pause();
                 // if(audioProcess != nullptr) audioProcess->postProcess(detectData);
                 detectState = IDLE;
             }
@@ -186,4 +191,11 @@ void Wakeup::stopWakeup(){
 void Wakeup::resume(){
     recorder->resume();
     detectState = WAKEUP;
+}
+
+void Wakeup::doResponse(){
+    vadModel->startDetect();
+    detectState = VAD;
+    isResponse = true;
+    recorder->resume();
 }

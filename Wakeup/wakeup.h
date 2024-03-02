@@ -20,6 +20,8 @@ public:
     void startWakeup();
     void stopWakeup();
     void resume();
+public slots:
+    void doResponse();
 
 
 signals:
@@ -39,7 +41,7 @@ private:
 #endif
     QByteArray cacheData;
     int cachePos;
-    bool isPlaying;
+    bool isResponse;
 };
 
 #endif // WAKEUP_H

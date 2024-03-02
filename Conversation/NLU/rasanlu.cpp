@@ -83,6 +83,7 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
             slot.value = entity.value("value").toString();
             slot.conf = entity.value("confidence").toDouble();
             if(writeSample){
+                out << "    - ";
                 int start = entity.value("start").toInt();
                 if(start > samplePos){
                     int end = entity.value("end").toInt();
@@ -104,6 +105,7 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
             if(samplePos < text.size()){
                 out << text.mid(samplePos);
             }
+            out << "\n";
             file.close();
         }
         Intent slotIntent = entity2Slot(intent);

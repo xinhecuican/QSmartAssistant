@@ -126,6 +126,11 @@ nlu:
     - [明天](time)天气怎么样
     - [今天晚上](time)天气怎么样
     - 说说[今后三天](time)的天气
+- intent: QUIT_ROBOT
+  examples: |
+    - 关闭机器人
+    - 退出机器人
+    - 关闭智能音箱
 - synonym: 灯
   examples: |
     - 灯

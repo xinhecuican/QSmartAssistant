@@ -3,3 +3,4 @@ Hass
 Weather
 SystemInfo
 VoiceControl
+QuitRobot

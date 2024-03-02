@@ -89,3 +89,20 @@ void Conversation::stop(){
 void Conversation::quitImmersive(const QString& name){
     pluginManager->quitImmerSive(name);
 }
+
+QString Conversation::question(const QString& question){
+    say(question);
+    emit requestResponse();
+    eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+    return resultCache;
+}
+
+void Conversation::onResponse(){
+    if(!asr->isStream()) resultCache = asr->detect(cache);
+    else resultCache += asr->detect(QByteArray(), true);
+    eventLoop.quit();
+}
+
+void Conversation::exit(){
+    emit exitSig();
+}

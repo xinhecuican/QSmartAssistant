@@ -1,6 +1,7 @@
 #ifndef CONVERSATION_H
 #define CONVERSATION_H
 #include <QObject>
+#include <QEventLoop>
 #include "ASR/ASRModel.h"
 #include "TTS/TTSModel.h"
 #include "NLU/nlumodel.h"
@@ -21,8 +22,13 @@ public:
     void say(const QString& text) override;
     void stop();
     void quitImmersive(const QString& name) override;
+    QString question(const QString& question) override;
+    void onResponse();
+    void exit() override;
 signals:
     void finish();
+    void requestResponse();
+    void exitSig();
 public slots:
     void sayRawData(QByteArray data, int sampleRate);
 private:
@@ -32,6 +38,7 @@ private:
     QByteArray cache;
     QString resultCache;
     PluginManager* pluginManager;
+    QEventLoop eventLoop;
 };
 
 #endif // CONVERSATION_H

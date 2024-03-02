@@ -1,6 +1,6 @@
 #include "robot.h"
 #include "Utils/config.h"
-
+#include <QCoreApplication>
 
 Robot::Robot(QObject* parent) : QObject(parent)
 {
@@ -15,6 +15,11 @@ Robot::Robot(QObject* parent) : QObject(parent)
     });
     connect(conversation, &Conversation::finish, this, [=](){
         wakeup->resume();
+    });
+    connect(conversation, &Conversation::requestResponse, wakeup, &Wakeup::doResponse);
+    connect(conversation, &Conversation::exitSig, this, [=](){
+        stop();
+        QCoreApplication::exit();
     });
 }
 
