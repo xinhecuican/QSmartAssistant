@@ -164,6 +164,9 @@ Intent RasaNLU::entity2Slot(const Intent& entityIntent){
             if(slot.name == "location"){
                 slotIntent.appendSlot(slot);
             }
+            if(slot.name == "time"){
+                slotIntent.appendSlot(slot);
+            }
         }
     }
     return slotIntent;
