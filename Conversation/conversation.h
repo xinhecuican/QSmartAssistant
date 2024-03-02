@@ -19,7 +19,7 @@ public:
      * @param stop if true then stop dialog and clear data
      */
     void dialog(bool stop);
-    void say(const QString& text) override;
+    void say(const QString& text, bool block=false) override;
     void stop();
     void quitImmersive(const QString& name) override;
     QString question(const QString& question) override;
@@ -39,6 +39,9 @@ private:
     QString resultCache;
     PluginManager* pluginManager;
     QEventLoop eventLoop;
+    qint64 index;
+    qint64 endIndex;
+    QEventLoop ttsEventLoop;
 };
 
 #endif // CONVERSATION_H

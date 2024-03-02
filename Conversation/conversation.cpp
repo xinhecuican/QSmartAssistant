@@ -18,6 +18,8 @@
 #endif
 
 Conversation::Conversation(QObject* parent) : QObject(parent) {
+    index = 0;
+    endIndex = 0;
     asr = nullptr;
     tts = nullptr;
     nlu = nullptr;
@@ -43,6 +45,14 @@ Conversation::Conversation(QObject* parent) : QObject(parent) {
     if(tts != nullptr) connect(tts, &TTSModel::dataArrive, this, &Conversation::sayRawData);
     pluginManager = new PluginManager(this);
     pluginManager->loadPlugin();
+    connect(Player::instance(), &Player::playEnd, this, [=](QVariant meta){
+        QVariantMap metaMap = meta.toMap();
+        if(metaMap.value("type") == "tts"){
+            if(metaMap.value("index").toLongLong() == endIndex){
+                ttsEventLoop.quit();
+            }
+        }
+    });
 }
 
 void Conversation::receiveData(const QByteArray& data){
@@ -60,9 +70,12 @@ void Conversation::dialog(bool stop){
         else resultCache += asr->detect(QByteArray(), true);
         qInfo() << "asr parse" << resultCache;
         if(resultCache != ""){
-            ParsedIntent parsedIntent = nlu->parseIntent(resultCache);
+            QString result = resultCache;
+            resultCache.clear();
+            cache.clear();
+            ParsedIntent parsedIntent = nlu->parseIntent(result);
             parsedIntent.toString();
-            pluginManager->handlePlugin(resultCache, parsedIntent);
+            pluginManager->handlePlugin(result, parsedIntent);
         }
         emit finish();
     }
@@ -70,14 +83,23 @@ void Conversation::dialog(bool stop){
     cache.clear();
 }
 
-void Conversation::say(const QString& text){
+void Conversation::say(const QString& text, bool block){
     QStringList list = text.split(QRegExp("\t|.|。|!|\?|；|\n"), Qt::SkipEmptyParts);
+    endIndex = index + list.size() - 1;
     for(QString& line : list)
         tts->detect(line);
+    if(block){
+        ttsEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+    }
 }
 
 void Conversation::sayRawData(QByteArray data, int sampleRate){
-    Player::instance()->playRaw(data, sampleRate, AudioPlaylist::NOTIFY);
+    QVariantMap meta = {
+        {"type", "tts"},
+        {"index", index}
+    };
+    Player::instance()->playRaw(data, sampleRate, AudioPlaylist::NOTIFY, meta);
+    index++;
 }
 
 void Conversation::stop(){
@@ -91,10 +113,14 @@ void Conversation::quitImmersive(const QString& name){
 }
 
 QString Conversation::question(const QString& question){
-    say(question);
+    say(question, true);
     emit requestResponse();
     eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
-    return resultCache;
+    QString result = resultCache;
+    resultCache.clear();
+    cache.clear();
+    qDebug() << result;
+    return result;
 }
 
 void Conversation::onResponse(){

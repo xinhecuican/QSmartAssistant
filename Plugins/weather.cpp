@@ -49,8 +49,8 @@ bool Weather::handle(const QString& text,
                 else{
                     QDateTime beginDate = QDateTime::fromString(timeRange.at(0), "yyyy-MM-dd");
                     QDateTime endDate = QDateTime::fromString(timeRange.at(1), "yyyy-MM-dd");
-                    qint64 deltaBegin = (beginDate.currentSecsSinceEpoch() - currentDate.currentSecsSinceEpoch()) / 3600 / 24;
-                    qint64 deltaEnd = (endDate.currentSecsSinceEpoch() - currentDate.currentSecsSinceEpoch()) / 3600 / 24;
+                    qint64 deltaBegin = currentDate.daysTo(beginDate);
+                    qint64 deltaEnd = currentDate.daysTo(endDate);
                     if(deltaBegin < 7){
                         deltaBegin = deltaBegin < 0 ? 0 : deltaBegin > 7 ? 7 : deltaBegin;
                         deltaEnd = deltaEnd < 0 ? 0 : deltaEnd > 7 ? 7 : deltaEnd;
@@ -76,7 +76,7 @@ bool Weather::handle(const QString& text,
                 else{
                     if(timeSlot.value.lastIndexOf(":") != -1){
                         QDateTime beginDate = QDateTime::fromString(timeSlot.value, "yyyy-MM-dd");
-                        qint64 deltaBegin = (beginDate.currentSecsSinceEpoch() - currentDate.currentSecsSinceEpoch()) / 3600 / 24;
+                        qint64 deltaBegin = currentDate.daysTo(beginDate);
                         if(deltaBegin < 7){
                             deltaBegin = deltaBegin < 0 ? 0 : deltaBegin > 7 ? 7 : deltaBegin;
                             searchDay(lat, lon, deltaBegin, deltaBegin);

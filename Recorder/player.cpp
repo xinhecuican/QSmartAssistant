@@ -8,8 +8,8 @@ Player::Player(QObject* parent)
 {
     player = new QMediaPlayer(this);
     playlist = new AudioPlaylist(player);
-    connect(playlist, &AudioPlaylist::playEnd, this, [=](){
-        emit playEnd();
+    connect(playlist, &AudioPlaylist::playEnd, this, [=](QVariant meta){
+        emit playEnd(meta);
     });
     decoder = new AudioBuffer(this);
     QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
@@ -36,7 +36,7 @@ Player::Player(QObject* parent)
     volume = 0;
 }
 
-void Player::play(const QString& fileName, AudioPlaylist::AudioPriority priority, QVariant meta){
+void Player::play(const QString& fileName, AudioPlaylist::AudioPriority priority, const QVariant& meta){
     playlist->addAudio(fileName, priority, meta);
 }
 
@@ -117,8 +117,8 @@ void Player::previous(){
     playlist->playPrevious();
 }
 
-void Player::playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority){
-    playlist->addRaw(data, sampleRate, priority);
+void Player::playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority, const QVariant &meta){
+    playlist->addRaw(data, sampleRate, priority, meta);
 }
 
 bool Player::isPlaying() const{

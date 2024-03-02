@@ -5,7 +5,7 @@
 class IPluginHelper{
 public:
     virtual ~IPluginHelper(){}
-    virtual void say(const QString& text)=0;
+    virtual void say(const QString& text, bool block=false)=0;
     virtual void quitImmersive(const QString& name)=0;
     /**
      * @brief 向用户提问题

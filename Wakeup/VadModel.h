@@ -53,6 +53,8 @@ public:
             if(currentTime - currentSlient > detectSlient){
                 if(detectChunk >= minChunk)
                     emit detected(false);
+                else
+                    emit detected(true);
                 undetectTimer->stop();
             }
         }

@@ -16,14 +16,14 @@ public:
 public:
     AudioPlaylist(QMediaPlayer* player);
     void addAudio(const QString& fileName, AudioPriority priority, const QVariant& meta);
-    void addRaw(const QByteArray& data, int sampleRate, AudioPriority priority);
+    void addRaw(const QByteArray& data, int sampleRate, AudioPriority priority, const QVariant& meta);
     void playNext(bool abandonCurrent=false);
     void playPrevious();
     void clear();
     QVariant getCurrentMeta() const;
     bool normalEnd();
 signals:
-    void playEnd();
+    void playEnd(QVariant meta);
 private:
     QUrl getUrl(const QString& fileName);
 
@@ -51,7 +51,9 @@ private:
         }
 
         AudioMedia getCurrent()const{
-            return list[index];
+            if(index > 0) return list[index-1];
+            else if(list.size() > 0) return list[0];
+            else return AudioMedia();
         }
 
         void clear(){
@@ -68,6 +70,7 @@ private:
     QList<Playlist> audiolist;
     QMediaPlayer* player;
     AudioPriority currentPriority;
+    QVariant currentMeta;
 };
 
 #endif // AUDIOPLAYLIST_H

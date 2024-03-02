@@ -27,6 +27,7 @@ public slots:
 signals:
     void dataArrive(QByteArray data);
     void detected(bool stop);
+    void finishResponse();
 private:
     enum DetectState{IDLE, WAKEUP, VAD};
     WakeupModel* wakeupModel;

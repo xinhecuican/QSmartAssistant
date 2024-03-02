@@ -147,7 +147,7 @@ Wakeup::Wakeup(QObject* parent)
             isResponse = false;
             recorder->pause();
             detectState = IDLE;
-            emit detected(stop);
+            emit finishResponse();
             return;
         }
         if(detectState == VAD){

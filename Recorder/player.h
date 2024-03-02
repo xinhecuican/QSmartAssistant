@@ -15,8 +15,8 @@ class Player : public QObject
     Q_OBJECT
 public:
     Player(QObject* parent=nullptr);
-    void play(const QString& fileName, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL, QVariant meta=QVariant());
-    void playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL);
+    void play(const QString& fileName, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL, const QVariant& meta=QVariant());
+    void playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority=AudioPlaylist::NORMAL, const QVariant& meta=QVariant());
     void pause();
     void stop();
     void resume();
@@ -30,7 +30,7 @@ public:
     QVariant getCurrentMeta() const;
     bool normalEnd();
 signals:
-    void playEnd();
+    void playEnd(QVariant meta);
 private:
     QMediaPlayer* player;
     AudioPlaylist* playlist;
