@@ -30,6 +30,9 @@ pipeline:
 - name: "DIETClassifier"
   epochs: 300
   constrain_similarities: true
+# 会删除前面数字和时间的识别结果
+- name: components.custom_number_extractor.CustomNumberExtractor
+- name: components.custom_time_extractor.CustomTimeExtractor
 # - name: "CRFEntityExtractor"
 # - name: "RegexEntityExtractor"
 #   case_sensitive: False

@@ -10,6 +10,8 @@ source ${lib_path}/bin/activate
 pip install rasa
 pip install jieba
 pip install transformers
+pip install emoji==1.7
+pip install recognizers-text-suite
 mkdir -p ${bert_path}
 cd ${bert_path}
 wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/config.json

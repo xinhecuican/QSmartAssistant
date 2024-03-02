@@ -15,7 +15,12 @@ from rasa.engine.storage.storage import ModelStorage
 from rasa.shared.nlu.constants import ENTITIES, TEXT
 from rasa.nlu.extractors.extractor import EntityExtractorMixin
 from rasa.shared.nlu.training_data.message import Message
-
+from recognizers_date_time import DateTimeRecognizer 
+from recognizers_text import Culture, ModelResult
+from datetime import datetime
+recognizer = DateTimeRecognizer(Culture.Chinese)
+model  = recognizer.get_datetime_model()
+result = model.parse("今天晚上天气")
 @DefaultV1Recipe.register(
     DefaultV1Recipe.ComponentType.ENTITY_EXTRACTOR,
     is_trainable=False
@@ -33,6 +38,8 @@ class CustomTimeExtractor(GraphComponent, EntityExtractorMixin):
     def __init__(self, config: Dict[Text, Any]) -> None:
         """Initialize CustomTimeExtractor."""
         self._config = config
+        recognizer = DateTimeRecognizer(Culture.Chinese)
+        self.model = recognizer.get_datetime_model()
 
     @classmethod
     def create(
@@ -53,29 +60,41 @@ class CustomTimeExtractor(GraphComponent, EntityExtractorMixin):
 
         Returns: The processed messages.
         """
+        
         time_pattern = re.compile(self._config["time_pattern"])
 
         for message in messages:
             text = message.get(TEXT)
-            matches = time_pattern.finditer(text)
-
+            time_results = self.model.parse(text)
             extracted_entities = []
-            for match in matches:
-                start, end = match.span()
-                value = match.group()
+            for result in time_results:
+                values = result.resolution['values']
+                type = result.resolution['values'][0]['type']
+                if type == 'datetimerange':
+                    value = result.resolution['values'][0]['start'] + '|' + result.resolution['values'][0]['end']
+                value = result.resolution['values'][0]['value']
+                # 不知道上午还是下午，哪个离中午近用哪个
+                if len(values) > 1 and values[0]['type'] == 'datetime':
+                    datetime1 = datetime.strptime(values[0]['value'], '%Y-%m-%d %H:%M:%S')
+                    if 12 - datetime1.hour() > 6:
+                        value = values[1]['value']
 
                 entity = {
                     "entity": "time",
                     "value": value,
-                    "start": start,
-                    "confidence": None,
-                    "end": end,
+                    "start": result.start,
+                    "confidence": 0,
+                    "end": result.end,
                     "extractor": "CustoTimeExtractor",
                 }
                 extracted_entities.append(entity)
-
+            entities = message.get(ENTITIES, [])
+            exclude_entities = []
+            for entity in entities:
+                if entity['entity'] != 'time':
+                    exclude_entities.append(entity)
             message.set(
-                ENTITIES, message.get(ENTITIES, []) + extracted_entities, add_to_output=True
+                ENTITIES, exclude_entities + extracted_entities, add_to_output=True
             )
 
         return messages
