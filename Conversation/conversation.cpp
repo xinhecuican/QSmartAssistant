@@ -71,7 +71,9 @@ void Conversation::dialog(bool stop){
 }
 
 void Conversation::say(const QString& text){
-    tts->detect(text);
+    QStringList list = text.split(QRegExp("\t|.|。|!|\?|；|\n"), Qt::SkipEmptyParts);
+    for(QString& line : list)
+        tts->detect(line);
 }
 
 void Conversation::sayRawData(QByteArray data, int sampleRate){

@@ -148,8 +148,14 @@ QString SherpaASR::detect(const QByteArray& data, bool isLast){
 
 void SherpaASR::stop(){
     if(valid){
-        DestroyOfflineRecognizer(recognizer);
-        DestroyOfflineStream(stream);
+        if(_isStream){
+            DestroyOnlineRecognizer(onlineRecognizer);
+            DestroyOnlineStream(onlineStream);
+        }
+        else{
+            DestroyOfflineRecognizer(recognizer);
+            DestroyOfflineStream(stream);
+        }
         valid = false;
     }
 }

@@ -39,7 +39,8 @@
 		"noise": 0.3,
 		"noise-w": 0.2,
 		"length": 1,
-		"speakerid": 66
+		"speakerid": 66,
+		"extra_volume": 0
 	},
 	"unit":{
 		"apiKey": "c6AcEFLAYjp7jAezYekKlCI2",
@@ -69,7 +70,8 @@
 		"vadRes": "vad_aicar_v0.16.bin"
 	},
 	"rasa": {
-		"model": "Data/rasa/models/default.tar.gz"
+		"model": "Data/rasa/models/default.tar.gz",
+		"record_samples": true
 	},
 	"hass":{
 		"url": "http://127.0.0.1:8123",

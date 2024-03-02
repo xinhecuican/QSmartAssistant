@@ -13,9 +13,6 @@ public:
                 const ParsedIntent& parsedIntent,
                 bool& isImmersive) override;
 private:
-    void executeService(const QString& path, const QJsonObject& params);
-
-private:
     struct HassService{
         QString pattern;
         QString path;
@@ -23,6 +20,10 @@ private:
         QString slotName;
         QString slotValue;
     };
+private:
+    void executeService(const QString& path, const QJsonObject& params);
+    QJsonObject parseParams(const Intent& intent, const HassService& service);
+private:
     QMap<QString, QList<HassService>> services;
     QString urlPrefix;
     QNetworkAccessManager manager;

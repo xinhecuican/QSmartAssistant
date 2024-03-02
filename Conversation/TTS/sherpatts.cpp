@@ -8,6 +8,7 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     memset(&config, 0, sizeof(config));
     QJsonObject ttsConfig = Config::instance()->getConfig("sherpa_tts");
     speakerid = ttsConfig.value("speakerid").toInt();
+    extraVol = ttsConfig.value("extra_volume").toInt();
     std::string rules = Config::getDataPath(ttsConfig.value("rules").toString()).toStdString();
     std::string model = Config::getDataPath(ttsConfig.value("model").toString()).toStdString();
     std::string lexicon = Config::getDataPath(ttsConfig.value("lexicon").toString()).toStdString();
@@ -45,7 +46,7 @@ void SherpaTTS::detect(const QString& text){
         data[(i<<1)] = sample;
         data[(i<<1)+1] = (sample >> 8);
     }
-    AudioWriter::changeVol(data, 16);
+    AudioWriter::changeVol(data, extraVol);
     emit dataArrive(data, audio->sample_rate);
 }
 

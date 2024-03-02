@@ -13,6 +13,7 @@ public:
 private:
     SherpaOnnxOfflineTts* tts;
     int speakerid;
+    int extraVol;
 };
 
 #endif // SHERPATTS_H

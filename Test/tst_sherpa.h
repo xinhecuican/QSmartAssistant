@@ -49,8 +49,8 @@ private slots:
         // QMediaPlayer* player = new QMediaPlayer;
         // QFileInfo fileInfo("Tmp/1708062224936.wav");
         // player->setMedia(QMediaContent(QUrl::fromLocalFile(fileInfo.absoluteFilePath())));
-        Player::instance()->playSoundEffect("Data/start.wav");
-        QTest::qWait(4000);
+        // Player::instance()->playSoundEffect("Data/start.wav");
+        // QTest::qWait(4000);
     }
     // void tts(){
     //     SherpaTTS* tts = new SherpaTTS();
@@ -100,27 +100,59 @@ private slots:
     //     bool immersive = false;
     //     info->handle("系统信息", parsedIntent, immersive);
     // }
-    void volume(){
-        WavFileReader reader;
-        reader.OpenWavFile("Data/short_test.wav");
-        QByteArray cache;
-        int size = 0;
-        do{
-            char buf[1024];
-            size = reader.ReadData(buf, 640);
-            if(size > 0){
-                cache.append(buf, size);
+    // void volume(){
+    //     WavFileReader reader;
+    //     reader.OpenWavFile("Data/short_test.wav");
+    //     QByteArray cache;
+    //     int size = 0;
+    //     do{
+    //         char buf[1024];
+    //         size = reader.ReadData(buf, 640);
+    //         if(size > 0){
+    //             cache.append(buf, size);
+    //         }
+    //     } while(size);
+    //     AudioWriter::changeVol(cache, 16);
+    //     QAudioFormat format;
+    //     format.setByteOrder(QAudioFormat::LittleEndian);
+    //     format.setChannelCount(1);
+    //     format.setCodec("audio/pcm");
+    //     format.setSampleRate(8000);
+    //     format.setSampleSize(16);
+    //     format.setSampleType(QAudioFormat::SignedInt);
+    //     AudioWriter::writeWav("short_test16.wav", cache, format);
+    // }
+
+    void hassRegex(){
+        Intent intent;
+        intent.appendSlot(IntentSlot("trend", "增大", 0));
+        intent.appendSlot(IntentSlot("number", "30", 0));
+        QRegExp keyFinder("\\{(.*)\\}");
+        keyFinder.setMinimal(true);
+        QString value = "test{trend}有多少{number}";
+        QString result = "";
+        int pos = 0;
+        int lastPos = 0;
+        while((pos=keyFinder.indexIn(value, pos)) != -1){
+            pos += keyFinder.matchedLength();
+            QString key = keyFinder.cap(1);
+            bool success = false;
+            IntentSlot slot = intent.getSlot(key, success);
+            if(success){
+                result += value.midRef(lastPos, keyFinder.pos(1)-lastPos-1);
+                result += slot.value;
+                lastPos = pos;
             }
-        } while(size);
-        AudioWriter::changeVol(cache, 16);
-        QAudioFormat format;
-        format.setByteOrder(QAudioFormat::LittleEndian);
-        format.setChannelCount(1);
-        format.setCodec("audio/pcm");
-        format.setSampleRate(8000);
-        format.setSampleSize(16);
-        format.setSampleType(QAudioFormat::SignedInt);
-        AudioWriter::writeWav("short_test16.wav", cache, format);
+            else{
+                qWarning() << "hass params unfind" << key;
+                result += value.midRef(lastPos, keyFinder.pos(1)-lastPos-1);
+                lastPos = pos;
+            }
+        }
+        if(lastPos < value.size()){
+            result += value.midRef(lastPos);
+        }
+        QCOMPARE(result, "test增大有多少30");
     }
 };
 #endif // TST_SHERPA_H

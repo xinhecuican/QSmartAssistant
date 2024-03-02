@@ -64,6 +64,9 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
         intent.name = intentObj.value("name").toString();
         intent.conf = intentObj.value("confidence").toDouble();
         QFile file("Data/Tmp/rasa/" + intent.name + ".yml");
+        QTextCodec* codec = QTextCodec::codecForName("UTF-8");
+        QTextStream out(&file);
+        out.setCodec(codec);
         if(recordSamples){
             QDir dir;
             dir.mkpath("Data/Tmp/rasa");
@@ -83,7 +86,7 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
                 int start = entity.value("start").toInt();
                 if(start > samplePos){
                     int end = entity.value("end").toInt();
-                    file.write(text.mid(samplePos, start-samplePos).toLatin1());
+                    out << text.mid(samplePos, start-samplePos);
                     QString slotText;
                     if(entity.contains("role")){
                         slotText = "[" + text.mid(start, end-start) + "]{\"entity\": \"" + slot.name + "\",\"role\":\"" + entity.value("role").toString() +"\"}";
@@ -91,7 +94,7 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
                     else{
                         slotText = "[" + text.mid(start, end-start) + "](" + slot.name + ")";
                     }
-                    file.write(slotText.toLatin1());
+                    out << slotText;
                     samplePos = end;
                 }
             }
@@ -99,7 +102,7 @@ ParsedIntent RasaNLU::parseIntent(const QString& text){
         }
         if(writeSample){
             if(samplePos < text.size()){
-                file.write(text.mid(samplePos).toLatin1());
+                out << text.mid(samplePos);
             }
             file.close();
         }

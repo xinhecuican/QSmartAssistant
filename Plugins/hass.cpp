@@ -43,7 +43,8 @@ bool Hass::handle(const QString& text,
         for(auto& service : hassServices){
             if(service.pattern != ""){
                 if(text.contains(QRegExp(service.pattern))){
-                    executeService(service.path, service.params);
+                    QJsonObject params = parseParams(intent, service);
+                    executeService(service.path, params);
                     return true;
                 }
             }
@@ -51,13 +52,47 @@ bool Hass::handle(const QString& text,
                 bool success;
                 IntentSlot slot = intent.getSlot(service.slotName, success);
                 if(slot.value == service.slotValue){
-                    executeService(service.path, service.params);
+                    QJsonObject params = parseParams(intent, service);
+                    executeService(service.path, params);
                     return true;
                 }
             }
         }
     }
     return false;
+}
+
+QJsonObject Hass::parseParams(const Intent& intent, const HassService& service){
+    QJsonObject params;
+    QRegExp keyFinder("\\{(.*)\\}");
+    keyFinder.setMinimal(true);
+    for(auto iter=service.params.begin(); iter!=service.params.end(); iter++){
+        QString value = iter->toString();
+        QString result = "";
+        int pos = 0;
+        int lastPos = 0;
+        while((pos=keyFinder.indexIn(value, pos)) != -1){
+            pos += keyFinder.matchedLength();
+            QString key = keyFinder.cap(1);
+            bool success = false;
+            IntentSlot slot = intent.getSlot(key, success);
+            if(success){
+                result += value.midRef(lastPos, keyFinder.pos(1)-lastPos-1);
+                result += slot.value;
+                lastPos = pos;
+            }
+            else{
+                qWarning() << "hass params unfind" << key;
+                result += value.midRef(lastPos, keyFinder.pos(1)-lastPos-1);
+                lastPos = pos;
+            }
+        }
+        if(lastPos < value.size()){
+            result += value.midRef(lastPos);
+        }
+        params.insert(iter.key(), result);
+    }
+    return params;
 }
 
 void Hass::executeService(const QString& path, const QJsonObject& params){
