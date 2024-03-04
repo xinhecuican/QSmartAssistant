@@ -1,6 +1,7 @@
 #include "conversation.h"
 #include <QDebug>
 #include "../Recorder/player.h"
+#include "../Utils/config.h"
 #if defined(ASR_SHERPA)
 #include "ASR/sherpaasr.h"
 #endif
@@ -17,7 +18,7 @@
 #include "TTS/sherpatts.h"
 #endif
 
-Conversation::Conversation(QObject* parent) : QObject(parent) {
+Conversation::Conversation(Player* player, QObject* parent) : QObject(parent), player(player) {
     index = 0;
     endIndex = 0;
     asr = nullptr;
@@ -45,7 +46,7 @@ Conversation::Conversation(QObject* parent) : QObject(parent) {
     if(tts != nullptr) connect(tts, &TTSModel::dataArrive, this, &Conversation::sayRawData);
     pluginManager = new PluginManager(this);
     pluginManager->loadPlugin();
-    connect(Player::instance(), &Player::playEnd, this, [=](QVariant meta){
+    connect(player, &Player::playEnd, this, [=](QVariant meta){
         QVariantMap metaMap = meta.toMap();
         if(metaMap.value("type") == "tts"){
             if(metaMap.value("index").toLongLong() == endIndex){
@@ -98,7 +99,7 @@ void Conversation::sayRawData(QByteArray data, int sampleRate){
         {"type", "tts"},
         {"index", index}
     };
-    Player::instance()->playRaw(data, sampleRate, AudioPlaylist::NOTIFY, meta);
+    player->playRaw(data, sampleRate, AudioPlaylist::NOTIFY, meta);
     index++;
 }
 
@@ -119,7 +120,6 @@ QString Conversation::question(const QString& question){
     QString result = resultCache;
     resultCache.clear();
     cache.clear();
-    qDebug() << result;
     return result;
 }
 
@@ -131,4 +131,12 @@ void Conversation::onResponse(){
 
 void Conversation::exit(){
     emit exitSig();
+}
+
+Player* Conversation::getPlayer(){
+    return player;
+}
+
+Config* Conversation::getConfig(){
+    return Config::instance();
 }

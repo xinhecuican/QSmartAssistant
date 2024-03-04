@@ -2,7 +2,6 @@
 #define PLAYER_H
 #include <QMediaPlayer>
 #include "audioplaylist.h"
-#include "../Utils/Template.h"
 #include <QObject>
 #include <QEventLoop>
 #include "audiobuffer.h"
@@ -12,7 +11,6 @@
 
 class LPCOMMON_EXPORT Player : public QObject
 {
-    DECLARE_INSTANCE(Player)
     Q_OBJECT
 public:
     Player(QObject* parent=nullptr);

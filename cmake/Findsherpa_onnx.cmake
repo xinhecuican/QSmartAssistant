@@ -2,16 +2,7 @@ find_package(PkgConfig)
 set(LIB_NAME sherpa_onnx)
 set(${LIB_NAME}_ROOT_DIR ${PROJECT_SOURCE_DIR}/lib/${LIB_NAME})
 set(${LIB_NAME}_INCLUDE_BASE ${${LIB_NAME}_ROOT_DIR}/include)
-macro(_FIND_INCLUDE foldername headername)
-    if(NOT ${LIB_NAME}_${foldername}_INCLUDE_DIR)
-        find_path(${LIB_NAME}_${foldername}_INCLUDE_DIR
-            NAMES ${foldername}/${headername}
-            PATHS ${${LIB_NAME}_ROOT_DIR}/include /usr/local/include)
 
-        list(APPEND ${LIB_NAME}_INCLUDE_DIR ${${LIB_NAME}_${foldername}_INCLUDE_DIR})
-        list(REMOVE_DUPLICATES ${LIB_NAME}_INCLUDE_DIR)
-    endif()
-endmacro(_FIND_INCLUDE)
 macro(_FIND_LIBRARY libname)
     if(NOT ${LIB_NAME}_${libname}_LIBRARY)
         find_library(${LIB_NAME}_${libname}_LIBRARY 

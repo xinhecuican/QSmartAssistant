@@ -2,29 +2,7 @@
 #include "../../Utils/config.h"
 
 Hass::Hass(){
-    QJsonObject hassConfig = Config::instance()->getConfig("hass");
-    urlPrefix = hassConfig.value("url").toString();
-    request.setRawHeader("Authorization", hassConfig.value("key").toString().toLatin1());
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    QJsonArray services = hassConfig.value("services").toArray();
-    for(auto iter=services.begin(); iter!=services.end(); iter++){
-        QJsonObject service = iter->toObject();
-        HassService hassService;
-        hassService.pattern = service.value("pattern").toString();
-        hassService.path = service.value("path").toString();
-        hassService.params = service.value("params").toObject();
-        hassService.slotName = service.value("slotName").toString();
-        hassService.slotValue = service.value("slotValue").toString();
-        QString intent = service.value("intent").toString();
-        if(!this->services.contains(intent)){
-            QList<HassService> hassServices;
-            hassServices.append(hassService);
-            this->services[intent] = hassServices;
-        }
-        else{
-            this->services[intent].append(hassService);
-        }
-    }
+
 }
 
 QString Hass::getName(){
@@ -61,6 +39,29 @@ bool Hass::handle(const QString& text,
 
 void Hass::setPluginHelper(IPluginHelper* helper){
     this->helper = helper;
+    QJsonObject hassConfig = helper->getConfig()->getConfig("hass");
+    urlPrefix = hassConfig.value("url").toString();
+    request.setRawHeader("Authorization", hassConfig.value("key").toString().toLatin1());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    QJsonArray services = hassConfig.value("services").toArray();
+    for(auto iter=services.begin(); iter!=services.end(); iter++){
+        QJsonObject service = iter->toObject();
+        HassService hassService;
+        hassService.pattern = service.value("pattern").toString();
+        hassService.path = service.value("path").toString();
+        hassService.params = service.value("params").toObject();
+        hassService.slotName = service.value("slotName").toString();
+        hassService.slotValue = service.value("slotValue").toString();
+        QString intent = service.value("intent").toString();
+        if(!this->services.contains(intent)){
+            QList<HassService> hassServices;
+            hassServices.append(hassService);
+            this->services[intent] = hassServices;
+        }
+        else{
+            this->services[intent].append(hassService);
+        }
+    }
 }
 
 void Hass::recvMessage(const PluginMessage& message){

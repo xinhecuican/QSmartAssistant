@@ -9,7 +9,7 @@ RasaNLU::RasaNLU(QObject* parent) : NLUModel(parent) {
 
     connect(reply, &QNetworkReply::finished, this, [=](){
         QJsonObject rasaConfg = Config::instance()->getConfig("rasa");
-        QString newModel = rasaConfg.value("model").toString();
+        QString newModel = Config::getDataPath(rasaConfg.value("model").toString());
         QFileInfo info(newModel);
         if(reply->error() == QNetworkReply::NoError){
             QByteArray data = reply->readAll();
@@ -17,17 +17,17 @@ RasaNLU::RasaNLU(QObject* parent) : NLUModel(parent) {
             QJsonObject obj = doc.object();
             QString currentModel = obj.value("model_file").toString();
             if(currentModel != info.fileName()){
-                process.setProgram("Data/stop-rasa.sh");
+                process.setProgram(Config::getDataPath("stop-rasa.sh"));
                 process.start();
                 process.waitForFinished();
-                process.setProgram("Data/start-rasa.sh");
+                process.setProgram(Config::getDataPath("start-rasa.sh"));
                 process.setArguments({info.absoluteFilePath()});
                 process.setWorkingDirectory(QCoreApplication::applicationDirPath());
                 process.start();
             }
         }
         else{
-            process.setProgram("Data/start-rasa.sh");
+            process.setProgram(Config::getDataPath("start-rasa.sh"));
             process.setArguments({info.absoluteFilePath()});
             process.setWorkingDirectory(QCoreApplication::applicationDirPath());
             process.start();

@@ -2,6 +2,8 @@
 #define IPLUGINHELPER_H
 #include <QString>
 #include "../Utils/LPcommonGlobal.h"
+#include "../Recorder/player.h"
+#include "../Utils/config.h"
 
 class LPCOMMON_EXPORT IPluginHelper{
 public:
@@ -16,6 +18,9 @@ public:
      */
     virtual QString question(const QString& question)=0;
     virtual void exit()=0;
+    virtual Player* getPlayer()=0;
+    virtual Config* getConfig()=0;
+
 };
 
 #endif // IPLUGINHELPER_H

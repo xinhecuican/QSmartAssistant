@@ -65,4 +65,16 @@ macro(ADD_ALL_SUBDIRECTORY)
     endforeach()
 endmacro()
 
+macro(PLUGIN_COMMON)
+    FILE(GLOB SRC_FILES "*.cpp")
+    FILE(GLOB HEAD_FILES "*.h")
+
+    source_group("Head Files" FILES ${HEAD_FILES} )
+    source_group("Src Files" FILES ${SRC_FILES} )
+
+    ADD_LIBRARY(${PROJECT_NAME} SHARED ${SRC_FILES} ${HEAD_FILES})
+    set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_PATH})
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN")
+endmacro()
+
 ADD_ALL_SUBDIRECTORY()

@@ -48,22 +48,22 @@ bool VoiceControl::handle(const QString& text,
         }
         if(preciseChange){
             if(changeDir){
-                Player::instance()->modifyVolume(changeDir==1?changeValue:-changeValue);
+                helper->getPlayer()->modifyVolume(changeDir==1?changeValue:-changeValue);
             }
             else{
-                Player::instance()->setVolume(changeValue);
+                helper->getPlayer()->setVolume(changeValue);
             }
         }
         else{
             if(changeDir){
-                Player::instance()->modifyVolume(changeDir==1?volumeStep:-volumeStep);
+                helper->getPlayer()->modifyVolume(changeDir==1?volumeStep:-volumeStep);
             }
             else if(text.contains("当前音量")){
-                helper->say("当前音量为" + QString::number(Player::instance()->getVolume()));
+                helper->say("当前音量为" + QString::number(helper->getPlayer()->getVolume()));
                 return true;
             }
         }
-        helper->say("音量为" + QString::number(Player::instance()->getVolume()));
+        helper->say("音量为" + QString::number(helper->getPlayer()->getVolume()));
         return true;
     }
     return false;

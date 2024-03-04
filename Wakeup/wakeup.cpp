@@ -5,7 +5,7 @@
 #include "../Utils/config.h"
 #include "../Utils/AudioWriter.h"
 #include "../Recorder/player.h"
-#if defined(WAKEUP_PROCUPINE)
+#if defined(WAKEUP_PORCUPINE)
 #include "Wakeup/porcupinewakeup.h"
 #endif
 #include "Wakeup/openwakeup.h"
@@ -31,8 +31,9 @@
 #include "Process/speexaudioprocess.h"
 #endif
 
-Wakeup::Wakeup(QObject* parent)
+Wakeup::Wakeup(Player* player, QObject* parent)
     : QObject(parent),
+      player(player),
       detectState(IDLE),
       cachePos(0),
       isResponse(false)
@@ -43,7 +44,7 @@ Wakeup::Wakeup(QObject* parent)
     wakeupModel = nullptr;
     vadModel = nullptr;
     audioProcess = nullptr;
-#if defined(WAKEUP_PROCUPINE)
+#if defined(WAKEUP_PORCUPINE)
     wakeupModel = new PorcupineWakeup(this);
 #endif
 #if defined(WAKEUP_OPEN)
@@ -134,9 +135,9 @@ Wakeup::Wakeup(QObject* parent)
             if(stop) detectState = WAKEUP;
             else {
                 detectState = IDLE;
-                qInfo() << "wakeup";
-                Player::instance()->pause();
-                Player::instance()->playSoundEffect(Config::getDataPath("start.wav"), true);
+                isPlaying = player->isPlaying();
+                if(isPlaying) player->pause();
+                player->playSoundEffect(Config::getDataPath("start.wav"), true);
                 vadModel->startDetect();
                 detectState = VAD;
             }
@@ -157,8 +158,8 @@ Wakeup::Wakeup(QObject* parent)
                 // if(audioProcess != nullptr) audioProcess->postProcess(detectData);
                 detectState = IDLE;
             }
-            Player::instance()->playSoundEffect(Config::getDataPath("end.wav"));
-            Player::instance()->resume();
+            if(isPlaying) player->resume();
+            player->playSoundEffect(Config::getDataPath("end.wav"));
             qInfo() << "vad" << stop;
             emit detected(stop);
         }

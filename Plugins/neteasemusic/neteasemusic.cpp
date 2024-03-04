@@ -4,7 +4,15 @@
 #include <QJsonArray>
 
 NeteaseMusic::NeteaseMusic(){
-    QJsonObject neteaseConfig = Config::instance()->getConfig("netease_cloud");
+}
+
+QString NeteaseMusic::getName(){
+    return "NeteaseMusic";
+}
+
+void NeteaseMusic::setPluginHelper(IPluginHelper* helper){
+    this->helper = helper;
+    QJsonObject neteaseConfig = helper->getConfig()->getConfig("netease_cloud");
     QVariantMap params;
     params["phone"] = neteaseConfig.value("phone").toString();
     params["password"] = neteaseConfig.value("password").toString();
@@ -16,13 +24,13 @@ NeteaseMusic::NeteaseMusic(){
         result = invokeMethod("login_cellphone", params);
         if(result["status"] == 200){
             cookie = result["cookie"].toString();
-            Config::instance()->saveConfig("netease_cloud", "cookie", cookie);
+            helper->getConfig()->saveConfig("netease_cloud", "cookie", cookie);
         }
         else{
             result = invokeMethod("register_anonimous", params);
             if(result["status"] == 200){
                 cookie = result["cookie"].toString();
-                Config::instance()->saveConfig("netease_cloud", "cookie", cookie);
+                helper->getConfig()->saveConfig("netease_cloud", "cookie", cookie);
             }
             else{
                 qWarning() <<  "netease login fail";
@@ -31,19 +39,11 @@ NeteaseMusic::NeteaseMusic(){
         }
     }
     searchTrigger = {"搜索","找","播放","听","放","来","唱", "再来"};
-    connect(Player::instance(), &Player::playEnd, this, [=](){
-        if(Player::instance()->normalEnd()){
+    connect(helper->getPlayer(), &Player::playEnd, this, [=](){
+        if(helper->getPlayer()->normalEnd()){
             helper->quitImmersive(getName());
         }
     });
-}
-
-QString NeteaseMusic::getName(){
-    return "NeteaseMusic";
-}
-
-void NeteaseMusic::setPluginHelper(IPluginHelper* helper){
-    this->helper = helper;
 }
 
 void NeteaseMusic::recvMessage(const PluginMessage& message){
@@ -73,11 +73,12 @@ bool NeteaseMusic::handle(const QString& text,
         }
     }
     bool needHandle = isSearchTrigger && isSearch && conf > 0.5;
+    bool result = needHandle || isImmersive;
     if(needHandle || isImmersive){
         if(needHandle && !isImmersive) isImmersive = true;
         doHandle(text, parsedIntent, isImmersive);
     }
-    return needHandle;
+    return result;
 }
 
 void NeteaseMusic::doHandle(const QString& text,
@@ -88,13 +89,13 @@ void NeteaseMusic::doHandle(const QString& text,
     }
     else if(parsedIntent.hasIntent("CLOSE_MUSIC") || text.contains("退出")){
         isImmersive = false;
-        Player::instance()->stop();
+        helper->getPlayer()->stop();
     }
     else if(parsedIntent.hasIntent("PAUSE")){
-        Player::instance()->pause();
+        helper->getPlayer()->pause();
     }
     else if(parsedIntent.hasIntent("CONTINUE")){
-        Player::instance()->resume();
+        helper->getPlayer()->resume();
     }
     else if(parsedIntent.hasIntent("CHANGE_VOL")){
         PluginMessage message;
@@ -103,10 +104,10 @@ void NeteaseMusic::doHandle(const QString& text,
         emit sendMessage(message);
     }
     else if(parsedIntent.hasIntent("CHANGE_TO_NEXT")){
-        Player::instance()->next();
+        helper->getPlayer()->next();
     }
     else if(parsedIntent.hasIntent("CHNAGE_TO_LAST")){
-        Player::instance()->previous();
+        helper->getPlayer()->previous();
     }
     else if(isSearch && isSearchTrigger){
         searchAlbum(parsedIntent);
@@ -119,7 +120,7 @@ void NeteaseMusic::doHandle(const QString& text,
 }
 
 void NeteaseMusic::getCurrentTrack(){
-    QVariantMap meta = Player::instance()->getCurrentMeta().toMap();
+    QVariantMap meta = helper->getPlayer()->getCurrentMeta().toMap();
     if(meta.contains("type") && meta["type"] == "song"){
         qint64 id = meta["id"].toLongLong();
         MusicInfo musicInfo = musicInfoMap[id];
@@ -205,8 +206,8 @@ void NeteaseMusic::setPlaylist(const QList<QString>& singerName, const QList<QSt
                             {"type", "song"},
                             {"id", musicInfo.id}
                         };
-                        Player::instance()->play(musicInfo.url, AudioPlaylist::NORMAL, meta);
-                        qDebug() << "play" << musicInfo.name << musicInfo.url;
+                        helper->getPlayer()->play(musicInfo.url, AudioPlaylist::NORMAL, meta);
+                        qDebug() << "play" << musicInfo.name << musicInfo.artist << musicInfo.url;
                         break;
                     }
                 }

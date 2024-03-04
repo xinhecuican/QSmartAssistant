@@ -8,14 +8,7 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia)
-FILE(GLOB SRC_FILES "*.cpp")
-FILE(GLOB HEAD_FILES "*.h")
-
-source_group("Head Files" FILES ${HEAD_FILES} )
-source_group("Src Files" FILES ${SRC_FILES} )
-
-add_library(${PROJECT_NAME} SHARED ${SRC_FILES} ${HEAD_FILES})
-set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_PATH})
+PLUGIN_COMMON()
 target_include_directories(${PROJECT_NAME} PRIVATE ../../lib/netease_music/include)
 link_directories(${PROJECT_SOURCE_DIR}/../../lib/netease_music/lib)
 set(NETEASE_LIB_DIR ${PROJECT_SOURCE_DIR}/../../lib/netease_music/lib)

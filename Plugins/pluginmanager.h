@@ -4,6 +4,7 @@
 #include "Plugin.h"
 #include "../Utils/ParsedIntent.h"
 #include "IPluginHelper.h"
+
 class PluginManager : public QObject
 {
     Q_OBJECT

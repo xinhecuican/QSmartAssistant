@@ -5,6 +5,7 @@
 #include "Vad/VadModel.h"
 #include "../Recorder/recorder.h"
 #include "Process/audioprocess.h"
+#include "../Recorder/player.h"
 /**
  * Wakeup robot, contains preProcess, wakeup, vad
  * if you use preprocess, config must fit frame size of preprocess
@@ -15,7 +16,7 @@ class Wakeup : public QObject
 {
     Q_OBJECT
 public:
-    Wakeup(QObject* parent=nullptr);
+    Wakeup(Player* player, QObject* parent=nullptr);
     ~Wakeup();
     void startWakeup();
     void stopWakeup();
@@ -30,6 +31,7 @@ signals:
     void finishResponse();
 private:
     enum DetectState{IDLE, WAKEUP, VAD};
+    Player* player;
     WakeupModel* wakeupModel;
     VadModel* vadModel;
     Recorder* recorder;
@@ -43,6 +45,7 @@ private:
     QByteArray cacheData;
     int cachePos;
     bool isResponse;
+    bool isPlaying;
 };
 
 #endif // WAKEUP_H

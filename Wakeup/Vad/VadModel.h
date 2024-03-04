@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QDateTime>
-#include "../Utils/config.h"
+#include "../../Utils/config.h"
 
 class VadModel : public QObject{
     Q_OBJECT

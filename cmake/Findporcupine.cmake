@@ -2,14 +2,13 @@ find_package(PkgConfig)
 set(LIB_NAME porcupine)
 set(${LIB_NAME}_ROOT_DIR ${PROJECT_SOURCE_DIR}/lib/${LIB_NAME})
 set(${LIB_NAME}_INCLUDE_BASE ${${LIB_NAME}_ROOT_DIR}/include)
-macro(_FIND_INCLUDE foldername headername)
+macro(_FIND_INCLUDE headername)
     if(NOT ${LIB_NAME}_${foldername}_INCLUDE_DIR)
         find_path(${LIB_NAME}_${foldername}_INCLUDE_DIR
-            NAMES ${foldername}/${headername}
-            PATHS ${${LIB_NAME}_ROOT_DIR}/include /usr/local/include)
+            NAMES ${headername}
+            HINTS ${${LIB_NAME}_ROOT_DIR}/include /usr/local/include)
 
         list(APPEND ${LIB_NAME}_INCLUDE_DIR ${${LIB_NAME}_${foldername}_INCLUDE_DIR})
-        list(REMOVE_DUPLICATES ${LIB_NAME}_INCLUDE_DIR)
     endif()
 endmacro(_FIND_INCLUDE)
 macro(_FIND_LIBRARY libname)
@@ -20,8 +19,8 @@ macro(_FIND_LIBRARY libname)
         list(APPEND ${LIB_NAME}_LIBRARY ${${LIB_NAME}_${libname}_LIBRARY})
     endif()
 endmacro(_FIND_LIBRARY)
-_FIND_INCLUDE(${${LIB_NAME}_INCLUDE_BASE} picovoice.h)
-_FIND_INCLUDE(${${LIB_NAME}_INCLUDE_BASE} pv_porcupine.h)
+_FIND_INCLUDE(picovoice.h)
+_FIND_INCLUDE(pv_porcupine.h)
 _FIND_LIBRARY(pv_porcupine)
 
 if(${LIB_NAME}_LIBRARY)

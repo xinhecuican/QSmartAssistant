@@ -4,9 +4,10 @@
 
 Robot::Robot(QObject* parent) : QObject(parent)
 {
+    player = new Player(this);
     Config::instance()->loadConfig();
-    wakeup = new Wakeup(this);
-    conversation = new Conversation(this);
+    wakeup = new Wakeup(player, this);
+    conversation = new Conversation(player, this);
     connect(wakeup, &Wakeup::dataArrive, this, [=](QByteArray data){
         conversation->receiveData(data);
     });
@@ -22,6 +23,10 @@ Robot::Robot(QObject* parent) : QObject(parent)
         stop();
         QCoreApplication::exit();
     });
+}
+
+Robot::~Robot(){
+
 }
 
 void Robot::start(){

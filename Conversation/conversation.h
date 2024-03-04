@@ -7,12 +7,13 @@
 #include "NLU/nlumodel.h"
 #include "../Plugins/pluginmanager.h"
 #include "../Plugins/IPluginHelper.h"
+#include "../Recorder/player.h"
 
 class Conversation : public QObject, public IPluginHelper
 {
     Q_OBJECT
 public:
-    Conversation(QObject* parent=nullptr);
+    Conversation(Player* player, QObject* parent=nullptr);
     void receiveData(const QByteArray& data);
     /**
      * @brief dialog
@@ -25,6 +26,8 @@ public:
     QString question(const QString& question) override;
     void onResponse();
     void exit() override;
+    Player* getPlayer() override;
+    Config* getConfig() override;
 signals:
     void finish();
     void requestResponse();
@@ -32,6 +35,7 @@ signals:
 public slots:
     void sayRawData(QByteArray data, int sampleRate);
 private:
+    Player* player;
     ASRModel* asr;
     TTSModel* tts;
     NLUModel* nlu;

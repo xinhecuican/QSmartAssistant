@@ -33,7 +33,7 @@ add_executable(lowpower_robot WIN32 MACOSX_BUNDLE
     robot.cpp robot.h
     main.cpp
 )
-set_target_properties(lowpower_robot PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN:${CONFIG_PATH}/plugins")
+set_target_properties(lowpower_robot PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN")
 macro(install_depend target_name )
     get_target_property(DLLS ${target_name} IMPORTED_LOCATION)
     add_custom_target(TARGET_${target_name} ALL
@@ -86,13 +86,7 @@ if(TEST)
 endif()
 
 file(COPY Data/ DESTINATION ${CONFIG_PATH}/Data)
-install(TARGETS lowpower_robot
-        EXPORT MyLibTargets 
-        LIBRARY DESTINATION lib  # 动态库安装路径
-        ARCHIVE DESTINATION lib  # 静态库安装路径
-        RUNTIME DESTINATION bin  # 可执行文件安装路径
-        PUBLIC_HEADER DESTINATION include  # 头文件安装路径
-)
+
 install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/
     DESTINATION ${CMAKE_INSTALL_PREFIX}
     USE_SOURCE_PERMISSIONS
