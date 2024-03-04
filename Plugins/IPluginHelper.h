@@ -1,8 +1,9 @@
 #ifndef IPLUGINHELPER_H
 #define IPLUGINHELPER_H
 #include <QString>
+#include "../Utils/LPcommonGlobal.h"
 
-class IPluginHelper{
+class LPCOMMON_EXPORT IPluginHelper{
 public:
     virtual ~IPluginHelper(){}
     virtual void say(const QString& text, bool block=false)=0;

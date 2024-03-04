@@ -6,29 +6,29 @@
 #include "../Utils/AudioWriter.h"
 #include "../Recorder/player.h"
 #if defined(WAKEUP_PROCUPINE)
-#include "porcupinewakeup.h"
+#include "Wakeup/porcupinewakeup.h"
 #endif
-#include "openwakeup.h"
+#include "Wakeup/openwakeup.h"
 #if defined(WAKEUP_DUILITE)
-#include "duilitewakeup.h"
+#include "Wakeup/duilitewakeup.h"
 #endif
 #if defined(VAD_COBRA)
-#include "cobravad.h"
+#include "Vad/cobravad.h"
 #endif
 #if defined(VAD_F)
-#include "fvadmodel.h"
+#include "Vad/fvadmodel.h"
 #endif
 #if defined(VAD_SILERO)
-#include "silerovad.h"
+#include "Vad/silerovad.h"
 #endif
 #if defined(VAD_DUILITE)
-#include "duilitevad.h"
+#include "Vad/duilitevad.h"
 #endif
 #if defined(PROCESS_KOALA)
-#include "koalaaudioprocess.h"
+#include "Process/koalaaudioprocess.h"
 #endif
 #if defined(PROCESS_SPEEX)
-#include "speexaudioprocess.h"
+#include "Process/speexaudioprocess.h"
 #endif
 
 Wakeup::Wakeup(QObject* parent)

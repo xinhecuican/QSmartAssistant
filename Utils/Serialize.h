@@ -6,7 +6,9 @@
 #include<QJsonObject>
 #include<QJsonDocument>
 #include<QDebug>
-class Serialize
+#include "LPcommonGlobal.h"
+
+class LPCOMMON_EXPORT Serialize
 {
 public:
     static void serialize(QString path, Serializable* point);

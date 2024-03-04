@@ -2,8 +2,8 @@
 #define CONFIG_H
 #include "Template.h"
 #include "Serializable.h"
-
-class Config : public Serializable
+#include "LPcommonGlobal.h"
+class LPCOMMON_EXPORT Config : public Serializable
 {
     DECLARE_INSTANCE(Config)
 public:

@@ -1,3 +1,4 @@
+#!/bin/bash
 current_path=$(cd $(dirname $0); pwd)
 parent_path=$(dirname ${current_path})
 lib_path=${parent_path}/lib/netease_music

@@ -3,6 +3,7 @@
 #include <QString>
 #include <QList>
 #include <QDebug>
+#include "LPcommonGlobal.h"
 
 struct IntentSlot{
     QString name;

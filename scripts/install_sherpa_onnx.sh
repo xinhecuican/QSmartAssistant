@@ -1,3 +1,4 @@
+#!/bin/bash
 current_path=$(cd $(dirname $0); pwd)
 parent_path=$(dirname ${current_path})
 lib_path=${parent_path}/lib/sherpa_onnx
@@ -14,7 +15,7 @@ cmake \
   -DCMAKE_INSTALL_PREFIX=/tmp/sherpa-onnx/shared \
   ..
 
-make -j6
+make -j `nproc`
 make install
 
 popd

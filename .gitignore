@@ -75,3 +75,4 @@ Data/
 lib/
 build*/
 .vscode/
+ModelConfig.pri

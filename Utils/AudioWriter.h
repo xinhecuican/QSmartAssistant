@@ -6,8 +6,9 @@
 #include <QFile>
 #include <QDebug>
 #include <math.h>
+#include "LPcommonGlobal.h"
 
-class AudioWriter{
+class LPCOMMON_EXPORT AudioWriter{
 public:
     struct WAVHEADER{
         //RIFF

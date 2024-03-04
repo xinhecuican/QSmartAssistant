@@ -8,8 +8,9 @@
 #include "audiobuffer.h"
 #include <QAudioOutput>
 #include <QProcess>
+#include "../Utils/LPcommonGlobal.h"
 
-class Player : public QObject
+class LPCOMMON_EXPORT Player : public QObject
 {
     DECLARE_INSTANCE(Player)
     Q_OBJECT

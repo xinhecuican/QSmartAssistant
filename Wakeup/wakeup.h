@@ -1,10 +1,10 @@
 #ifndef WAKEUP_H
 #define WAKEUP_H
 #include <QObject>
-#include "WakeupModel.h"
-#include "VadModel.h"
+#include "Wakeup/WakeupModel.h"
+#include "Vad/VadModel.h"
 #include "../Recorder/recorder.h"
-#include "audioprocess.h"
+#include "Process/audioprocess.h"
 /**
  * Wakeup robot, contains preProcess, wakeup, vad
  * if you use preprocess, config must fit frame size of preprocess

@@ -5,8 +5,9 @@
 #include <QThread>
 #include <QAudioInput>
 #include "recordhandler.h"
+#include "../Utils/LPcommonGlobal.h"
 
-class Recorder : public QObject {
+class LPCOMMON_EXPORT Recorder : public QObject {
     Q_OBJECT
 public:
     Recorder(int chunkSize=1600, QObject* parent=nullptr);

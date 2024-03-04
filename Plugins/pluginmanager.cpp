@@ -1,7 +1,8 @@
 #include "pluginmanager.h"
 #include "../Utils/config.h"
 #include <QFile>
-#include "PluginReflector.h"
+#include <QPluginLoader>
+#include <QDir>
 
 PluginManager::PluginManager(IPluginHelper* helper, QObject* parent)
     :QObject(parent),
@@ -20,14 +21,25 @@ void PluginManager::loadPlugin(){
     }
     while(!file.atEnd()){
         QString pluginName = file.readLine().trimmed();
-        Plugin* plugin = qobject_cast<Plugin*>(PluginReflector::newInstance(pluginName, Q_ARG(IPluginHelper*, helper), Q_ARG(QObject*, this)));
-        qInfo() << "load plugin" << pluginName;
-        plugins.append(plugin);
+        QPluginLoader loader(QDir::homePath() + "/.config/lowpower_robot/plugins/lib" + pluginName + ".so");
+        QObject *plugin = loader.instance();
+        if(plugin){
+            auto centerInterface = qobject_cast<Plugin*>(plugin);
+            if(centerInterface){
+                connect(plugin, SIGNAL(sendMessage(PluginMessage)), this, SLOT(handleMessage(PluginMessage)));
+                centerInterface->setPluginHelper(helper);
+                pluginMap[centerInterface->getName()] = centerInterface;
+                plugins.append(centerInterface);
+                qInfo() << "load plugin" << pluginName;
+            }
+        }
     }
     file.close();
 }
 
 void PluginManager::handlePlugin(const QString& text, const ParsedIntent& parsedIntent){
+    this->text = text;
+    this->parsedIntent = parsedIntent;
     if(immersive){
         bool hit = immersivePlugin->handle(text, parsedIntent, immersive);
         if(hit) qInfo() << "hit plugin immersive" << immersivePlugin->getName();
@@ -59,5 +71,13 @@ void PluginManager::handlePlugin(const QString& text, const ParsedIntent& parsed
 void PluginManager::quitImmerSive(const QString& name){
     if(immersive && immersivePlugin->getName() == name){
         immersive = false;
+    }
+}
+
+void PluginManager::handleMessage(PluginMessage message){
+    if(pluginMap.contains(message.dst)){
+        bool immersive = false;
+        if(message.message == "handle") pluginMap[message.dst]->handle(text, parsedIntent, immersive);
+        else pluginMap[message.dst]->recvMessage(message);
     }
 }

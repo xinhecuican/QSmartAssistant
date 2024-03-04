@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     // 设置PWD
     QString applicationDirPathStr = QCoreApplication::applicationDirPath();
     QDir::setCurrent(applicationDirPathStr);
+    QCoreApplication::addLibraryPath(QDir::homePath() + "/.config/lowpower_robot/plugins/lib");
     Robot* robot = new Robot(&a);
     robot->start();
     a.connect(&a, &QCoreApplication::aboutToQuit, &a, [=]() {

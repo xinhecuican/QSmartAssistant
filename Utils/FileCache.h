@@ -4,8 +4,9 @@
 #include "Template.h"
 #include "../Utils/config.h"
 #include <QDir>
+#include "LPcommonGlobal.h"
 
-class FileCache{
+class LPCOMMON_EXPORT FileCache{
     DECLARE_INSTANCE(FileCache)
 public:
     FileCache(){
