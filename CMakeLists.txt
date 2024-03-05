@@ -84,6 +84,9 @@ if(TEST)
         Test/tst_sherpa.h Test/TestPluginHelper.h
     )
 endif()
+if(DEBUG_PROCESS)
+    target_compile_definitions(lowpower_robot  PUBLIC -DDEBUG_PROCESS)
+endif()
 
 file(COPY Data/ DESTINATION ${CONFIG_PATH}/Data)
 

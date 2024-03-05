@@ -6,11 +6,12 @@
 
 class DuiliteASR : public ASRModel
 {
+    Q_OBJECT
 public:
     DuiliteASR(QObject* parent=nullptr);
     ~DuiliteASR();
     bool isStream() override;
-    QString detect(const QByteArray& data, bool isLast=false) override;
+    void detect(const QByteArray& data, bool isLast=false) override;
     void stop() override;
     QString result;
 private:

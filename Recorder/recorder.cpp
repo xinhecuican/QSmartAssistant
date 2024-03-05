@@ -1,5 +1,6 @@
 #include "recorder.h"
 #include <QDebug>
+#include <QDateTime>
 
 Recorder::Recorder(int chunkSize, QObject* parent) :
     QObject(parent),
@@ -28,6 +29,7 @@ Recorder::Recorder(int chunkSize, QObject* parent) :
     input = new QAudioInput(devInfo, format, this);
     connect(input, &QAudioInput::stateChanged, this, [=](QAudio::State state){
         qDebug() << state;
+        this->state = state;
     });
 }
 
@@ -37,6 +39,9 @@ void Recorder::startRecord(){
     connect(buffer, &QIODevice::readyRead, this, [=](){
         int bytesReady = input->bytesReady();
         while(bytesReady > chunkSize){
+            if(state == QAudio::SuspendedState){
+                return;
+            }
             emit dataArrive(buffer->read(chunkSize));
             bytesReady -= chunkSize;
         }

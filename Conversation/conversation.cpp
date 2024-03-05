@@ -25,10 +25,10 @@ Conversation::Conversation(Player* player, QObject* parent) : QObject(parent), p
     tts = nullptr;
     nlu = nullptr;
 #if defined(ASR_SHERPA)
-    asr = new SherpaASR(this);
+    asr = new SherpaASR();
 #endif
 #if defined(ASR_DUILITE)
-    asr = new DuiliteASR(this);
+    asr = new DuiliteASR();
 #endif
 #if defined(NLU_BAIDU)
     nlu = new BaiduNLU(this);
@@ -43,6 +43,29 @@ Conversation::Conversation(Player* player, QObject* parent) : QObject(parent), p
     if(tts == nullptr) qCritical() << "undefine tts mxodel";
     if(nlu == nullptr) qCritical() << "undefine nlu model";
 
+    if(asr != nullptr){
+        asr->moveToThread(&thread);
+        connect(this, &Conversation::feedASR, asr, &ASRModel::detect);
+        connect(this, &Conversation::clearASR, asr, &ASRModel::clear);
+        connect(asr, &ASRModel::recognized, this, [=](QString result){
+            qInfo() << "asr parse" << result;
+            if(!isResponse){
+                if(result != ""){
+                    ParsedIntent parsedIntent = nlu->parseIntent(result);
+                    parsedIntent.toString();
+                    pluginManager->handlePlugin(result, parsedIntent);
+                }
+                asrEventLoop.quit();
+                emit finish();
+            }
+            else{
+                resultCache = result;
+                eventLoop.quit();
+            }
+            cache.clear();
+        });
+        thread.start();
+    }
     if(tts != nullptr) connect(tts, &TTSModel::dataArrive, this, &Conversation::sayRawData);
     pluginManager = new PluginManager(this);
     pluginManager->loadPlugin();
@@ -58,7 +81,7 @@ Conversation::Conversation(Player* player, QObject* parent) : QObject(parent), p
 
 void Conversation::receiveData(const QByteArray& data){
     if(asr->isStream()){
-        resultCache.append(asr->detect(data));
+        emit feedASR(data);
     }
     else{
         cache.append(data);
@@ -67,20 +90,14 @@ void Conversation::receiveData(const QByteArray& data){
 
 void Conversation::dialog(bool stop){
     if(!stop){
-        if(!asr->isStream()) resultCache = asr->detect(cache);
-        else resultCache += asr->detect(QByteArray(), true);
-        qInfo() << "asr parse" << resultCache;
-        if(resultCache != ""){
-            QString result = resultCache;
-            resultCache.clear();
-            cache.clear();
-            ParsedIntent parsedIntent = nlu->parseIntent(result);
-            parsedIntent.toString();
-            pluginManager->handlePlugin(result, parsedIntent);
-        }
-        emit finish();
+        isResponse = false;
+        if(!asr->isStream()) emit feedASR(cache, true);
+        else emit feedASR(QByteArray(), true);
+//        asrEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
     }
-    resultCache.clear();
+    else{
+        emit clearASR();
+    }
     cache.clear();
 }
 
@@ -104,7 +121,9 @@ void Conversation::sayRawData(QByteArray data, int sampleRate){
 }
 
 void Conversation::stop(){
-    asr->stop();
+    thread.quit();
+    thread.wait();
+    asr->deleteLater();
     nlu->stop();
     tts->stop();
 }
@@ -124,9 +143,9 @@ QString Conversation::question(const QString& question){
 }
 
 void Conversation::onResponse(){
-    if(!asr->isStream()) resultCache = asr->detect(cache);
-    else resultCache += asr->detect(QByteArray(), true);
-    eventLoop.quit();
+    isResponse = true;
+    if(!asr->isStream()) emit feedASR(cache, true);
+    else emit feedASR(QByteArray(), true);
 }
 
 void Conversation::exit(){

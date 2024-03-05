@@ -7,9 +7,6 @@ Player::Player(QObject* parent)
     : QObject(parent)
 {
     player = new QMediaPlayer(this);
-    connect(player, &QMediaPlayer::stateChanged, this, [=](QMediaPlayer::State state){
-        qDebug() << "player " << state << this;
-    });
     playlist = new AudioPlaylist(player);
     connect(playlist, &AudioPlaylist::playEnd, this, [=](QVariant meta){
         emit playEnd(meta);

@@ -54,13 +54,13 @@ DuiliteASR::~DuiliteASR(){
     stop();
 }
 
-QString  DuiliteASR::detect(const QByteArray& data, bool isLast){
+void  DuiliteASR::detect(const QByteArray& data, bool isLast){
     Q_UNUSED(isLast)
     int ret = feedFunc(asr, (char*)data.data(), data.length());
     if(ret){
         qWarning() << "asr feed error" << ret;
     }
-    return result;
+    emit recognized(result);
 }
 
 bool DuiliteASR::isStream(){

@@ -87,7 +87,7 @@ Wakeup::Wakeup(Player* player, QObject* parent)
         exit(0);
     });
 #endif
-    cacheData.resize(wakeupModel->getChunkSize());
+    cacheData.resize(wakeupModel->getChunkSize() * 4);
     connect(recorder, &Recorder::dataArrive, this, [=](QByteArray data){
 #ifdef DEBUG_PROCESS
         debugRaw.append(data);
@@ -134,10 +134,13 @@ Wakeup::Wakeup(Player* player, QObject* parent)
         if(detectState == WAKEUP){
             if(stop) detectState = WAKEUP;
             else {
+                qInfo() << "wakeup";
                 detectState = IDLE;
                 isPlaying = player->isPlaying();
                 if(isPlaying) player->pause();
+                recorder->pause();
                 player->playSoundEffect(Config::getDataPath("start.wav"), true);
+                recorder->resume();
                 vadModel->startDetect();
                 detectState = VAD;
             }

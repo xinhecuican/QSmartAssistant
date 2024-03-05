@@ -114,8 +114,6 @@ void NeteaseMusic::doHandle(const QString& text,
     }
     else{
         qInfo() << "netease can't understand" << text;
-        parsedIntent.toString();
-        isImmersive = false;
     }
 }
 

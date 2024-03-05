@@ -26,6 +26,7 @@ private:
     QIODevice* buffer;
     int chunkSize;
     QThread thread;
+    QAudio::State state;
 //    RecordHandler* handler;
 
 //signals:

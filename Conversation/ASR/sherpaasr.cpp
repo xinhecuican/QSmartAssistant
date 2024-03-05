@@ -81,7 +81,7 @@ bool SherpaASR::isStream(){
     return _isStream;
 }
 
-QString SherpaASR::detect(const QByteArray& data, bool isLast){
+void SherpaASR::detect(const QByteArray& data, bool isLast){
     char* rawData = const_cast<char*>(data.data());
     const int16_t* intData = reinterpret_cast<int16_t*>(rawData);
     int dataLength = data.length() / 2;
@@ -103,10 +103,10 @@ QString SherpaASR::detect(const QByteArray& data, bool isLast){
         if (strlen(r->text)) {
             QString result = r->text;
             DestroyOfflineRecognizerResult(r);
-            return result;
+            emit recognized(result);
         }
         DestroyOfflineRecognizerResult(r);
-        return "";
+        emit recognized("");
     }
     else{
         int currentPos = 0;
@@ -142,7 +142,11 @@ QString SherpaASR::detect(const QByteArray& data, bool isLast){
             onlineStream = CreateOnlineStream(onlineRecognizer);
         }
         DestroyOnlineRecognizerResult(r);
-        return result;
+        this->result.append(result);
+        if(isLast){
+            emit recognized(this->result);
+            this->result = "";
+        }
     }
 }
 
@@ -158,4 +162,8 @@ void SherpaASR::stop(){
         }
         valid = false;
     }
+}
+
+void SherpaASR::clear(){
+    result = "";
 }

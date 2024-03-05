@@ -8,6 +8,7 @@
 #include "../Plugins/pluginmanager.h"
 #include "../Plugins/IPluginHelper.h"
 #include "../Recorder/player.h"
+#include <QThread>
 
 class Conversation : public QObject, public IPluginHelper
 {
@@ -35,6 +36,11 @@ signals:
 public slots:
     void sayRawData(QByteArray data, int sampleRate);
 private:
+signals:
+    void feedASR(const QByteArray& data, bool isLast=false);
+    void onRecognize(QString result);
+    void clearASR();
+private:
     Player* player;
     ASRModel* asr;
     TTSModel* tts;
@@ -46,6 +52,9 @@ private:
     qint64 index;
     qint64 endIndex;
     QEventLoop ttsEventLoop;
+    bool isResponse;
+    QThread thread;
+    QEventLoop asrEventLoop;
 };
 
 #endif // CONVERSATION_H
