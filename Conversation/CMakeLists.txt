@@ -43,7 +43,7 @@ if(TTS_SHERPA)
     )
 endif()
 
-if(TTS_SHERPA OR ASR_SHERPA)
+if(TTS_SHERPA OR ASR_SHERPA OR WAKEUP_SHERPA)
     add_custom_lib(sherpa_onnx)
     add_custom_file(sherpa_onnx ${${LIB_NAME}_ROOT_DIR}/lib/lib*)
 endif()

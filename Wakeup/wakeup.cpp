@@ -8,9 +8,17 @@
 #if defined(WAKEUP_PORCUPINE)
 #include "Wakeup/porcupinewakeup.h"
 #endif
+#if defined(WAKEUP_OPEN)
 #include "Wakeup/openwakeup.h"
+#endif
 #if defined(WAKEUP_DUILITE)
 #include "Wakeup/duilitewakeup.h"
+#endif
+#if defined(WAKEUP_SHERPA)
+#include "Wakeup/sherpawakeup.h"
+#endif
+#if defined(WAKEUP_SNOWBOY)
+#include "Wakeup/snowboywakeup.h"
 #endif
 #if defined(VAD_COBRA)
 #include "Vad/cobravad.h"
@@ -52,6 +60,12 @@ Wakeup::Wakeup(Player* player, QObject* parent)
 #endif
 #if defined(WAKEUP_DUILITE)
     wakeupModel = new DuiliteWakeup(this);
+#endif
+#if defined(WAKEUP_SHERPA)
+    wakeupModel = new SherpaWakeup(this);
+#endif
+#if defined(WAKEUP_SNOWBOY)
+    wakeupModel = new SnowboyWakeup(this);
 #endif
 
 #if defined(VAD_COBRA)

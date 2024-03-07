@@ -7,6 +7,7 @@ target_sources(lowpower_robot PUBLIC
 target_sources(lpcommon PUBLIC IPluginHelper.h)
 list(APPEND COMMON_HEADERS IPluginHelper.h)
 set(PLUGIN_PATH ${CONFIG_PATH}/plugins)
+option(BUILD_PLUGINS "build plugins" ON)
 
 # 获取目录下的子目录名
 # subdirnamelist 子目录名称列表，输出变量，调用处定义，填充时不能加${}
@@ -76,5 +77,6 @@ macro(PLUGIN_COMMON)
     set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_PATH})
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN")
 endmacro()
-
-ADD_ALL_SUBDIRECTORY()
+if(BUILD_PLUGINS)
+    ADD_ALL_SUBDIRECTORY()
+endif()

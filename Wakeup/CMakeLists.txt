@@ -6,6 +6,7 @@ set(CMAKE_AUTOMOC ON)
 option(WAKEUP_PORCUPINE "porcupine wakeup" OFF)
 option(WAKEUP_OPEN "open wakeup" OFF)
 option(WAKEUP_DUILITE "duilite wakeup" ON)
+option(WAKEUP_SNOWBOY, "snowboy wakeup" OFF)
 
 # vad
 option(VAD_COBRA "cobra vad" OFF)
@@ -23,7 +24,6 @@ target_sources(lowpower_robot PUBLIC
     Process/audioprocess.h
     Vad/VadModel.h
     Wakeup/WakeupModel.h
-    Wakeup/openwakeup.h Wakeup/openwakeup.cpp
 )
 
 if(WAKEUP_DUILITE)
@@ -33,12 +33,35 @@ if(WAKEUP_DUILITE)
     )
 endif()
 
+if(WAKEUP_OPEN)
+    target_compile_definitions(lowpower_robot  PUBLIC -DWAKEUP_OPEN)
+    target_sources(lowpower_robot PUBLIC
+        Wakeup/openwakeup.cpp Wakeup/openwakeup.h
+    )
+endif()
+
 if(WAKEUP_PORCUPINE)
     target_compile_definitions(lowpower_robot  PUBLIC -DWAKEUP_PORCUPINE)
     target_sources(lowpower_robot PUBLIC
         Wakeup/porcupinewakeup.cpp Wakeup/porcupinewakeup.h
     )
     add_custom_lib(porcupine)
+endif()
+
+if(WAKEUP_SHERPA)
+    target_compile_definitions(lowpower_robot PUBLIC -DWAKEUP_SHERPA)
+    target_sources(lowpower_robot PUBLIC
+        Wakeup/sherpawakeup.cpp Wakeup/sherpawakeup.h
+    )
+endif()
+
+if(WAKEUP_SNOWBOY)
+    target_compile_definitions(lowpower_robot PUBLIC -DWAKEUP_SNOWBOY)
+    target_sources(lowpower_robot PUBLIC
+        Wakeup/snowboywakeup.cpp Wakeup/snowboywakeup.h
+        Wakeup/snowboywrapper.cpp Wakeup/snowboywrapper.h
+    )
+    add_custom_lib(snowboy)
 endif()
 
 if(VAD_COBRA)

@@ -2,7 +2,7 @@
 #include "../../Utils/config.h"
 #include <QDebug>
 
-PorcupineWakeup::PorcupineWakeup(QObject* parent) : WakeupModel(parent),valid(false)
+PorcupineWakeup::PorcupineWakeup(QObject* parent) : WakeupModel(parent)
 {
     QJsonObject porcupineConfig = Config::instance()->getConfig("porcupine");
     std::string keyword = Config::getDataPath(porcupineConfig.find("keyword")->toString()).toStdString();

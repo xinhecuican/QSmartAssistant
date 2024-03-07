@@ -13,7 +13,6 @@ public:
     int getChunkSize() override;
 private:
     pv_porcupine* porcupine;
-    bool valid;
     int chunkSize;
 };
 

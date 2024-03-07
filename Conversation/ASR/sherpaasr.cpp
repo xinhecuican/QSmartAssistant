@@ -33,7 +33,7 @@ SherpaASR::SherpaASR(QObject* parent) : ASRModel(parent) {
     else{
         memset(&onlineConfig, 0, sizeof(onlineConfig));
         onlineConfig.model_config.debug = 0;
-        onlineConfig.model_config.num_threads = 1;
+        onlineConfig.model_config.num_threads = 2;
         onlineConfig.model_config.provider = "cpu";
 
         onlineConfig.decoding_method = "greedy_search";

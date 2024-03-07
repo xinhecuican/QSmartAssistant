@@ -19,6 +19,7 @@ file(GLOB COMMON_HEADERS Utils/*.h Recorder/*.h)
 # test
 option(TEST "启用测试" OFF)
 option(DEBUG_PROCESS "测试音频前处理" OFF)
+set(WAKEUP_SHERPA OFF cache BOOL)
 set(CONFIG_PATH "$ENV{HOME}/.config/lowpower_robot")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
