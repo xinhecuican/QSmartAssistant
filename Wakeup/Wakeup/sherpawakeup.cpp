@@ -11,7 +11,8 @@ SherpaWakeup::SherpaWakeup(QObject* parent) : WakeupModel(parent){
     QString model2(model);
     std::string modelS2 = model2.replace("%1", "encoder").toStdString();
     std::string hotwords = Config::getDataPath(config.find("hotword")->toString()).toStdString();
-    float thres = config.value("thres").toDouble();
+    float thres = config.value("thres").toDouble(0.5);
+    float score = config.value("score").toDouble(1);
     chunkSize = Config::instance()->getConfig("wakeup").value("chunkSize").toInt();
     SherpaOnnxKeywordSpotterConfig onlineConfig;
     memset(&onlineConfig, 0, sizeof(onlineConfig));
@@ -30,6 +31,7 @@ SherpaWakeup::SherpaWakeup(QObject* parent) : WakeupModel(parent){
     onlineConfig.model_config.transducer.joiner = modelS.c_str();
 
     onlineConfig.keywords_threshold = thres;
+    onlineConfig.keywords_score = score;
     onlineConfig.keywords_file = hotwords.c_str();
 
     spotter = CreateKeywordSpotter(&onlineConfig);

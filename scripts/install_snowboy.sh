@@ -27,12 +27,13 @@ mv include/snowboy-detect.h ${lib_path}/include
 mv resoures/common.res ${parent_path}/Data
 libname=libsnowboy-detect.a
 get_arch=`arch`
-if grep -q "Raspberry Pi" /sys/firmware/devicetree/base/model; then
-    mv lib/rpi/${libname} ${lib_path}/lib
-elif [[ $get_arch =~ "x86_64" ]];then
+
+if [[ $get_arch =~ "x86_64" ]];then
     mv lib/ubuntu64/${libname} ${lib_path}/lib
 elif [[ $get_arch =~ "aarch64" ]];then
     mv lib/aarch64-ubuntu1604/${libname} ${lib_path}/lib
+elif grep -q "Raspberry Pi" /sys/firmware/devicetree/base/model; then
+    mv lib/rpi/${libname} ${lib_path}/lib
 else
     echo "unknown arch"
 fi

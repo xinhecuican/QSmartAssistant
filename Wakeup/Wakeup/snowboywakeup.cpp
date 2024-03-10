@@ -22,7 +22,13 @@ SnowboyWakeup::~SnowboyWakeup(){
 void SnowboyWakeup::detect(const QByteArray& data) {
     char* rawData = const_cast<char*>(data.data());
     const int16_t* intData = reinterpret_cast<int16_t*>(rawData);
-    detector->RunDetection(intData, data.size()/2);
+    int ret = detector->RunDetection(intData, data.size()/2);
+    if(ret > 0){
+        emit detected(false);
+    }
+    else if(ret == -1){
+        qWarning() << "snowboy detect error" << ret;
+    }
 }
 
 void SnowboyWakeup::stop(){

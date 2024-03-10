@@ -11,6 +11,7 @@ public:
     ~SpeexAudioProcess();
     void preProcess(QByteArray& data) override;
     void stop() override;
+    int getChunkSize() override;
 private:
     SpeexPreprocessState *preprocState;
     int frameSize;

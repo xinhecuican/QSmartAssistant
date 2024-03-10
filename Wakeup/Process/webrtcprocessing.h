@@ -12,6 +12,7 @@ public:
     ~WebrtcProcessing();
     void preProcess(QByteArray& data) override;
     void stop() override;
+    int getChunkSize() override;
 private:
     webrtc::AudioProcessing* apm;
     bool enableAEC;

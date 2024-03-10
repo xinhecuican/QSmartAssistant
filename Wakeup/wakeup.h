@@ -29,6 +29,10 @@ signals:
     void dataArrive(QByteArray data);
     void detected(bool stop);
     void finishResponse();
+
+private:
+    void preProcess();
+
 private:
     enum DetectState{IDLE, WAKEUP, VAD};
     Player* player;
@@ -43,7 +47,7 @@ private:
     QByteArray debugRaw;
 #endif
     QByteArray cacheData;
-    int cachePos;
+    QByteArray rawData;
     bool isResponse;
     bool isPlaying;
 };

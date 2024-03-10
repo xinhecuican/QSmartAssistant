@@ -22,6 +22,8 @@ public:
     virtual void postProcess(QByteArray& data){Q_UNUSED(data);}
 
     virtual void stop(){}
+
+    virtual int getChunkSize() { return 0; }
 protected:
     bool valid;
 };

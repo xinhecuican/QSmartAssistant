@@ -42,6 +42,19 @@
 		"speakerid": 66,
 		"extra_volume": 0
 	},
+    "sherpa_wakeup": {
+        "model": "sherpa-kws/%1-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
+        "thres": 0.5,
+        "score": 0.5,
+        "tokens": "sherpa-kws/tokens.txt",
+        "hotword": "sherpa-kws/keywords.txt"
+    },
+    "snowboy": {
+        "resource": "common.res",
+        "thres": 0.8,
+        "model": "snowboy.umdl",
+        "chunkSize": 3200
+    },
 	"unit":{
 		"apiKey": "c6AcEFLAYjp7jAezYekKlCI2",
 		"secret": "IMLmMjXajZlF5FpDlAcyBGVN3XrzuINX",

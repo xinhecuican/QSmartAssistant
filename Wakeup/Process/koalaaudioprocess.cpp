@@ -46,3 +46,7 @@ void KoalaAudioProcess::stop(){
         valid = false;
     }
 }
+
+int KoalaAudioProcess::getChunkSize(){
+    return chunkSize;
+}

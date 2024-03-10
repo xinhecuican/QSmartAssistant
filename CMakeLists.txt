@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(lowpower_robot VERSION 1.0 LANGUAGES C CXX)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Set up AUTOMOC and some sensible defaults for runtime execution
@@ -19,7 +19,6 @@ file(GLOB COMMON_HEADERS Utils/*.h Recorder/*.h)
 # test
 option(TEST "启用测试" OFF)
 option(DEBUG_PROCESS "测试音频前处理" OFF)
-set(WAKEUP_SHERPA OFF cache BOOL)
 set(CONFIG_PATH "$ENV{HOME}/.config/lowpower_robot")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
@@ -36,10 +35,12 @@ add_executable(lowpower_robot WIN32 MACOSX_BUNDLE
 )
 set_target_properties(lowpower_robot PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN")
 macro(install_depend target_name )
-    get_target_property(DLLS ${target_name} IMPORTED_LOCATION)
-    add_custom_target(TARGET_${target_name} ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${DLLS} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    if(NOT TARGET TARGET_${target_name})
+        get_target_property(DLLS ${target_name} IMPORTED_LOCATION)
+        add_custom_target(TARGET_${target_name} ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${DLLS} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    endif()
 endmacro(install_depend)
 
 macro(add_custom_file target_name PATH)

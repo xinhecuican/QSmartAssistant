@@ -1,10 +1,10 @@
 #include "wakeup.h"
+#include "../Recorder/player.h"
+#include "../Utils/AudioWriter.h"
+#include "../Utils/config.h"
 #include <QDebug>
 #include <QSound>
 #include <QTimer>
-#include "../Utils/config.h"
-#include "../Utils/AudioWriter.h"
-#include "../Recorder/player.h"
 #if defined(WAKEUP_PORCUPINE)
 #include "Wakeup/porcupinewakeup.h"
 #endif
@@ -39,13 +39,8 @@
 #include "Process/speexaudioprocess.h"
 #endif
 
-Wakeup::Wakeup(Player* player, QObject* parent)
-    : QObject(parent),
-      player(player),
-      detectState(IDLE),
-      cachePos(0),
-      isResponse(false)
-{
+Wakeup::Wakeup(Player *player, QObject *parent)
+    : QObject(parent), player(player), detectState(IDLE), isResponse(false) {
     QJsonObject wakeupConfig = Config::instance()->getConfig("wakeup");
     int chunkSize = wakeupConfig.find("chunkSize")->toInt();
     recorder = new Recorder(chunkSize, this);
@@ -88,70 +83,79 @@ Wakeup::Wakeup(Player* player, QObject* parent)
     audioProcess = new SpeexAudioProcess(recorder->getFormat());
 #endif
 
-    if(wakeupModel == nullptr){
+    if (wakeupModel == nullptr) {
         qCritical() << "undefine wakeup model";
     }
-    if(vadModel == nullptr){
+    if (vadModel == nullptr) {
         qCritical() << "undefine vad model";
     }
 #ifdef DEBUG_PROCESS
-    QTimer::singleShot(10000, this, [=](){
-        AudioWriter::writeWav("out_enhance.wav", debugData, recorder->getFormat());
+    QTimer::singleShot(10000, this, [=]() {
+        AudioWriter::writeWav("out_enhance.wav", debugData,
+                              recorder->getFormat());
         AudioWriter::writeWav("out_ref.wav", debugRaw, recorder->getFormat());
         exit(0);
     });
 #endif
-    cacheData.resize(wakeupModel->getChunkSize() * 4);
-    connect(recorder, &Recorder::dataArrive, this, [=](QByteArray data){
+    connect(recorder, &Recorder::dataArrive, this, [=](QByteArray data) {
+        if (audioProcess != nullptr) {
+            rawData.append(data);
+        } else {
+            cacheData.append(data);
+        }
 #ifdef DEBUG_PROCESS
         debugRaw.append(data);
 #endif
-        switch(detectState){
-        case WAKEUP:{
-            if(audioProcess != nullptr) audioProcess->preProcess(data);
-            if(data.length() >= wakeupModel->getChunkSize()){
+        int index = 0;
+        switch (detectState) {
+        case WAKEUP: {
+            preProcess();
+            int remain = cacheData.length();
+            while (remain >= wakeupModel->getChunkSize()) {
+                QByteArray data =
+                    cacheData.mid(index, wakeupModel->getChunkSize());
                 wakeupModel->detect(data);
+                index += wakeupModel->getChunkSize();
+                remain -= wakeupModel->getChunkSize();
             }
-            else{
-                cacheData.replace(cachePos, data.length(), data);
-                cachePos += data.length();
-                if(cachePos >= wakeupModel->getChunkSize()){
-                    wakeupModel->detect(cacheData);
-                    cachePos = 0;
-                }
+            if (index > 0) {
+                cacheData.remove(0, index);
             }
             break;
         }
-        case VAD:{
-            if(audioProcess != nullptr) audioProcess->preProcess(data);
+        case VAD: {
+            preProcess();
             emit this->dataArrive(data);
-            if(data.length() >= vadModel->getChunkSize()){
+            int remain = cacheData.length();
+            while (remain >= vadModel->getChunkSize()) {
+                QByteArray data =
+                    cacheData.mid(index, vadModel->getChunkSize());
                 vadModel->detect(data);
+                index += vadModel->getChunkSize();
+                remain -= vadModel->getChunkSize();
             }
-            else{
-                cacheData.replace(cachePos, data.length(), data);
-                cachePos += data.length();
-                if(cachePos >= wakeupModel->getChunkSize()){
-                    vadModel->detect(cacheData);
-                    cachePos = 0;
-                }
+            if (index > 0) {
+                cacheData.remove(0, index);
             }
             break;
         }
-        case IDLE: break;
+        case IDLE:
+            break;
         }
 #ifdef DEBUG_PROCESS
         debugData.append(data);
 #endif
     });
-    connect(wakeupModel, &WakeupModel::detected, this, [=](bool stop){
-        if(detectState == WAKEUP){
-            if(stop) detectState = WAKEUP;
+    connect(wakeupModel, &WakeupModel::detected, this, [=](bool stop) {
+        if (detectState == WAKEUP) {
+            if (stop)
+                detectState = WAKEUP;
             else {
                 qInfo() << "wakeup";
                 detectState = IDLE;
                 isPlaying = player->isPlaying();
-                if(isPlaying) player->pause();
+                if (isPlaying)
+                    player->pause();
                 recorder->pause();
                 player->playSoundEffect(Config::getDataPath("start.wav"), true);
                 recorder->resume();
@@ -160,22 +164,25 @@ Wakeup::Wakeup(Player* player, QObject* parent)
             }
         }
     });
-    connect(vadModel, &VadModel::detected, this, [=](bool stop){
-        if(isResponse){
+    connect(vadModel, &VadModel::detected, this, [=](bool stop) {
+        if (isResponse) {
             isResponse = false;
             recorder->pause();
             detectState = IDLE;
             emit finishResponse();
             return;
         }
-        if(detectState == VAD){
-            if(stop) detectState = WAKEUP;
+        if (detectState == VAD) {
+            if (stop)
+                detectState = WAKEUP;
             else {
                 recorder->pause();
-                // if(audioProcess != nullptr) audioProcess->postProcess(detectData);
+                // if(audioProcess != nullptr)
+                // audioProcess->postProcess(detectData);
                 detectState = IDLE;
             }
-            if(isPlaying) player->resume();
+            if (isPlaying)
+                player->resume();
             player->playSoundEffect(Config::getDataPath("end.wav"));
             qInfo() << "vad" << stop;
             emit detected(stop);
@@ -183,37 +190,48 @@ Wakeup::Wakeup(Player* player, QObject* parent)
     });
 }
 
-Wakeup::~Wakeup(){
-    if(audioProcess != nullptr){
+Wakeup::~Wakeup() {
+    if (audioProcess != nullptr) {
         delete audioProcess;
         audioProcess = nullptr;
     }
 }
 
-void Wakeup::startWakeup(){
+void Wakeup::startWakeup() {
     recorder->startRecord();
     detectState = WAKEUP;
     detectData.clear();
 }
 
-void Wakeup::stopWakeup(){
+void Wakeup::stopWakeup() {
     recorder->stopRecord();
     wakeupModel->stop();
     vadModel->stop();
-    if(audioProcess != nullptr){
+    if (audioProcess != nullptr) {
         audioProcess->stop();
     }
     detectState = IDLE;
 }
 
-void Wakeup::resume(){
+void Wakeup::resume() {
     recorder->resume();
     detectState = WAKEUP;
 }
 
-void Wakeup::doResponse(){
+void Wakeup::doResponse() {
     vadModel->startDetect();
     detectState = VAD;
     isResponse = true;
     recorder->resume();
+}
+
+void Wakeup::preProcess() {
+    if (audioProcess != nullptr) {
+        while (rawData.size() >= audioProcess->getChunkSize()) {
+            QByteArray data = rawData.mid(0, audioProcess->getChunkSize());
+            audioProcess->preProcess(data);
+            cacheData.append(data);
+            rawData.remove(0, audioProcess->getChunkSize());
+        }
+    }
 }

@@ -22,6 +22,7 @@ target_sources(lowpower_robot PUBLIC
 set(PLUGIN_PATH ${CONFIG_PATH}/plugins)
 
 if(ASR_SHERPA)
+    message(STATUS "asr sherpa")
     target_compile_definitions(lowpower_robot  PUBLIC -DASR_SHERPA)
     target_sources(lowpower_robot PUBLIC
         ASR/sherpaasr.cpp ASR/sherpaasr.h
@@ -30,6 +31,7 @@ if(ASR_SHERPA)
 endif()
 
 if( ASR_DUILITE)
+    message(STATUS "asr duilite")
     target_compile_definitions(lowpower_robot  PUBLIC -DASR_DUILITE)
     target_sources(lowpower_robot PUBLIC
         Conversation/ASR/duiliteasr.cpp Conversation/ASR/duiliteasr.h
@@ -37,6 +39,7 @@ if( ASR_DUILITE)
 endif()
 
 if(TTS_SHERPA)
+    message(STATUS "tts sherpa")
     target_compile_definitions(lowpower_robot  PUBLIC -DTTS_SHERPA)
     target_sources(lowpower_robot PUBLIC
         TTS/sherpatts.cpp TTS/sherpatts.h
@@ -49,6 +52,7 @@ if(TTS_SHERPA OR ASR_SHERPA OR WAKEUP_SHERPA)
 endif()
 
 if(NLU_BAIDU)
+    message(STATUS "nlu baidu")
     target_compile_definitions(lowpower_robot  PUBLIC -DNLU_BAIDU)
     target_sources(lowpower_robot PUBLIC
         NLU/baidunlu.cpp NLU/baidunlu.h
@@ -56,6 +60,7 @@ if(NLU_BAIDU)
 endif()
 
 if(NLU_RASA)
+    message(STATUS "nlu rasa")
     target_compile_definitions(lowpower_robot  PUBLIC -DNLU_RASA)
     target_sources(lowpower_robot PUBLIC
         NLU/rasanlu.cpp NLU/rasanlu.h

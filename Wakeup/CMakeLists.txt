@@ -6,6 +6,7 @@ set(CMAKE_AUTOMOC ON)
 option(WAKEUP_PORCUPINE "porcupine wakeup" OFF)
 option(WAKEUP_OPEN "open wakeup" OFF)
 option(WAKEUP_DUILITE "duilite wakeup" ON)
+option(WAKEUP_SHERPA "sherpa wakeup" OFF)
 option(WAKEUP_SNOWBOY, "snowboy wakeup" OFF)
 
 # vad
@@ -27,6 +28,7 @@ target_sources(lowpower_robot PUBLIC
 )
 
 if(WAKEUP_DUILITE)
+    message(STATUS "wakeup duilite")
     target_compile_definitions(lowpower_robot  PUBLIC -DWAKEUP_DUILITE)
     target_sources(lowpower_robot PUBLIC
         Wakeup/duilitewakeup.cpp Wakeup/duilitewakeup.h
@@ -34,13 +36,16 @@ if(WAKEUP_DUILITE)
 endif()
 
 if(WAKEUP_OPEN)
+    message(STATUS "wakeup open")
     target_compile_definitions(lowpower_robot  PUBLIC -DWAKEUP_OPEN)
     target_sources(lowpower_robot PUBLIC
         Wakeup/openwakeup.cpp Wakeup/openwakeup.h
+        Wakeup/openwakeonnx.cpp Wakeup/openwakeonnx.h
     )
 endif()
 
 if(WAKEUP_PORCUPINE)
+    message(STATUS "wakeup porcupine")
     target_compile_definitions(lowpower_robot  PUBLIC -DWAKEUP_PORCUPINE)
     target_sources(lowpower_robot PUBLIC
         Wakeup/porcupinewakeup.cpp Wakeup/porcupinewakeup.h
@@ -49,6 +54,7 @@ if(WAKEUP_PORCUPINE)
 endif()
 
 if(WAKEUP_SHERPA)
+    message(STATUS "wakeup sherpa")
     target_compile_definitions(lowpower_robot PUBLIC -DWAKEUP_SHERPA)
     target_sources(lowpower_robot PUBLIC
         Wakeup/sherpawakeup.cpp Wakeup/sherpawakeup.h
@@ -56,6 +62,7 @@ if(WAKEUP_SHERPA)
 endif()
 
 if(WAKEUP_SNOWBOY)
+    message(STATUS "wakeup snowboy")
     target_compile_definitions(lowpower_robot PUBLIC -DWAKEUP_SNOWBOY)
     target_sources(lowpower_robot PUBLIC
         Wakeup/snowboywakeup.cpp Wakeup/snowboywakeup.h
@@ -65,6 +72,7 @@ if(WAKEUP_SNOWBOY)
 endif()
 
 if(VAD_COBRA)
+    message(STATUS "vad cobra")
     target_compile_definitions(lowpower_robot  PUBLIC -DVAD_COBRA)
     target_sources(lowpower_robot PUBLIC
         Vad/cobravad.cpp Vad/cobravad.h
@@ -73,6 +81,7 @@ if(VAD_COBRA)
 endif()
 
 if(VAD_F)
+    message(STATUS "vad f")
     target_compile_definitions(lowpower_robot  PUBLIC -DVAD_F)
     target_sources(lowpower_robot PUBLIC
         Vad/fvadmodel.cpp Vad/fvadmodel.h
@@ -81,6 +90,7 @@ if(VAD_F)
 endif()
 
 if(VAD_DUILITE)
+    message(STATUS "vad duilite")
     target_compile_definitions(lowpower_robot  PUBLIC -DVAD_DUILITE)
     target_sources(lowpower_robot PUBLIC
         Vad/duilitevad.cpp Vad/duilitevad.h
@@ -88,14 +98,16 @@ if(VAD_DUILITE)
 endif()
 
 if(VAD_SILERO)
+    message(STATUS "vad silero")
     target_compile_definitions(lowpower_robot  PUBLIC -DVAD_SILERO)
     target_sources(lowpower_robot PUBLIC
         Vad/silerovad.cpp Vad/silerovad.h
     )
-    add_custom_lib(silerovad)
+    add_custom_lib(onnxruntime)
 endif()
 
 if(PROCESS_KOALA)
+    message(STATUS "process koala")
     target_compile_definitions(lowpower_robot  PUBLIC -DPROCESS_KOALA)
     target_sources(lowpower_robot PUBLIC
         Process/koalaaudioprocess.cpp Process/koalaaudioprocess.h
@@ -104,6 +116,7 @@ if(PROCESS_KOALA)
 endif()
 
 if(PROCESS_SPEEX)
+    message(STATUS "process speex")
     target_compile_definitions(lowpower_robot  PUBLIC -DPROCESS_SPEEX)
     target_sources(lowpower_robot PUBLIC
     Process/speexaudioprocess.cpp Process/speexaudioprocess.h
@@ -112,6 +125,7 @@ if(PROCESS_SPEEX)
 endif()
 
 if(PROCESS_WEBRTC)
+    message(STATUS "process webrtc")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD -DPROCESS_WEBRTC")
     target_sources(lowpower_robot PUBLIC
     Process/webrtcprocessing.cpp Process/webrtcprocessing.h

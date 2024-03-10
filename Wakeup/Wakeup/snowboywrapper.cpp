@@ -17,7 +17,6 @@ Snowboy::Snowboy(const char* resource_name, Model model)
   //   model_filename = "resources/snowboy.umdl,resources/alexa.pmdl";
   //   sensitivity_str = "0.4,0.4";
   c(detector_)->SetSensitivity(std::to_string(model.sensitivity));
-  c(detector_)->ApplyFrontend(true);
 }
 
 int Snowboy::SampleRate() const { return c(detector_)->SampleRate(); }

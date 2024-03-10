@@ -94,6 +94,10 @@ WebrtcProcessing::WebrtcProcessing(int chunkSize, QObject* parent)
     }
 }
 
+WebrtcProcessing::~WebrtcProcessing(){
+    stop();
+}
+
 void WebrtcProcessing::preProcess(QByteArray& data){
     webrtc::AudioFrame frame;
     frame.sample_rate_hz_ = 16000;
@@ -114,4 +118,8 @@ void WebrtcProcessing::stop(){
         delete apm;
         valid = false;
     }
+}
+
+int WebrtcProcessing::getChunkSize(){
+    return chunkSize;
 }

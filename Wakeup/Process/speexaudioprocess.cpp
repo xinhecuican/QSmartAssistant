@@ -34,3 +34,7 @@ void SpeexAudioProcess::stop(){
         valid = false;
     }
 }
+
+int SpeexAudioProcess::getChunkSize(){
+    return frameSize * 2;
+}

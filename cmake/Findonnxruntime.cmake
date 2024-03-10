@@ -1,5 +1,5 @@
 find_package(PkgConfig)
-set(LIB_NAME silerovad)
+set(LIB_NAME onnxruntime)
 set(${LIB_NAME}_ROOT_DIR ${PROJECT_SOURCE_DIR}/lib/${LIB_NAME})
 set(${LIB_NAME}_INCLUDE_BASE ${${LIB_NAME}_ROOT_DIR}/include)
 macro(_FIND_LIBRARY libname)

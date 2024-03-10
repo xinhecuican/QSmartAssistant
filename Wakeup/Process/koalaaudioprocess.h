@@ -10,6 +10,7 @@ public:
     ~KoalaAudioProcess();
     void preProcess(QByteArray& data) override;
     void stop()override;
+    int getChunkSize() override;
 private:
     pv_koala_t* koala;
     int16_t* enhancedData;
