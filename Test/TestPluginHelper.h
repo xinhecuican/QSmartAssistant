@@ -15,8 +15,14 @@ public:
         qDebug() << "question" << question;
         return "";
     }
-    void exit(){
+    void exit()override{
         
+    }
+    Config getConfig()override{
+        return Config::instance();
+    }
+    Player getPlayer()override{
+        return nullptr;
     }
 };
 

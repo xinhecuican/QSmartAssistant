@@ -7,7 +7,7 @@ option(WAKEUP_PORCUPINE "porcupine wakeup" OFF)
 option(WAKEUP_OPEN "open wakeup" OFF)
 option(WAKEUP_DUILITE "duilite wakeup" ON)
 option(WAKEUP_SHERPA "sherpa wakeup" OFF)
-option(WAKEUP_SNOWBOY, "snowboy wakeup" OFF)
+option(WAKEUP_SNOWBOY "snowboy wakeup" OFF)
 
 # vad
 option(VAD_COBRA "cobra vad" OFF)

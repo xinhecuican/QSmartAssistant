@@ -11,6 +11,9 @@ Player::Player(QObject* parent)
     connect(playlist, &AudioPlaylist::playEnd, this, [=](QVariant meta){
         emit playEnd(meta);
     });
+    connect(playlist, &AudioPlaylist::playStart, this, [=](QVariant meta){
+        emit playStart(meta);
+    });
     decoder = new AudioBuffer(this);
     QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
     QAudioFormat decoderFormat = decoder->getFormat();

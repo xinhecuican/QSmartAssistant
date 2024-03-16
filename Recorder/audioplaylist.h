@@ -24,6 +24,7 @@ public:
     bool normalEnd();
 signals:
     void playEnd(QVariant meta);
+    void playStart(QVariant meta);
 private:
     QUrl getUrl(const QString& fileName);
 

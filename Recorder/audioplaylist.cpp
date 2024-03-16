@@ -132,6 +132,7 @@ QUrl AudioPlaylist::getUrl(const QString& fileName){
 void AudioPlaylist::setMedia(const AudioMedia& media){
     player->setMedia(media.url);
     currentMeta = media.meta;
+    emit playStart(currentMeta);
     player->play();
 }
 
