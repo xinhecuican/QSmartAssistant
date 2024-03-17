@@ -69,7 +69,9 @@
 		"phone": "xxx",
 		"password": "xxx",
 		"cookie": "",
-		"volumeStep": 10
+		"volumeStep": 10,
+		"homeDir": "~/projects/lowpower-robot/Plugins/neteasemusic/NeteaseCloudMusicApi",
+		"port": "34932"
 	},
 	"duilite":{
 		"login": "duilite_login.json",
