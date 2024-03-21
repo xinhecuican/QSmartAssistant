@@ -131,6 +131,11 @@ nlu:
     - 关闭机器人
     - 退出机器人
     - 关闭智能音箱
+- intent: CHAT
+  examples: |
+    - 进入闲聊模式
+    - 我们来聊聊天吧
+    - 我想问一个问题
 - synonym: 灯
   examples: |
     - 灯

@@ -18,6 +18,7 @@ intents:
 - SYS_INFO
 - Weather
 - QUIT_ROBOT
+- CHAT
 entities:
 - human:
     roles:
