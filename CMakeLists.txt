@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(lowpower_robot VERSION 1.0 LANGUAGES C CXX)
+project(QSmartAssistant VERSION 1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -20,21 +20,21 @@ file(GLOB COMMON_HEADERS Utils/*.h Recorder/*.h)
 option(TEST "启用测试" OFF)
 option(DEBUG_PROCESS "测试音频前处理" OFF)
 option(DEBUG_BREAKPAD "开启breakpad捕获dump" OFF)
-set(CONFIG_PATH "$ENV{HOME}/.config/lowpower_robot")
+set(CONFIG_PATH "$ENV{HOME}/.config/QSmartAssistant")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_HEADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/include) 
-set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/software/lowpower_robot")
+set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/software/QSmartAssistant")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 add_library(lpcommon SHARED ${COMMON_SOURCES} ${COMMON_HEADERS})
 target_compile_definitions(lpcommon PRIVATE LPCOMMON_LIBRARY)
-add_executable(lowpower_robot WIN32 MACOSX_BUNDLE
+add_executable(QSmartAssistant WIN32 MACOSX_BUNDLE
     robot.cpp robot.h
     main.cpp
 )
-set_target_properties(lowpower_robot PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN")
+set_target_properties(QSmartAssistant PROPERTIES LINK_FLAGS "-Wl,-rpath=$ORIGIN")
 macro(install_depend target_name )
     if(NOT TARGET TARGET_${target_name})
         get_target_property(DLLS ${target_name} IMPORTED_LOCATION)
@@ -53,8 +53,8 @@ endmacro(add_custom_file)
 macro(add_custom_lib custom_lib_name)
     find_package(${custom_lib_name} REQUIRED)
     if(${LIB_NAME}_FOUND)
-        target_include_directories(lowpower_robot PRIVATE ${${LIB_NAME}_INCLUDE_DIRS})
-        target_link_libraries(lowpower_robot PRIVATE ${${LIB_NAME}_LIBRARIES})
+        target_include_directories(QSmartAssistant PRIVATE ${${LIB_NAME}_INCLUDE_DIRS})
+        target_link_libraries(QSmartAssistant PRIVATE ${${LIB_NAME}_LIBRARIES})
         install_depend(${LIB_NAME})
     else()
         message(FATAL_ERROR "${custom_lib_name} not found")
@@ -70,9 +70,9 @@ if(DEBUG_BREAKPAD)
         find_package(breakpad REQUIRED)
     endif()
     if(${LIB_NAME}_FOUND)
-        target_compile_definitions(lowpower_robot PUBLIC -DBREAKPAD)
-        target_include_directories(lowpower_robot PRIVATE ${${LIB_NAME}_INCLUDE_DIRS})
-        target_link_libraries(lowpower_robot PRIVATE ${${LIB_NAME}_LIBRARIES})
+        target_compile_definitions(QSmartAssistant PUBLIC -DBREAKPAD)
+        target_include_directories(QSmartAssistant PRIVATE ${${LIB_NAME}_INCLUDE_DIRS})
+        target_link_libraries(QSmartAssistant PRIVATE ${${LIB_NAME}_LIBRARIES})
         install_depend(${LIB_NAME})
     else()
         message(FATAL_ERROR "${custom_lib_name} not found")
@@ -89,7 +89,7 @@ target_link_libraries(lpcommon PRIVATE
 find_package(openssl  REQUIRED)
 add_custom_file(openssl ${${LIB_NAME}_ROOT_DIR}/lib/lib*)
 
-target_link_libraries(lowpower_robot PRIVATE
+target_link_libraries(QSmartAssistant PRIVATE
     Qt::Core
     Qt::Multimedia
     Qt::Network
@@ -102,12 +102,12 @@ add_subdirectory(Conversation)
 add_subdirectory(Wakeup)
 add_subdirectory(Plugins)
 if(TEST)
-    target_sources(lowpower_robot PUBLIC
+    target_sources(QSmartAssistant PUBLIC
         Test/tst_sherpa.h Test/TestPluginHelper.h
     )
 endif()
 if(DEBUG_PROCESS)
-    target_compile_definitions(lowpower_robot  PUBLIC -DDEBUG_PROCESS)
+    target_compile_definitions(QSmartAssistant  PUBLIC -DDEBUG_PROCESS)
 endif()
 
 file(COPY Data/ DESTINATION ${CONFIG_PATH}/Data)

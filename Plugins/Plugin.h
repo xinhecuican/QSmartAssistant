@@ -60,6 +60,6 @@ public:
      */
     virtual void sendMessage(PluginMessage message) = 0;
 };
-#define LOWPOWER_ROBOT_PLUGIN_ID "lowpwoer_robot_plugin1.0"
-Q_DECLARE_INTERFACE(Plugin, LOWPOWER_ROBOT_PLUGIN_ID)
+#define QSmartAssistant_PLUGIN_ID "QSmartAssistant_plugin1.0"
+Q_DECLARE_INTERFACE(Plugin, QSmartAssistant_PLUGIN_ID)
 #endif // PLUGIN_H

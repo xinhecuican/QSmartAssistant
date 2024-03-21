@@ -7,7 +7,7 @@ class Hass : public QObject, Plugin
 {
     Q_OBJECT
     Q_INTERFACES(Plugin)
-    Q_PLUGIN_METADATA(IID LOWPOWER_ROBOT_PLUGIN_ID)
+    Q_PLUGIN_METADATA(IID QSmartAssistant_PLUGIN_ID)
 public:
     Hass();
     QString getName() override;

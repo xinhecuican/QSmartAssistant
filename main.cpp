@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
                                          true, -1);
 #endif
     QCoreApplication::addLibraryPath(QDir::homePath() +
-                                     "/.config/lowpower_robot/plugins/lib");
+                                     "/.config/QSmartAssistant/plugins/lib");
     Robot *robot = new Robot(&a);
     robot->start();
     a.connect(&a, &QCoreApplication::aboutToQuit, &a, [=]() {

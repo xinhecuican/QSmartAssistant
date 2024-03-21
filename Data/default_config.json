@@ -70,8 +70,8 @@
 		"password": "xxx",
 		"cookie": "",
 		"volumeStep": 10,
-		"homeDir": "~/projects/lowpower-robot/Plugins/neteasemusic/NeteaseCloudMusicApi",
-		"port": "34932"
+		"homeDir": "xxx",
+		"port": "34793"
 	},
 	"duilite":{
 		"login": "duilite_login.json",
@@ -86,6 +86,7 @@
 	},
 	"rasa": {
 		"model": "Data/rasa/models/default.tar.gz",
+		"python_venv": "absolute path to activate",
 		"record_samples": true
 	},
 	"hass":{

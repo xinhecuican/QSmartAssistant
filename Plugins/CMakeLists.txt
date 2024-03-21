@@ -1,5 +1,4 @@
-
-target_sources(lowpower_robot PUBLIC
+target_sources(QSmartAssistant PUBLIC
     Plugin.h
     pluginmanager.cpp pluginmanager.h
 )

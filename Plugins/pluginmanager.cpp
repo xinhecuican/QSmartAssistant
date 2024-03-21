@@ -20,7 +20,7 @@ void PluginManager::loadPlugin() {
     while (!file.atEnd()) {
         QString pluginName = file.readLine().trimmed();
         QPluginLoader loader(QDir::homePath() +
-                             "/.config/lowpower_robot/plugins/lib" +
+                             "/.config/QSmartAssistant/plugins/lib" +
                              pluginName + ".so");
         QObject *plugin = loader.instance();
         if (plugin) {

@@ -2,8 +2,9 @@
 #include "../../Utils/config.h"
 
 RasaNLU::RasaNLU(QObject *parent) : NLUModel(parent) {
-    recordSamples =
-        Config::instance()->getConfig("rasa").value("record_samples").toBool();
+    QJsonObject rasaConfig = Config::instance()->getConfig("rasa");
+    recordSamples = rasaConfig.value("record_samples").toBool();
+    QString pythonDir = rasaConfig.value("python_venv").toString();
     request.setUrl(QUrl("http://127.0.0.1:5005/status"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QNetworkReply *reply = manager.get(request);
@@ -23,14 +24,14 @@ RasaNLU::RasaNLU(QObject *parent) : NLUModel(parent) {
                 process.start();
                 process.waitForFinished();
                 process.setProgram(Config::getDataPath("start-rasa.sh"));
-                process.setArguments({info.absoluteFilePath()});
+                process.setArguments({pythonDir, info.absoluteFilePath()});
                 process.setWorkingDirectory(
                     QCoreApplication::applicationDirPath());
                 process.start();
             }
         } else {
             process.setProgram(Config::getDataPath("start-rasa.sh"));
-            process.setArguments({info.absoluteFilePath()});
+            process.setArguments({pythonDir, info.absoluteFilePath()});
             process.setWorkingDirectory(QCoreApplication::applicationDirPath());
             process.start();
         }

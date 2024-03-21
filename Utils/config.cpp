@@ -34,7 +34,7 @@ QJsonObject Config::getConfig(const QString& name){
 }
 
 QString Config::getDataPath(const QString &path){
-    return QDir::homePath() + "/.config/lowpower_robot/Data/" + path;
+    return QDir::homePath() + "/.config/QSmartAssistant/Data/" + path;
 }
 
 void Config::saveConfig(const QString& name, const QString& configName, const QVariant& value){
