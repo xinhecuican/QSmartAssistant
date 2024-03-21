@@ -18,6 +18,7 @@ class NeteaseMusic : public QObject, Plugin {
     Q_PLUGIN_METADATA(IID LOWPOWER_ROBOT_PLUGIN_ID)
 public:
     NeteaseMusic();
+    ~NeteaseMusic();
     QString getName() override;
     bool handle(const QString &text, const ParsedIntent &parsedIntent,
                 bool &isImmersive) override;
@@ -36,7 +37,7 @@ private:
     QMap<qint64, MusicInfo> musicInfoMap;
 
 private:
-    void doHandle(const QString &text, const ParsedIntent &parsedIntent,
+    bool doHandle(const QString &text, const ParsedIntent &parsedIntent,
                   bool &isImmersive);
     void getCurrentTrack();
     void searchAlbum(const ParsedIntent &parsedIntent);

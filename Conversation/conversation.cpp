@@ -37,14 +37,14 @@ Conversation::Conversation(Player* player, QObject* parent) : QObject(parent), p
     nlu = new RasaNLU(this);
 #endif
 #if defined(TTS_SHERPA)
-    tts = new SherpaTTS(this);
+    tts = new SherpaTTS();
 #endif
     if(asr == nullptr) qCritical() << "undefine asr model";
     if(tts == nullptr) qCritical() << "undefine tts mxodel";
     if(nlu == nullptr) qCritical() << "undefine nlu model";
 
     if(asr != nullptr){
-        asr->moveToThread(&thread);
+        asr->moveToThread(&asrThread);
         connect(this, &Conversation::feedASR, asr, &ASRModel::detect);
         connect(this, &Conversation::clearASR, asr, &ASRModel::clear);
         connect(asr, &ASRModel::recognized, this, [=](QString result){
@@ -64,9 +64,14 @@ Conversation::Conversation(Player* player, QObject* parent) : QObject(parent), p
             }
             cache.clear();
         });
-        thread.start();
+        asrThread.start();
     }
-    if(tts != nullptr) connect(tts, &TTSModel::dataArrive, this, &Conversation::sayRawData);
+    if(tts != nullptr) {
+        tts->moveToThread(&ttsThread);
+        connect(this, &Conversation::feedTTS, tts, &TTSModel::detect);
+        connect(tts, &TTSModel::dataArrive, this, &Conversation::sayRawData);
+        ttsThread.start();
+    }
     pluginManager = new PluginManager(this);
     pluginManager->loadPlugin();
     connect(player, &Player::playEnd, this, [=](QVariant meta){
@@ -105,7 +110,7 @@ void Conversation::say(const QString& text, bool block){
     QStringList list = text.split(QRegExp("\t|.|。|!|\?|；|\n"), Qt::SkipEmptyParts);
     endIndex = index + list.size() - 1;
     for(QString& line : list)
-        tts->detect(line);
+        emit feedTTS(line);
     if(block){
         ttsEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
     }
@@ -121,11 +126,13 @@ void Conversation::sayRawData(QByteArray data, int sampleRate){
 }
 
 void Conversation::stop(){
-    thread.quit();
-    thread.wait();
+    asrThread.quit();
+    asrThread.wait();
     asr->deleteLater();
     nlu->stop();
-    tts->stop();
+    ttsThread.quit();
+    ttsThread.wait();
+    tts->deleteLater();
 }
 
 void Conversation::quitImmersive(const QString& name){

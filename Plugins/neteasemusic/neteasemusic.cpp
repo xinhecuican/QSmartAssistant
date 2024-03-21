@@ -9,6 +9,12 @@
 
 NeteaseMusic::NeteaseMusic() { srand(time(0)); }
 
+NeteaseMusic::~NeteaseMusic() {
+#ifdef NETEASE_USE_JS
+    process.kill();
+#endif
+}
+
 QString NeteaseMusic::getName() { return "NeteaseMusic"; }
 
 void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
@@ -127,12 +133,13 @@ bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
     if (needHandle || isImmersive) {
         if (needHandle && !isImmersive)
             isImmersive = true;
-        doHandle(text, parsedIntent, isImmersive);
+        bool success = doHandle(text, parsedIntent, isImmersive);
+        result = result & success;
     }
     return result;
 }
 
-void NeteaseMusic::doHandle(const QString &text,
+bool NeteaseMusic::doHandle(const QString &text,
                             const ParsedIntent &parsedIntent,
                             bool &isImmersive) {
     if (text.contains("这首歌")) {
@@ -157,7 +164,9 @@ void NeteaseMusic::doHandle(const QString &text,
         searchAlbum(parsedIntent);
     } else {
         qInfo() << "netease can't understand" << text;
+        return false;
     }
+    return true;
 }
 
 void NeteaseMusic::getCurrentTrack() {

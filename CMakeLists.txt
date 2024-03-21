@@ -19,6 +19,7 @@ file(GLOB COMMON_HEADERS Utils/*.h Recorder/*.h)
 # test
 option(TEST "启用测试" OFF)
 option(DEBUG_PROCESS "测试音频前处理" OFF)
+option(DEBUG_BREAKPAD "开启breakpad捕获dump" OFF)
 set(CONFIG_PATH "$ENV{HOME}/.config/lowpower_robot")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
@@ -59,6 +60,25 @@ macro(add_custom_lib custom_lib_name)
         message(FATAL_ERROR "${custom_lib_name} not found")
     endif()
 endmacro(add_custom_lib)
+
+# Find BreakPad
+if(DEBUG_BREAKPAD)
+    message(STATUS "enable breakpad")
+    find_package(breakpad REQUIRED)
+    if(NOT ${LIB_NAME}_FOUND)
+        execute_process(COMMAND sh ${CMAKE_SOURCE_DIR}/scripts/install_breakpad.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts)
+        find_package(breakpad REQUIRED)
+    endif()
+    if(${LIB_NAME}_FOUND)
+        target_compile_definitions(lowpower_robot PUBLIC -DBREAKPAD)
+        target_include_directories(lowpower_robot PRIVATE ${${LIB_NAME}_INCLUDE_DIRS})
+        target_link_libraries(lowpower_robot PRIVATE ${${LIB_NAME}_LIBRARIES})
+        install_depend(${LIB_NAME})
+    else()
+        message(FATAL_ERROR "${custom_lib_name} not found")
+    endif()
+endif()
+# End Find BreakPad
 
 target_link_libraries(lpcommon PRIVATE
     Qt::Core

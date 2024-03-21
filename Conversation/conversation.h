@@ -38,6 +38,7 @@ public slots:
 private:
 signals:
     void feedASR(const QByteArray& data, bool isLast=false);
+    void feedTTS(const QString& text);
     void onRecognize(QString result);
     void clearASR();
 private:
@@ -53,8 +54,9 @@ private:
     qint64 endIndex;
     QEventLoop ttsEventLoop;
     bool isResponse;
-    QThread thread;
+    QThread asrThread;
     QEventLoop asrEventLoop;
+    QThread ttsThread;
 };
 
 #endif // CONVERSATION_H
