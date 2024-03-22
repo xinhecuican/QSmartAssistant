@@ -1,78 +1,77 @@
 #include "player.h"
-#include <QFileInfo>
-#include <QDateTime>
 #include <QAudioOutput>
+#include <QDateTime>
+#include <QFileInfo>
 
-Player::Player(QObject* parent)
-    : QObject(parent)
-{
+Player::Player(QObject *parent) : QObject(parent) {
     player = new QMediaPlayer(this);
     playlist = new AudioPlaylist(player);
-    connect(playlist, &AudioPlaylist::playEnd, this, [=](QVariant meta){
-        emit playEnd(meta);
-    });
-    connect(playlist, &AudioPlaylist::playStart, this, [=](QVariant meta){
-        emit playStart(meta);
-    });
+    connect(playlist, &AudioPlaylist::playEnd, this,
+            [=](QVariant meta) { emit playEnd(meta); });
+    connect(playlist, &AudioPlaylist::playStart, this,
+            [=](QVariant meta) { emit playStart(meta); });
     decoder = new AudioBuffer(this);
     QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
     QAudioFormat decoderFormat = decoder->getFormat();
-    if(!defaultDev.isFormatSupported(decoderFormat))
+    if (!defaultDev.isFormatSupported(decoderFormat))
         decoderFormat = defaultDev.nearestFormat(decoderFormat);
     output = new QAudioOutput(defaultDev, decoderFormat, this);
-    connect(output, &QAudioOutput::stateChanged, this, [=](QAudio::State state){
-        if(state == QAudio::IdleState){
-            decoder->close();
-            output->reset();
-            output->stop();
-            if(isBlockThread) eventLoop.quit();
-            else if(playerPlaying) player->play();
-        }
-        else if(state == QAudio::StoppedState){
-            if(output->error() != QAudio::NoError){
-                qWarning() << output->error();
-            }
-        }
-    });
+    connect(output, &QAudioOutput::stateChanged, this,
+            [=](QAudio::State state) {
+                if (state == QAudio::IdleState) {
+                    decoder->close();
+                    output->reset();
+                    output->stop();
+                    if (isBlockThread)
+                        eventLoop.quit();
+                    else if (playerPlaying)
+                        player->play();
+                } else if (state == QAudio::StoppedState) {
+                    if (output->error() != QAudio::NoError) {
+                        qWarning() << output->error();
+                    }
+                }
+            });
     getVolumeProcess.setProgram("amixer");
     getVolumeProcess.setArguments({"get", "Master"});
     volume = 0;
 }
 
-void Player::play(const QString& fileName, AudioPlaylist::AudioPriority priority, const QVariant& meta){
+void Player::play(const QString &fileName,
+                  AudioPlaylist::AudioPriority priority, const QVariant &meta) {
     playlist->addAudio(fileName, priority, meta);
 }
 
-void Player::pause(){
-    if(player->state() == QMediaPlayer::PlayingState){
+void Player::pause() {
+    if (player->state() == QMediaPlayer::PlayingState) {
         isPause = true;
         player->pause();
     }
 }
 
-void Player::resume(){
-    if(isPause){
+void Player::resume() {
+    if (isPause) {
         isPause = false;
         player->play();
     }
 }
 
-void Player::stop(){
+void Player::stop() {
     player->stop();
     playlist->clear();
 }
 
-void Player::playSoundEffect(const QString& fileName, bool blockThread){
+void Player::playSoundEffect(const QString &fileName, bool blockThread) {
 
     isBlockThread = blockThread;
     playerPlaying = player->state() == QMediaPlayer::PlayingState;
-    if(playerPlaying){
+    if (playerPlaying) {
         player->pause();
     }
     decoder->start(fileName);
-    if(decoder->getState() == AudioBuffer::Stopped){
+    if (decoder->getState() == AudioBuffer::Stopped) {
         isBlockThread = false;
-        if(playerPlaying){
+        if (playerPlaying) {
             player->play();
         }
         return;
@@ -80,14 +79,16 @@ void Player::playSoundEffect(const QString& fileName, bool blockThread){
     output->setVolume(0.8);
     decoder->open(QIODevice::ReadOnly);
     output->start(decoder);
-    if(blockThread){
+    if (blockThread) {
         eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
-        if(playerPlaying) player->play();
+        if (playerPlaying)
+            player->play();
     }
 }
 
-void Player::setVolume(int volume){
-    QProcess::execute("amixer", {"set", "Master", QString::number(volume) + "%"});
+void Player::setVolume(int volume) {
+    QProcess::execute("amixer",
+                      {"set", "Master", QString::number(volume) + "%"});
     // player->setVolume(volume);
 }
 
@@ -98,40 +99,39 @@ int Player::getVolume() {
     QString str = data;
     int index = str.indexOf('[');
     int index2 = str.indexOf(']');
-    volume = str.mid(index+1, index2-index-2).toInt();
+    volume = str.mid(index + 1, index2 - index - 2).toInt();
     return volume;
 }
 
-void Player::modifyVolume(int value){
-    if(value > 0){
-        QProcess::execute("amixer", {"set", "Master", QString::number(value) + "%+"});
-    }
-    else{
+void Player::modifyVolume(int value) {
+    if (value > 0) {
+        QProcess::execute("amixer",
+                          {"set", "Master", QString::number(value) + "%+"});
+    } else {
         value = -value;
-        QProcess::execute("amixer", {"set", "Master", QString::number(value) + "%-"});
+        QProcess::execute("amixer",
+                          {"set", "Master", QString::number(value) + "%-"});
     }
 }
 
-void Player::next(){
-    playlist->playNext(true);
-}
+void Player::next() { playlist->playNext(true); }
 
-void Player::previous(){
-    playlist->playPrevious();
-}
+void Player::previous() { playlist->playPrevious(); }
 
-void Player::playRaw(const QByteArray& data, int sampleRate, AudioPlaylist::AudioPriority priority, const QVariant &meta){
+void Player::playRaw(const QByteArray &data, int sampleRate,
+                     AudioPlaylist::AudioPriority priority,
+                     const QVariant &meta) {
     playlist->addRaw(data, sampleRate, priority, meta);
 }
 
-bool Player::isPlaying() const{
+bool Player::isPlaying() const {
     return player->state() == QMediaPlayer::PlayingState;
 }
 
-QVariant Player::getCurrentMeta() const{
-    return playlist->getCurrentMeta();
-}
+QVariant Player::getCurrentMeta() const { return playlist->getCurrentMeta(); }
 
-bool Player::normalEnd(){
-    return playlist->normalEnd();
+bool Player::normalEnd() { return playlist->normalEnd(); }
+
+void Player::clear(const QString &id, AudioPlaylist::AudioPriority priority) {
+    playlist->clearType(id, priority);
 }

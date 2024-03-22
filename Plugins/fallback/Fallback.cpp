@@ -12,4 +12,6 @@ bool Fallback::handle(const QString &text, const ParsedIntent &parsedIntent,
     return true;
 }
 
-void Fallback::recvMessage(const PluginMessage &message) {}
+void Fallback::recvMessage(const QString &text,
+                           const ParsedIntent &parsedIntent,
+                           const PluginMessage &message) {}

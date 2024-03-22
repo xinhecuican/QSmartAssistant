@@ -32,16 +32,18 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                     QDateTime endDate = QDateTime::fromString(
                         timeRange.at(1), "yyyy-MM-dd hh:mm:ss");
                     qint64 deltaBegin = (beginDate.currentSecsSinceEpoch() -
-                            currentDate.currentSecsSinceEpoch()) / 3600;
+                                         currentDate.currentSecsSinceEpoch()) /
+                                        3600;
                     qint64 deltaEnd = (endDate.currentSecsSinceEpoch() -
-                            currentDate.currentSecsSinceEpoch()) / 3600;
+                                       currentDate.currentSecsSinceEpoch()) /
+                                      3600;
                     if (deltaBegin < 24) {
                         deltaBegin = deltaBegin < 0    ? 0
-                                    : deltaBegin > 24 ? 24
-                                    : deltaBegin;
+                                     : deltaBegin > 24 ? 24
+                                                       : deltaBegin;
                         deltaEnd = deltaEnd < 0    ? 0
-                                    : deltaEnd > 24 ? 24
-                                    : deltaEnd;
+                                   : deltaEnd > 24 ? 24
+                                                   : deltaEnd;
                         searchHour(lat, lon, deltaBegin, deltaEnd);
                     } else {
                         helper->say("当前仅能播报24小时内的天气预报");
@@ -55,11 +57,11 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                     qint64 deltaEnd = currentDate.daysTo(endDate);
                     if (deltaBegin < 7) {
                         deltaBegin = deltaBegin < 0   ? 0
-                                    : deltaBegin > 7 ? 7
-                                    : deltaBegin;
+                                     : deltaBegin > 7 ? 7
+                                                      : deltaBegin;
                         deltaEnd = deltaEnd < 0   ? 0
-                                    : deltaEnd > 7 ? 7
-                                    : deltaEnd;
+                                   : deltaEnd > 7 ? 7
+                                                  : deltaEnd;
                         searchDay(lat, lon, deltaBegin, deltaEnd);
                     } else {
                         helper->say("当前仅能播报7天内的天气预报");
@@ -70,11 +72,12 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                     QDateTime beginDate = QDateTime::fromString(
                         timeSlot.value, "yyyy-MM-dd hh:mm:ss");
                     qint64 deltaBegin = (beginDate.currentSecsSinceEpoch() -
-                                currentDate.currentSecsSinceEpoch()) / 3600;
+                                         currentDate.currentSecsSinceEpoch()) /
+                                        3600;
                     if (deltaBegin < 24) {
                         deltaBegin = deltaBegin < 0    ? 0
-                                    : deltaBegin > 24 ? 24
-                                    : deltaBegin;
+                                     : deltaBegin > 24 ? 24
+                                                       : deltaBegin;
                         searchHour(lat, lon, deltaBegin, deltaBegin);
                     } else {
                         helper->say("当前仅能播报24小时内的天气预报");
@@ -85,8 +88,8 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                     qint64 deltaBegin = currentDate.daysTo(beginDate);
                     if (deltaBegin < 7) {
                         deltaBegin = deltaBegin < 0   ? 0
-                                    : deltaBegin > 7 ? 7
-                                    : deltaBegin;
+                                     : deltaBegin > 7 ? 7
+                                                      : deltaBegin;
                         searchDay(lat, lon, deltaBegin, deltaBegin);
                     } else {
                         helper->say("当前仅能播报7天内的天气预报");
@@ -103,7 +106,8 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
 
 void Weather::setPluginHelper(IPluginHelper *helper) { this->helper = helper; }
 
-void Weather::recvMessage(const PluginMessage &message) {}
+void Weather::recvMessage(const QString &text, const ParsedIntent &parsedIntent,
+                          const PluginMessage &message) {}
 
 void Weather::searchLocation(const QString &location, QString &lat,
                              QString &lon) {
@@ -185,10 +189,10 @@ void Weather::searchDay(const QString &lat, const QString &lon, int begin,
                                     "。最低温度" + day["tempMin"].toString() +
                                     "。最高温度" + day["tempMax"].toString());
                     } else {
-                        helper->say(QString::number(currentDay) +
-                                    "天后天气" + day["textDay"].toString() +
-                                    "。最低温度" + day["tempMin"].toString() +
-                                    "。最高温度" + day["tempMax"].toString());
+                        helper->say(QString::number(currentDay) + "天后天气" +
+                                    day["textDay"].toString() + "。最低温度" +
+                                    day["tempMin"].toString() + "。最高温度" +
+                                    day["tempMax"].toString());
                     }
                 }
                 currentDay++;

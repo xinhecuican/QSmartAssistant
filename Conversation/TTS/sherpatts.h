@@ -8,7 +8,7 @@ class SherpaTTS : public TTSModel
 public:
     SherpaTTS(QObject* parent=nullptr);
     ~SherpaTTS();
-    void detect(const QString& text) override;
+    void detect(const QString& text, const QString& type) override;
     void stop() override;
 private:
     SherpaOnnxOfflineTts* tts;

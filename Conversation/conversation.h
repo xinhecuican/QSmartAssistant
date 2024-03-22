@@ -21,7 +21,8 @@ public:
      * @param stop if true then stop dialog and clear data
      */
     void dialog(bool stop);
-    void say(const QString& text, bool block=false) override;
+    void say(const QString& text, bool block=false, const QString& type="") override;
+    void stopSay(const QString& type, AudioPlaylist::AudioPriority priority=AudioPlaylist::NOTIFY) override;
     void stop();
     void quitImmersive(const QString& name) override;
     QString question(const QString& question) override;
@@ -29,16 +30,17 @@ public:
     void exit() override;
     Player* getPlayer() override;
     Config* getConfig() override;
+    ParsedIntent parse(const QString& text) override;
 signals:
     void finish();
     void requestResponse();
     void exitSig();
 public slots:
-    void sayRawData(QByteArray data, int sampleRate);
+    void sayRawData(QByteArray data, int sampleRate, const QString& type);
 private:
 signals:
     void feedASR(const QByteArray& data, bool isLast=false);
-    void feedTTS(const QString& text);
+    void feedTTS(const QString& text, const QString& type);
     void onRecognize(QString result);
     void clearASR();
 private:

@@ -7,11 +7,11 @@ public:
     TTSModel(QObject* parent=nullptr):QObject(parent){valid=true;}
     virtual ~TTSModel(){}
     virtual bool isStream(){return false;}
-    virtual void detect(const QString& text)=0;
+    virtual void detect(const QString& text, const QString& type)=0;
     virtual void stop(){}
 
 signals:
-    void dataArrive(QByteArray data, int sampleRate);
+    void dataArrive(QByteArray data, int sampleRate, const QString& type);
 protected:
     bool valid;
 };

@@ -47,9 +47,13 @@ public:
     /**
      * @brief receive message from another plugin
      *
+     * @param text
+     * @param parsedIntent
      * @param message
      */
-    virtual void recvMessage(const PluginMessage &message) = 0;
+    virtual void recvMessage(const QString &text,
+                             const ParsedIntent &parsedIntent,
+                             const PluginMessage &message) = 0;
 
     // signals:
     /**

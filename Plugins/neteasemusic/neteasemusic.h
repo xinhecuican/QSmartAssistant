@@ -23,7 +23,8 @@ public:
     bool handle(const QString &text, const ParsedIntent &parsedIntent,
                 bool &isImmersive) override;
     void setPluginHelper(IPluginHelper *helper) override;
-    void recvMessage(const PluginMessage &message) override;
+    void recvMessage(const QString &text, const ParsedIntent &parsedIntent,
+                     const PluginMessage &message) override;
 signals:
     void sendMessage(PluginMessage message) override;
 

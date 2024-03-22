@@ -3,7 +3,8 @@
 		"chunkSize": 640,
 		"detectSlient": 800,
 		"undetectSlient": 4000,
-		"minChunk": 3
+		"minChunk": 3,
+		"responseSlient": 30000
 	},
 	"plugin":{
 		"orderFile": "plugin_order.txt"
@@ -124,5 +125,15 @@
 	"Weather":{
 		"key": "xxx",
 		"home": "xxx"
-	}
+	},
+	"chat": {
+        "botName": "chatgpt",
+        "modelName": "gpt-3.5-turbo",
+        "key": "sk-xxx",
+        "temperature": 1,
+        "max_tokens": 2000,
+        "stream": true,
+        "payload": "你是一个非常实用的AI助手，可以精确简短的回答问题",
+		"proxy": "127.0.0.1:7890"
+    }
 }

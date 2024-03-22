@@ -125,7 +125,8 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         }
         case VAD: {
             preProcess();
-            emit this->dataArrive(data);
+            if(vadModel->containVoice())
+                emit this->dataArrive(data);
             int remain = cacheData.length();
             while (remain >= vadModel->getChunkSize()) {
                 QByteArray data =
@@ -219,7 +220,8 @@ void Wakeup::resume() {
 }
 
 void Wakeup::doResponse() {
-    vadModel->startDetect();
+    // TODO: 延长VAD等待时间，没检测到语音时不运行ASR
+    vadModel->startDetect(true);
     detectState = VAD;
     isResponse = true;
     recorder->resume();

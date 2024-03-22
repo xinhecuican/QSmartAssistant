@@ -37,6 +37,7 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
             [=]() { qDebug() << process.readAllStandardOutput(); });
     process.setWorkingDirectory(homeDir);
     process.start("node", {homeDir + "/app.js"});
+// TODO: 在回调中登录
     process.waitForReadyRead();
 #endif
 
@@ -58,7 +59,8 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
         for (int i = 0; i < 3; i++) {
             result = invokeMethod("login_cellphone", params);
             if (result["status"] == 200) {
-                cookie = QUrl::toPercentEncoding(result["cookie"].toString().toLocal8Bit());
+                cookie = QUrl::toPercentEncoding(
+                    result["cookie"].toString().toLocal8Bit());
                 helper->getConfig()->saveConfig("netease_cloud", "cookie",
                                                 cookie);
                 success = true;
@@ -74,7 +76,8 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
             params.clear();
             result = invokeMethod("register_anonimous", params);
             if (result["status"] == 200) {
-                cookie = QUrl::toPercentEncoding(result["cookie"].toString().toLocal8Bit());
+                cookie = QUrl::toPercentEncoding(
+                    result["cookie"].toString().toLocal8Bit());
                 helper->getConfig()->saveConfig("netease_cloud", "cookie",
                                                 cookie);
             } else {
@@ -106,7 +109,9 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
     });
 }
 
-void NeteaseMusic::recvMessage(const PluginMessage &message) {}
+void NeteaseMusic::recvMessage(const QString &text,
+                               const ParsedIntent &parsedIntent,
+                               const PluginMessage &message) {}
 
 bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
                           bool &isImmersive) {
@@ -283,6 +288,8 @@ QList<QString> NeteaseMusic::getAudio(QList<qint64> ids) {
         for (auto &id : ids) {
             urls.append(idUrlMap[id]);
         }
+    } else {
+        helper->say("网络连接出错了");
     }
     return urls;
 }
@@ -299,7 +306,7 @@ QString NeteaseMusic::getArtist(const QVariantMap &song) {
 
 QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args) {
     QVariantMap ret;
-    if(cookie.size() != 0){
+    if (cookie.size() != 0) {
         args["cookie"] = cookie;
     }
 #ifndef NETEASE_USE_JS
@@ -396,7 +403,7 @@ void NeteaseMusic::searchDefault() {
     if (result["status"] == 200) {
         QList<QVariant> playlists =
             result["body"].toMap()["playlists"].toList();
-        if(playlists.size() > 0){
+        if (playlists.size() > 0) {
             QVariantMap playlist = playlists[0].toMap();
             QString id = playlist["id"].toString();
             params.clear();
@@ -407,6 +414,8 @@ void NeteaseMusic::searchDefault() {
                 QList<QVariant> songs =
                     audioResult["body"].toMap()["songs"].toList();
                 parseSongs(songs);
+            } else {
+                helper->say("网络连接出错了");
             }
         }
     }

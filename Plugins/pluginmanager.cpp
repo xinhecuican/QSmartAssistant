@@ -5,7 +5,7 @@
 #include <QPluginLoader>
 
 PluginManager::PluginManager(IPluginHelper *helper, QObject *parent)
-    : QObject(parent), helper(helper), immersive(false) {}
+    : QObject(parent), helper(helper), immersive(false), immersivePlugin(nullptr) {}
 
 void PluginManager::loadPlugin() {
     qRegisterMetaType<IPluginHelper *>("IPluginHelper*");
@@ -48,6 +48,9 @@ void PluginManager::handlePlugin(const QString &text,
     this->parsedIntent = parsedIntent;
     if (immersive) {
         bool hit = immersivePlugin->handle(text, parsedIntent, immersive);
+        if (!immersive) {
+            immersivePlugin = nullptr;
+        }
         if (hit)
             qInfo() << "hit plugin immersive" << immersivePlugin->getName();
         else {
@@ -76,8 +79,9 @@ void PluginManager::handlePlugin(const QString &text,
 }
 
 void PluginManager::quitImmerSive(const QString &name) {
-    if (immersive && immersivePlugin->getName() == name) {
+    if (immersive && immersivePlugin != nullptr && immersivePlugin->getName() == name) {
         immersive = false;
+        immersivePlugin = nullptr;
     }
 }
 
@@ -87,6 +91,6 @@ void PluginManager::handleMessage(PluginMessage message) {
         if (message.message == "handle")
             pluginMap[message.dst]->handle(text, parsedIntent, immersive);
         else
-            pluginMap[message.dst]->recvMessage(message);
+            pluginMap[message.dst]->recvMessage(text, parsedIntent, message);
     }
 }
