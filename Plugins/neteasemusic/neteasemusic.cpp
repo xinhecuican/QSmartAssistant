@@ -127,6 +127,8 @@ void NeteaseMusic::login() {
                 isLogin = false;
             }
         }
+    } else {
+        isLogin = true;
     }
     if (isLogin) {
         params.clear();
@@ -150,8 +152,11 @@ void NeteaseMusic::recvMessage(const QString &text,
 
 bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
                           bool &isImmersive) {
-    if (isLogin)
-        return false;
+    if (!isLogin) {
+        login();
+        if (!isLogin)
+            return false;
+    }
     isSearchTrigger = false;
     for (auto &trigger : searchTrigger) {
         if (text.contains(trigger)) {
