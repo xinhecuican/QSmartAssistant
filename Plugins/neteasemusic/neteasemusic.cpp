@@ -7,7 +7,10 @@
 #include <stdlib.h>
 #include <time.h>
 
-NeteaseMusic::NeteaseMusic() : isLogin(false) { srand(time(0)); }
+NeteaseMusic::NeteaseMusic()
+    : isLogin(false), lastRecommandTime(0), styleTime(0), styleCursor(0) {
+    srand(time(0));
+}
 
 NeteaseMusic::~NeteaseMusic() {
 #ifdef NETEASE_USE_JS
@@ -122,6 +125,20 @@ void NeteaseMusic::login() {
             } else {
                 qWarning() << "netease login fail";
                 isLogin = false;
+            }
+        }
+    }
+    if (isLogin) {
+        params.clear();
+        result = invokeMethod("style_preference", params);
+        if (result["status"] == 200) {
+            QList<QVariant> styleList = result["body"]
+                                            .toMap()["data"]
+                                            .toMap()["tagPreferenceVos"]
+                                            .toList();
+            for (int i = 0; i < styleList.size(); i++) {
+                QVariantMap style = styleList[i].toMap();
+                preferTags.push_back(style["tagId"].toInt());
             }
         }
     }
@@ -415,25 +432,62 @@ void NeteaseMusic::parseSongs(const QList<QVariant> &songs) {
 
 void NeteaseMusic::searchDefault() {
     QVariantMap params;
-    params["limit"] = 1;
-    params["offset"] = rand() % 10000;
-    QVariantMap result = invokeMethod("top_playlist", params);
-    if (result["status"] == 200) {
-        QList<QVariant> playlists =
-            result["body"].toMap()["playlists"].toList();
-        if (playlists.size() > 0) {
-            QVariantMap playlist = playlists[0].toMap();
-            QString id = playlist["id"].toString();
-            params.clear();
-            params["id"] = id;
-            QVariantMap audioResult =
-                invokeMethod("playlist_track_all", params);
-            if (audioResult["status"] == 200) {
-                QList<QVariant> songs =
-                    audioResult["body"].toMap()["songs"].toList();
-                parseSongs(songs);
-            } else {
-                helper->say("网络连接出错了");
+    double possibility = ((double)rand() / (RAND_MAX));
+    if (QDateTime::currentMSecsSinceEpoch() - lastRecommandTime >
+        24 * 60 * 60 * 1000) { // 每日新歌
+        lastRecommandTime = QDateTime::currentMSecsSinceEpoch();
+        params["limit"] = 20;
+        QVariantMap result = invokeMethod("personalized_newsong", params);
+        if (result["status"] == 200) {
+            QList<QVariant> songs = result["body"].toMap()["result"].toList();
+            parseSongs(songs);
+        }
+    } else if (possibility > 0.7) { // 根据曲风偏好搜歌
+        int tagId = 1000;
+        if (preferTags.size() > 0) {
+            int index = 0;
+            while (((double)rand() / (RAND_MAX)) > 0.5 &&
+                   index < preferTags.size() - 1) {
+                index++;
+            }
+            tagId = preferTags[index];
+        }
+        params["tagId"] = tagId;
+        if (QDateTime::currentMSecsSinceEpoch() - styleTime >
+            24 * 60 * 60 * 1000) {
+            styleTime = QDateTime::currentMSecsSinceEpoch();
+            styleCursor = 0;
+        }
+        params["cursor"] = styleCursor;
+        params["size"] = 20;
+        QVariantMap result = invokeMethod("style_song", params);
+        if (result["status"] == 200) {
+            QList<QVariant> songs =
+                result["body"].toMap()["data"].toMap()["songs"].toList();
+            parseSongs(songs);
+            styleCursor += songs.size();
+        }
+    } else { // 热门歌单
+        params["limit"] = 1;
+        params["offset"] = rand() % 10000;
+        QVariantMap result = invokeMethod("top_playlist", params);
+        if (result["status"] == 200) {
+            QList<QVariant> playlists =
+                result["body"].toMap()["playlists"].toList();
+            if (playlists.size() > 0) {
+                QVariantMap playlist = playlists[0].toMap();
+                QString id = playlist["id"].toString();
+                params.clear();
+                params["id"] = id;
+                QVariantMap audioResult =
+                    invokeMethod("playlist_track_all", params);
+                if (audioResult["status"] == 200) {
+                    QList<QVariant> songs =
+                        audioResult["body"].toMap()["songs"].toList();
+                    parseSongs(songs);
+                } else {
+                    helper->say("网络连接出错了");
+                }
             }
         }
     }

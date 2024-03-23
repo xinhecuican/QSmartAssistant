@@ -44,13 +44,14 @@ private:
     void searchAlbum(const ParsedIntent &parsedIntent);
     void setPlaylist(const QList<QString> &singer, const QList<QString> &song);
     QVariantMap invokeMethod(QString name, QVariantMap &args);
-    void parseSongs(const QList<QVariant>& songs);
+    void parseSongs(const QList<QVariant> &songs);
     void searchDefault();
     void login();
 
 private:
     QList<QString> getAudio(QList<qint64> ids);
     QString getArtist(const QVariantMap &song);
+
 private:
 #ifndef NETEASE_USE_JS
     NeteaseCloudMusicApi api;
@@ -67,6 +68,10 @@ private:
     bool isSearch;
     bool isSearchTrigger;
     IPluginHelper *helper;
+    qint64 lastRecommandTime;
+    QList<int> preferTags;
+    qint64 styleTime;
+    int styleCursor;
 };
 
 #endif // NETEASEMUSIC_H
