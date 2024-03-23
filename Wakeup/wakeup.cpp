@@ -155,8 +155,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
                 qInfo() << "wakeup";
                 detectState = IDLE;
                 isPlaying = player->isPlaying();
-                if (isPlaying)
-                    player->pause();
+                player->pause();
                 recorder->pause();
                 player->playSoundEffect(Config::getDataPath("start.wav"), true);
                 recorder->resume();
@@ -182,8 +181,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
                 // audioProcess->postProcess(detectData);
                 detectState = IDLE;
             }
-            if (isPlaying)
-                player->resume();
+            player->resume();
             player->playSoundEffect(Config::getDataPath("end.wav"));
             qInfo() << "vad" << stop;
             emit detected(stop);

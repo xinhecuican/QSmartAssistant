@@ -25,12 +25,16 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
                     QOverload<QMediaPlayer::Error>::of(&QMediaPlayer::error),
                     player, [=](QMediaPlayer::Error error) {
                         if (error != QMediaPlayer::NoError) {
+                            emit playEnd(getCurrentMeta());
                             playNext();
                         }
                     });
 }
 
 void AudioPlaylist::playNext(bool abandonCurrent) {
+    if (abandonCurrent && player->state() == QMediaPlayer::PlayingState) {
+        emit playEnd(getCurrentMeta());
+    }
     if (player->state() != QMediaPlayer::PlayingState || abandonCurrent) {
         Playlist &current = audiolist[currentPriority];
         if (current.block) {
@@ -80,16 +84,18 @@ void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
                              const QVariant &meta) {
     QUrl url = getUrl(fileName);
     audiolist[priority].append(url, meta);
-    if (priority > currentPriority) {
-        if (player->state() == QMediaPlayer::PlayingState) {
-            player->pause();
-            audiolist[currentPriority].block = true;
-            audiolist[currentPriority].position = player->position();
+    if (player->state() != QMediaPlayer::PausedState) {
+        if (priority > currentPriority) {
+            if (player->state() == QMediaPlayer::PlayingState) {
+                player->pause();
+                audiolist[currentPriority].block = true;
+                audiolist[currentPriority].position = player->position();
+            }
+            currentPriority = priority;
         }
-        currentPriority = priority;
-    }
 
-    playNext();
+        playNext();
+    }
 }
 
 void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
@@ -97,16 +103,18 @@ void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
     QString fileName = FileCache::instance()->writeWav(data, sampleRate);
     QUrl url = getUrl(fileName);
     audiolist[priority].append(url, meta);
-    if (priority > currentPriority) {
-        if (player->state() == QMediaPlayer::PlayingState) {
-            player->pause();
-            audiolist[currentPriority].block = true;
-            audiolist[currentPriority].position = player->position();
+    if (player->state() != QMediaPlayer::PausedState) {
+        if (priority > currentPriority) {
+            if (player->state() == QMediaPlayer::PlayingState) {
+                player->pause();
+                audiolist[currentPriority].block = true;
+                audiolist[currentPriority].position = player->position();
+            }
+            currentPriority = priority;
         }
-        currentPriority = priority;
-    }
 
-    playNext();
+        playNext();
+    }
 }
 
 void AudioPlaylist::clear() {
@@ -144,7 +152,7 @@ bool AudioPlaylist::normalEnd() {
 
 void AudioPlaylist::clearType(const QString &id, AudioPriority priority) {
     Playlist list = audiolist[priority];
-    if(id == ""){
+    if (id == "") {
         audiolist[priority].clear();
     }
     auto iter = list.list.begin();
