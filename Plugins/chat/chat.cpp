@@ -30,7 +30,7 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
         request.setRawHeader("Authorization", ("Bearer " + key).toUtf8());
         request.setHeader(QNetworkRequest::ContentTypeHeader,
                           "application/json");
-        request.setUrl(QUrl("https://api.openai.com/v1/chat/completions"));
+        request.setUrl(QUrl(chatConfig.value("api_base").toString("https://api.openai.com/v1/chat/completions")));
 
         QString proxy = chatConfig.value("proxy").toString();
         if (proxy != "") {

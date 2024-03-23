@@ -134,6 +134,7 @@
         "max_tokens": 2000,
         "stream": true,
         "payload": "你是一个非常实用的AI助手，可以精确简短的回答问题",
-		"proxy": "127.0.0.1:7890"
+		"proxy": "127.0.0.1:7890",
+		"api_base": "https://api.openai.com/v1/chat/completions"
     }
 }
