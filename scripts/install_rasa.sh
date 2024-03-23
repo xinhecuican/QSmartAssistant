@@ -16,8 +16,8 @@ pip install emoji==1.7
 pip install recognizers-text-suite
 mkdir -p ${bert_path}
 cd ${bert_path}
-# wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/config.json
-# wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/pytorch_model.bin
-# wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/tf_model.h5
-# wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/tokenizer_config.json
-# wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/vocab.txt
+wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/config.json
+wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/pytorch_model.bin
+wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/tf_model.h5
+wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/tokenizer_config.json
+wget https://huggingface.co/google-bert/bert-base-chinese/resolve/main/vocab.txt
