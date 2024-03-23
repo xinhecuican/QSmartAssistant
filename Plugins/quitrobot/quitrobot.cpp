@@ -22,6 +22,7 @@ bool QuitRobot::handle(const QString &text, const ParsedIntent &parsedIntent,
         if (answer == "是" || answer == "确定") {
             helper->exit();
         }
+        return true;
     }
     return false;
 }

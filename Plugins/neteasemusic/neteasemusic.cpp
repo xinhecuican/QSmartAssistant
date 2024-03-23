@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-NeteaseMusic::NeteaseMusic() { srand(time(0)); }
+NeteaseMusic::NeteaseMusic() : isLogin(false) { srand(time(0)); }
 
 NeteaseMusic::~NeteaseMusic() {
 #ifdef NETEASE_USE_JS
@@ -33,59 +33,16 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
             [=](QProcess::ProcessError error) {
                 qDebug() << "netease node api error" << error;
             });
-    connect(&process, &QProcess::readyReadStandardOutput, this,
-            [=]() { qDebug() << process.readAllStandardOutput(); });
+    connect(&process, &QProcess::readyReadStandardOutput, this, [=]() {
+        login();
+        qDebug() << process.readAllStandardOutput();
+    });
     process.setWorkingDirectory(homeDir);
     process.start("node", {homeDir + "/app.js"});
-// TODO: 在回调中登录
-    process.waitForReadyRead();
+#else
+    login();
 #endif
 
-    QVariantMap params;
-    cookie = neteaseConfig.value("cookie").toString();
-    volumeStep = neteaseConfig.value("volumeStep").toInt();
-    QVariantMap result;
-    result = invokeMethod("login_status", params);
-    login = true;
-    bool loginanoni = result["body"]
-                          .toMap()["data"]
-                          .toMap()["account"]
-                          .toMap()["anonimousUser"]
-                          .toBool();
-    if (cookie == "" || (result["status"] != 200) || loginanoni) {
-        params["phone"] = neteaseConfig.value("phone").toString();
-        params["password"] = neteaseConfig.value("password").toString();
-        bool success = false;
-        for (int i = 0; i < 3; i++) {
-            result = invokeMethod("login_cellphone", params);
-            if (result["status"] == 200) {
-                cookie = QUrl::toPercentEncoding(
-                    result["cookie"].toString().toLocal8Bit());
-                helper->getConfig()->saveConfig("netease_cloud", "cookie",
-                                                cookie);
-                success = true;
-                break;
-            } else {
-                if (result["body"] != "") {
-                    qWarning() << result["body"].toMap()["message"].toString();
-                }
-                QThread::msleep(1000);
-            }
-        }
-        if (!success) {
-            params.clear();
-            result = invokeMethod("register_anonimous", params);
-            if (result["status"] == 200) {
-                cookie = QUrl::toPercentEncoding(
-                    result["cookie"].toString().toLocal8Bit());
-                helper->getConfig()->saveConfig("netease_cloud", "cookie",
-                                                cookie);
-            } else {
-                qWarning() << "netease login fail";
-                login = false;
-            }
-        }
-    }
     searchTrigger = {"搜索", "找", "播放", "听", "放", "来", "唱", "再来"};
     connect(helper->getPlayer(), &Player::playEnd, this, [=](QVariant meta) {
         QVariantMap metaMap = meta.toMap();
@@ -109,13 +66,74 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
     });
 }
 
+void NeteaseMusic::login() {
+    if (isLogin)
+        return;
+    QJsonObject neteaseConfig = helper->getConfig()->getConfig("netease_cloud");
+    QVariantMap params;
+    cookie = neteaseConfig.value("cookie").toString();
+    volumeStep = neteaseConfig.value("volumeStep").toInt();
+    QVariantMap result;
+    result = invokeMethod("login_status", params);
+    bool loginanoni = result["body"]
+                          .toMap()["data"]
+                          .toMap()["account"]
+                          .toMap()["anonimousUser"]
+                          .toBool();
+    if (result["status"] != 200) {
+        result = invokeMethod("login_status", params);
+    }
+    if (cookie == "" || (result["status"] != 200) || loginanoni) {
+        params["phone"] = neteaseConfig.value("phone").toString();
+        params["password"] = neteaseConfig.value("password").toString();
+        bool success = false;
+        for (int i = 0; i < 3; i++) {
+            result = invokeMethod("login_cellphone", params);
+            if (result["status"] == 200) {
+                QString importCookie = QUrl::toPercentEncoding(
+                    result["cookie"].toString().toLocal8Bit());
+                if (importCookie != "") {
+                    cookie = importCookie;
+                    helper->getConfig()->saveConfig("netease_cloud", "cookie",
+                                                    cookie);
+                }
+                success = true;
+                isLogin = true;
+                break;
+            } else {
+                if (result["body"] != "") {
+                    qWarning() << result["body"].toMap()["message"].toString();
+                }
+                QThread::msleep(1000);
+            }
+        }
+        if (!success && cookie == "") {
+            params.clear();
+            result = invokeMethod("register_anonimous", params);
+            if (result["status"] == 200) {
+                QString importCookie = QUrl::toPercentEncoding(
+                    result["cookie"].toString().toLocal8Bit());
+                if (importCookie != "") {
+                    cookie = importCookie;
+                    helper->getConfig()->saveConfig("netease_cloud", "cookie",
+                                                    cookie);
+                }
+                isLogin = true;
+            } else {
+                qWarning() << "netease login fail";
+                isLogin = false;
+            }
+        }
+    }
+}
+
 void NeteaseMusic::recvMessage(const QString &text,
                                const ParsedIntent &parsedIntent,
                                const PluginMessage &message) {}
 
 bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
                           bool &isImmersive) {
-    if (!login)
+    if (isLogin)
         return false;
     isSearchTrigger = false;
     for (auto &trigger : searchTrigger) {

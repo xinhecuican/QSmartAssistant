@@ -113,11 +113,14 @@ void Conversation::say(const QString &text, bool block, const QString &type) {
     if (text == "") {
         return;
     }
+    qInfo() << "say" << text;
     QStringList list =
-        text.split(QRegExp("\t|.|。|!|\?|；|\n"), Qt::SkipEmptyParts);
+        text.split(QRegExp("[\t.。!\?？！；\n]"), Qt::SkipEmptyParts);
     endIndex = index + list.size() - 1;
-    for (QString &line : list)
-        emit feedTTS(line, type);
+    for (QString &line : list) {
+        if (line != "")
+            emit feedTTS(line, type);
+    }
     if (block) {
         ttsEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
     }

@@ -35,15 +35,16 @@ private:
     QNetworkAccessManager manager;
     QNetworkRequest request;
     QJsonObject requestData;
-    QJsonObject payload;
     QJsonArray conversation;
     QNetworkProxy proxy;
     QNetworkReply *reply;
     QString output;
     int currentToken;
     int maxTokens;
+    int limitToken;
     QString result;
     bool stream;
+    bool chatMode;
 };
 
 #endif

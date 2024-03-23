@@ -1,9 +1,9 @@
 #include "chat.h"
 #include "../../Utils/config.h"
 
-Chat::Chat() : reply(nullptr) {}
+Chat::Chat() : reply(nullptr), chatMode(false) {}
 
-QString Chat::getName(){ return "Chat"; }
+QString Chat::getName() { return "Chat"; }
 
 void Chat::setPluginHelper(IPluginHelper *helper) {
     this->helper = helper;
@@ -14,15 +14,19 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
         QString key = chatConfig.value("key").toString();
         double temperature = chatConfig.value("temperature").toDouble(1);
         maxTokens = chatConfig.value("max_tokens").toInt(1000);
-        bool stream = chatConfig.value("stream").toBool();
-        QString payload = chatConfig.value("payload").toString();
-        if (payload != "") {
-            this->payload.insert("role", "system");
-            this->payload.insert("content", payload);
+        limitToken = chatConfig.value("limit_token").toInt(4000);
+        stream = chatConfig.value("stream").toBool();
+        QString payloadStr = chatConfig.value("payload").toString();
+        QJsonObject payload;
+        if (payloadStr != "") {
+            payload.insert("role", "system");
+            payload.insert("content", payloadStr);
         } else {
-            this->payload.insert("role", "system");
-            this->payload.insert("content", "你是一个非常实用的AI助手");
+            payload.insert("role", "system");
+            payload.insert("content", "你是一个非常实用的AI助手");
         }
+        conversation.append(payload);
+        currentToken += payload["content"].toString().size();
         requestData["model"] = modelName;
         requestData["temperature"] = temperature;
         requestData["max_tokens"] = maxTokens;
@@ -30,7 +34,9 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
         request.setRawHeader("Authorization", ("Bearer " + key).toUtf8());
         request.setHeader(QNetworkRequest::ContentTypeHeader,
                           "application/json");
-        request.setUrl(QUrl(chatConfig.value("api_base").toString("https://api.openai.com/v1/chat/completions")));
+        request.setUrl(
+            QUrl(chatConfig.value("api_base")
+                     .toString("https://api.openai.com/v1/chat/completions")));
 
         QString proxy = chatConfig.value("proxy").toString();
         if (proxy != "") {
@@ -39,7 +45,6 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
                 this->proxy.setType(QNetworkProxy::HttpProxy);
                 this->proxy.setHostName(url.at(0));
                 this->proxy.setPort(url.at(1).toShort());
-                qDebug() << this->proxy.hostName() << this->proxy.port();
                 manager.setProxy(this->proxy);
             }
         }
@@ -50,26 +55,27 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
 
 bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
                   bool &isImmersive) {
-    if (parsedIntent.hasIntent("CHAT")) {
-        helper->say("来对话吧！您有什么问题呢？", true);
-        while (true) {
-            QString ans = helper->question("");
-            if (ans == "")
-                continue;
-            ParsedIntent intents = helper->parse(ans);
-            if (isImmersive) {
-                reply->abort();
-                result = "";
-                helper->stopSay("chat");
-                isImmersive = false;
-            }
-            if (intents.hasIntent("CLOSE_MUSIC")) {
-                break;
-            } else {
+    if (isImmersive) {
+        reply->abort();
+        result = "";
+        helper->stopSay("chat");
+        if (!chatMode)
+            isImmersive = false;
+    }
+    if (parsedIntent.hasIntent("CHAT") || chatMode) {
+        if (!chatMode) {
+            QString ans = helper->question("来对话吧！您有什么问题呢？");
+            chatMode = true;
+            if (ans != "") {
                 isImmersive = true;
-                handleInner(ans, intents, "Chat");
+                handleInner(ans, parsedIntent, "Chat");
             }
+        } else {
+            isImmersive = true;
+            handleInner(text, parsedIntent, "Chat");
         }
+        return true;
+    } else if (parsedIntent.hasIntent("CLOSE_MUSIC")) {
         isImmersive = false;
         return true;
     }
@@ -90,33 +96,72 @@ void Chat::recvMessage(const QString &text, const ParsedIntent &intent,
 void Chat::handleInner(const QString &text, const ParsedIntent &intent,
                        const QString &master) {
     if (botName == "chatgpt") {
-        requestData["messages"] =
-            QJsonArray{payload, conversation,
-                       QJsonObject{{"role", "user"}, {"content", text}}};
-        if(reply != nullptr){
+        conversation.append(QJsonObject{{"role", "user"}, {"content", text}});
+        requestData["messages"] = conversation;
+        currentToken += text.size();
+        if (reply != nullptr) {
             delete reply;
         }
+        qDebug() << requestData;
         reply = manager.post(request, QJsonDocument(requestData).toJson());
         connect(reply, &QNetworkReply::readyRead, this, [=]() {
             QString response = QString::fromUtf8(reply->readAll());
+            for (int i = 0; i < response.size(); i++) {
+                if (response[i] == '{') {
+                    response.remove(0, i);
+                    break;
+                }
+            }
             QJsonDocument jsonDoc = QJsonDocument::fromJson(response.toUtf8());
             QJsonObject jsonObj = jsonDoc.object();
-            QJsonArray choicesArray = jsonObj["choices"].toArray();
-            if (!choicesArray.isEmpty()) {
-                QJsonObject messageObj =
-                    choicesArray[0].toObject()["message"].toObject();
-                response = messageObj["content"].toString();
-                result += response;
-                QStringList list = response.split(QRegExp("\t|.|。|!|\?|；|\n"),
-                                                  Qt::SkipEmptyParts);
-                if (list.size() > 1) {
-                    helper->say(output + list.at(0), false, master);
-                    for (int i = 1; i < list.size() - 1; i++) {
-                        helper->say(list.at(i), false, master);
+            if (jsonObj.contains("choices")) {
+                QJsonArray choicesArray = jsonObj["choices"].toArray();
+                QString content;
+                if (!choicesArray.isEmpty()) {
+                    if (!stream) {
+                        QJsonObject messageObj =
+                            choicesArray.at(0).toObject()["message"].toObject();
+                        content = messageObj["content"].toString();
+                    } else {
+                        QJsonObject message = choicesArray.at(0).toObject();
+                        QJsonObject messageObj = message["delta"].toObject();
+                        if (messageObj.contains("content")) {
+                            content = messageObj["content"].toString();
+                        }
                     }
-                    output = list.last();
-                } else {
-                    output = response;
+                    result += content;
+                    bool split = false;
+                    QStringList list;
+                    int begin = -1;
+                    if (stream) {
+                        for (int i = 0; i < content.size(); i++) {
+                            if (content[i] == '\t' || content[i] == '.' ||
+                                content[i] == "。" || content[i] == "！" ||
+                                content[i] == '!' || content[i] == '?' ||
+                                content[i] == "？" || content[i] == "；" ||
+                                content[i] == '\n') {
+                                split = true;
+                                list.append(content.mid(begin, i - begin));
+                                begin = i;
+                            }
+                        }
+                        if (split) {
+                            if (list.size() > 1) {
+                                helper->say(output + list.at(0), false, master);
+                                for (int i = 1; i < list.size() - 1; i++) {
+                                    helper->say(list.at(i), false, master);
+                                }
+                                output = list.last();
+                            } else {
+                                helper->say(output + list.at(0), false, master);
+                                output = "";
+                            }
+                        } else {
+                            output += content;
+                        }
+                    } else {
+                        output += content;
+                    }
                 }
             }
         });
@@ -126,26 +171,23 @@ void Chat::handleInner(const QString &text, const ParsedIntent &intent,
                     helper->say(output, false, master);
                     output.clear();
                 }
-                QJsonObject question;
-                question.insert("role", "user");
-                question.insert("content", text);
-                currentToken += text.size();
-                conversation.append(question);
                 QJsonObject response;
                 response.insert("role", "assistant");
                 response.insert("content", result);
-                conversation.append(result);
+                conversation.append(response);
                 currentToken += result.size();
-                while (currentToken + 500 > maxTokens) {
+                while (currentToken + maxTokens > limitToken &&
+                       conversation.size() > 1) {
                     currentToken -=
-                        conversation.first()["content"].toString().size();
-                    conversation.removeFirst();
+                        conversation.at(1)["content"].toString().size();
+                    conversation.removeAt(1);
                 }
             } else {
                 qWarning() << "chatgpt network error" << reply->errorString();
             }
             result.clear();
-            helper->quitImmersive(master);
+            if (!chatMode)
+                helper->quitImmersive(master);
         });
     }
 }

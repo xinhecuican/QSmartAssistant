@@ -220,7 +220,6 @@ void Wakeup::resume() {
 }
 
 void Wakeup::doResponse() {
-    // TODO: 延长VAD等待时间，没检测到语音时不运行ASR
     vadModel->startDetect(true);
     detectState = VAD;
     isResponse = true;

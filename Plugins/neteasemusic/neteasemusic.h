@@ -46,6 +46,7 @@ private:
     QVariantMap invokeMethod(QString name, QVariantMap &args);
     void parseSongs(const QList<QVariant>& songs);
     void searchDefault();
+    void login();
 
 private:
     QList<QString> getAudio(QList<qint64> ids);
@@ -61,7 +62,7 @@ private:
 #endif
     QString cookie;
     QList<QString> searchTrigger;
-    bool login;
+    bool isLogin;
     int volumeStep;
     bool isSearch;
     bool isSearchTrigger;

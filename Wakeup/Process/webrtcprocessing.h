@@ -4,7 +4,6 @@
 #include "audioprocess.h"
 #include <QAudioInput>
 
-// TODO: finish webrtc
 class WebrtcProcessing : public AudioProcess
 {
 public:
