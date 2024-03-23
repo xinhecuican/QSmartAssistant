@@ -1,0 +1,9 @@
+feat
+fix
+plugin
+doc
+perf
+chore
+style
+refactor
+test

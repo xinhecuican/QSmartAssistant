@@ -32,9 +32,9 @@
 import os
 import re
 import sys
-from maint.lib import maintainers
+# from maint.lib import maintainers
 
-from style.repo import GitRepo
+# from style.repo import GitRepo
 
 def _printErrorQuit(error_message):
     """
@@ -58,48 +58,45 @@ def _printErrorQuit(error_message):
 
     print("""
 The first line of a commit must contain one or more gem5 tags separated by
-commas (see MAINTAINERS.yaml for the possible tags), followed by a colon and
+commas (see scripts/tag.txt for the possible tags), followed by a colon and
 a commit title. There must be no leading nor trailing whitespaces.
 
 This header line must then be followed by an empty line. A detailed message,
 although highly recommended, is not mandatory and can follow that empty line.
 
 e.g.:
-    cpu: Refactor branch predictors
+    feat: add duilite ASR
 
-    Refactor branch predictor code to improve its readability, moving functions
-    X and Y to the base class...
+    add duilite ASR...
 
-e.g.:
-    mem,mem-cache: Improve packet class readability
-
-    The packet class...
 """)
     sys.exit(1)
 
 def _validateTags(commit_header):
     """
-        Check if all tags in the commit header belong to the list of valid
-        gem5 tags.
+        Check if all tags in the commit header belong to the list of valid tags.
 
         @param commit_header The first line of the commit message.
     """
 
     # List of valid tags
-    maintainer_dict = maintainers.Maintainers.from_file()
-    valid_tags = [tag for tag, _ in maintainer_dict]
+    valid_tags = []
+    with open("scripts/tag.txt", "r", encoding='utf-8') as f:
+        for line in f:
+            valid_tags.append(line.strip())
+    # maintainer_dict = maintainers.Maintainers.from_file()
+    # valid_tags = [tag for tag, _ in maintainer_dict]
 
     # Remove non-tag 'pmc' and add special tags not in MAINTAINERS.yaml
-    valid_tags.remove('pmc')
-    valid_tags.extend(['RFC', 'WIP'])
+    # valid_tags.remove('pmc')
+    # valid_tags.extend(['RFC', 'WIP'])
 
     tags = ''.join(commit_header.split(':')[0].split()).split(',')
     if (any(tag not in valid_tags for tag in tags)):
         invalid_tag = next((tag for tag in tags if tag not in valid_tags))
         _printErrorQuit("Invalid Gem5 tag: " + invalid_tag)
-
 # Go to git directory
-os.chdir(GitRepo().repo_base())
+# os.chdir(GitRepo().repo_base())
 
 # Get the commit message
 commit_message = open(sys.argv[1]).read()
@@ -127,13 +124,14 @@ if (len(commit_header) > max_header_size):
 
 # Then there must be at least one empty line between the commit header and
 # the commit description
-if (commit_message_lines[1] != ""):
-    _printErrorQuit("Please add an empty line between the commit title and " \
-        "its description")
+if len(commit_message_lines) > 1:
+    if (commit_message_lines[1] != ""):
+        _printErrorQuit("Please add an empty line between the commit title and " \
+            "its description")
 
-# Encourage providing descriptions
-if (re.search("^(Signed-off-by|Change-Id|Reviewed-by):",
-    commit_message_lines[2])):
-    print("Warning: Commit does not have a description")
+    # Encourage providing descriptions
+    if (re.search("^(Signed-off-by|Change-Id|Reviewed-by):",
+        commit_message_lines[2])):
+        print("Warning: Commit does not have a description")
 
 sys.exit(0)
