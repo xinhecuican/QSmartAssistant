@@ -135,3 +135,19 @@ bool Player::normalEnd() { return playlist->normalEnd(); }
 void Player::clear(const QString &id, AudioPlaylist::AudioPriority priority) {
     playlist->clearType(id, priority);
 }
+
+int Player::getCurrentIndex(AudioPlaylist::AudioPriority priority) const {
+    return playlist->getCurrentIndex(priority);
+}
+
+AudioPlaylist::AudioPriority Player::getCurrentPriority() const {
+    return playlist->getCurrentPriority();
+}
+
+int Player::getAudioNumber(AudioPlaylist::AudioPriority priority) const {
+    return playlist->getAudioNumber(priority);
+}
+
+void Player::play(int index, AudioPlaylist::AudioPriority priority) {
+    playlist->play(index, priority);
+}

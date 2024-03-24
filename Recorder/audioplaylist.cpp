@@ -117,6 +117,18 @@ void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
     }
 }
 
+void AudioPlaylist::play(int index, AudioPriority priority) {
+    if (priority != currentPriority)
+        return;
+    Playlist &list = audiolist[priority];
+    if (list.list.size() <= index) {
+        return;
+    }
+    list.index = index;
+    setMedia(list.list[list.index]);
+    list.index++;
+}
+
 void AudioPlaylist::clear() {
     for (auto &list : audiolist) {
         list.clear();
@@ -175,4 +187,16 @@ void AudioPlaylist::clearType(const QString &id, AudioPriority priority) {
             playNext();
         }
     }
+}
+
+int AudioPlaylist::getCurrentIndex(AudioPriority priority) const {
+    return audiolist[currentPriority].getCurrentIndex();
+}
+
+AudioPlaylist::AudioPriority AudioPlaylist::getCurrentPriority() const {
+    return currentPriority;
+}
+
+int AudioPlaylist::getAudioNumber(AudioPriority priority) const {
+    return audiolist[priority].list.size();
 }

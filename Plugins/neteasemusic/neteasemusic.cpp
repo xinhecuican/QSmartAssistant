@@ -34,7 +34,7 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
     }
     connect(&process, &QProcess::errorOccurred, this,
             [=](QProcess::ProcessError error) {
-                qDebug() << "netease node api error" << error;
+                qWarning() << "netease node api error" << error;
             });
     connect(&process, &QProcess::readyReadStandardOutput, this, [=]() {
         login();
@@ -74,7 +74,13 @@ void NeteaseMusic::login() {
         return;
     QJsonObject neteaseConfig = helper->getConfig()->getConfig("netease_cloud");
     QVariantMap params;
-    cookie = neteaseConfig.value("cookie").toString();
+    QFile cookieFile(Config::getDataPath("Tmp/netease_cookie"));
+    if (!cookieFile.open(QIODevice::ReadOnly)) {
+        qWarning() << "netease cookie file open error";
+    } else {
+        cookie = cookieFile.readAll();
+        cookieFile.close();
+    }
     volumeStep = neteaseConfig.value("volumeStep").toInt();
     QVariantMap result;
     result = invokeMethod("login_status", params);
@@ -90,15 +96,20 @@ void NeteaseMusic::login() {
         params["phone"] = neteaseConfig.value("phone").toString();
         params["password"] = neteaseConfig.value("password").toString();
         bool success = false;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 5; i++) {
             result = invokeMethod("login_cellphone", params);
             if (result["status"] == 200) {
                 QString importCookie = QUrl::toPercentEncoding(
                     result["cookie"].toString().toLocal8Bit());
                 if (importCookie != "") {
                     cookie = importCookie;
-                    helper->getConfig()->saveConfig("netease_cloud", "cookie",
-                                                    cookie);
+                    if (!cookieFile.open(QIODevice::WriteOnly |
+                                         QIODevice::Truncate)) {
+                        qWarning() << "netease cookie write error";
+                    } else {
+                        cookieFile.write(cookie.toLocal8Bit());
+                        cookieFile.close();
+                    }
                 }
                 success = true;
                 isLogin = true;
@@ -118,8 +129,13 @@ void NeteaseMusic::login() {
                     result["cookie"].toString().toLocal8Bit());
                 if (importCookie != "") {
                     cookie = importCookie;
-                    helper->getConfig()->saveConfig("netease_cloud", "cookie",
-                                                    cookie);
+                    if (!cookieFile.open(QIODevice::WriteOnly |
+                                         QIODevice::Truncate)) {
+                        qWarning() << "netease cookie write error";
+                    } else {
+                        cookieFile.write(cookie.toLocal8Bit());
+                        cookieFile.close();
+                    }
                 }
                 isLogin = true;
             } else {
@@ -418,6 +434,8 @@ void NeteaseMusic::parseSongs(const QList<QVariant> &songs) {
             ids.append(song["id"].toLongLong());
         }
         QList<QString> urls = getAudio(ids);
+        int currentNumber = helper->getPlayer()->getAudioNumber();
+        bool isPlaying = helper->getPlayer()->isPlaying();
         for (int i = 0; i < urls.size(); i++) {
             if (urls[i] != "") {
                 QVariantMap song = songs.at(i).toMap();
@@ -432,6 +450,9 @@ void NeteaseMusic::parseSongs(const QList<QVariant> &songs) {
                                           meta);
             }
         }
+        if (urls.size() != 0 && isPlaying) {
+            helper->getPlayer()->play(currentNumber);
+        }
     }
 }
 
@@ -444,8 +465,8 @@ void NeteaseMusic::searchDefault() {
         params["limit"] = 20;
         QVariantMap result = invokeMethod("personalized_newsong", params);
         if (result["status"] == 200) {
-            QList<QVariant> songs = result["body"].toMap()["result"].toList();
-            parseSongs(songs);
+            QList<QVariant> songs =
+            result["body"].toMap()["result"].toList(); parseSongs(songs);
         }
     } else if (possibility > 0.7) { // 根据曲风偏好搜歌
         int tagId = 1000;
@@ -473,27 +494,28 @@ void NeteaseMusic::searchDefault() {
             styleCursor += songs.size();
         }
     } else { // 热门歌单
-        params["limit"] = 1;
-        params["offset"] = rand() % 10000;
-        QVariantMap result = invokeMethod("top_playlist", params);
-        if (result["status"] == 200) {
-            QList<QVariant> playlists =
-                result["body"].toMap()["playlists"].toList();
-            if (playlists.size() > 0) {
-                QVariantMap playlist = playlists[0].toMap();
-                QString id = playlist["id"].toString();
-                params.clear();
-                params["id"] = id;
-                QVariantMap audioResult =
-                    invokeMethod("playlist_track_all", params);
-                if (audioResult["status"] == 200) {
-                    QList<QVariant> songs =
-                        audioResult["body"].toMap()["songs"].toList();
-                    parseSongs(songs);
-                } else {
-                    helper->say("网络连接出错了");
-                }
+    params["limit"] = 1;
+    params["offset"] = rand() % 499;
+    QVariantMap result = invokeMethod("top_playlist", params);
+    if (result["status"] == 200) {
+        QList<QVariant> playlists =
+            result["body"].toMap()["playlists"].toList();
+        if (playlists.size() > 0) {
+            QVariantMap playlist = playlists[0].toMap();
+            QString id = playlist["id"].toString();
+            qDebug() << "playlist id" << id;
+            params.clear();
+            params["id"] = id;
+            QVariantMap audioResult =
+                invokeMethod("playlist_track_all", params);
+            if (audioResult["status"] == 200) {
+                QList<QVariant> songs =
+                    audioResult["body"].toMap()["songs"].toList();
+                parseSongs(songs);
+            } else {
+                helper->say("网络连接出错了");
             }
         }
+    }
     }
 }

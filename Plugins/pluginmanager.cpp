@@ -48,9 +48,6 @@ void PluginManager::handlePlugin(const QString &text,
     this->parsedIntent = parsedIntent;
     if (immersive) {
         bool hit = immersivePlugin->handle(text, parsedIntent, immersive);
-        if (!immersive) {
-            immersivePlugin = nullptr;
-        }
         if (hit)
             qInfo() << "hit plugin immersive" << immersivePlugin->getName();
         else {
@@ -63,6 +60,9 @@ void PluginManager::handlePlugin(const QString &text,
                     break;
                 }
             }
+        }
+        if (!immersive) {
+            immersivePlugin = nullptr;
         }
     } else {
         bool end = false;

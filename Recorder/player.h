@@ -16,6 +16,8 @@ public:
     void play(const QString &fileName,
               AudioPlaylist::AudioPriority priority = AudioPlaylist::NORMAL,
               const QVariant &meta = QVariant());
+    void play(int index,
+              AudioPlaylist::AudioPriority prirority = AudioPlaylist::NORMAL);
     void playRaw(const QByteArray &data, int sampleRate,
                  AudioPlaylist::AudioPriority priority = AudioPlaylist::NORMAL,
                  const QVariant &meta = QVariant());
@@ -33,6 +35,11 @@ public:
     bool normalEnd();
     void clear(const QString &id,
                AudioPlaylist::AudioPriority priority = AudioPlaylist::NORMAL);
+    int getCurrentIndex(
+        AudioPlaylist::AudioPriority priority = AudioPlaylist::NORMAL) const;
+    AudioPlaylist::AudioPriority getCurrentPriority() const;
+    int getAudioNumber(
+        AudioPlaylist::AudioPriority priority = AudioPlaylist::NORMAL) const;
 signals:
     void playEnd(QVariant meta);
     void playStart(QVariant meta);

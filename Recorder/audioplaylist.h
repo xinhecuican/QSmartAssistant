@@ -19,12 +19,16 @@ public:
                   const QVariant &meta);
     void addRaw(const QByteArray &data, int sampleRate, AudioPriority priority,
                 const QVariant &meta);
+    void play(int index, AudioPriority priority);
     void playNext(bool abandonCurrent = false);
     void playPrevious();
     void clear();
     QVariant getCurrentMeta() const;
     bool normalEnd();
     void clearType(const QString &id, AudioPriority priority);
+    int getCurrentIndex(AudioPriority priority) const;
+    AudioPriority getCurrentPriority() const;
+    int getAudioNumber(AudioPriority priority) const;
 signals:
     void playEnd(QVariant meta);
     void playStart(QVariant meta);
@@ -59,6 +63,15 @@ private:
                 return list[0];
             else
                 return AudioMedia();
+        }
+
+        int getCurrentIndex() const {
+            if (list.size() == 0) {
+                return 0;
+            } else if (index != 0) {
+                return index - 1;
+            }
+            return 0;
         }
 
         void clear() {

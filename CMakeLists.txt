@@ -78,7 +78,7 @@ if(DEBUG_BREAKPAD)
         message(FATAL_ERROR "${custom_lib_name} not found")
     endif()
     add_custom_target(dump_symbols
-    COMMAND sh ${CMAKE_SOURCE_DIR}/scripts/dump_symbols.sh ${CMAKE_BUILD_TYPE} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts)
+    COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/dump_symbols.sh ${CMAKE_BUILD_TYPE} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts)
 endif()
 # End Find BreakPad
 

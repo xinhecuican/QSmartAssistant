@@ -18,7 +18,7 @@ if(NETEASE_USE_JS)
         HINTS NeteaseCloudMusicApi/
     )
     if(NOT NeteaseAPP)
-        execute_process(COMMAND sh ${CMAKE_SOURCE_DIR}/scripts/install_neteasejs.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts)
+        execute_process(COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/install_neteasejs.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts)
     endif()
     target_compile_definitions(${PROJECT_NAME} PUBLIC -DNETEASE_USE_JS)
 else()
