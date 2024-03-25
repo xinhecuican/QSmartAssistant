@@ -62,7 +62,10 @@ bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
         if (!chatMode)
             isImmersive = false;
     }
-    if (parsedIntent.hasIntent("CHAT") || chatMode) {
+    if (parsedIntent.hasIntent("CLOSE_MUSIC") && chatMode) {
+        isImmersive = false;
+        return true;
+    } else if (parsedIntent.hasIntent("CHAT") || chatMode) {
         isImmersive = true;
         if (!chatMode) {
             QString ans = helper->question("来对话吧！您有什么问题呢？");
@@ -73,9 +76,6 @@ bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
         } else {
             handleInner(text, parsedIntent, "Chat");
         }
-        return true;
-    } else if (parsedIntent.hasIntent("CLOSE_MUSIC")) {
-        isImmersive = false;
         return true;
     }
     return false;

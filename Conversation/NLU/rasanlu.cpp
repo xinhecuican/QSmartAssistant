@@ -54,6 +54,7 @@ ParsedIntent RasaNLU::parseIntent(const QString &text) {
     connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
     eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
     bool writeSample = false;
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     if (!reply->error()) {
         Intent intent;
         QByteArray replyData = reply->readAll();
@@ -63,7 +64,6 @@ ParsedIntent RasaNLU::parseIntent(const QString &text) {
         intent.name = intentObj.value("name").toString();
         intent.conf = intentObj.value("confidence").toDouble();
         QFile file(Config::getDataPath("Tmp/rasa/" + intent.name + ".yml"));
-        QTextCodec *codec = QTextCodec::codecForName("UTF-8");
         QTextStream out(&file);
         out.setCodec(codec);
         if (recordSamples) {
@@ -115,6 +115,22 @@ ParsedIntent RasaNLU::parseIntent(const QString &text) {
         Intent slotIntent = entity2Slot(intent);
         if (slotIntent.conf > 0.3) {
             parsedIntent.append(slotIntent);
+        }
+        if (recordSamples) {
+            QFile qaFile(Config::getDataPath("Tmp/rasa/qa.csv"));
+            QTextStream qaStream(&qaFile);
+            qaStream.setCodec(codec);
+            bool qaExists = qaFile.exists();
+            if (qaFile.open(QIODevice::WriteOnly | QIODevice::Append)) {
+                if (!qaExists) {
+                    qaStream << "question,intent,conf\n";
+                }
+                if (parsedIntent.intents.size() > 0) {
+                    qaStream << text << "," << parsedIntent.intents[0].name
+                             << "," << parsedIntent.intents[0].conf << "\n";
+                }
+                qaFile.close();
+            }
         }
     } else {
         qWarning() << "rasa request error";
