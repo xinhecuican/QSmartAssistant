@@ -60,7 +60,7 @@ DuiliteVad::~DuiliteVad() { stop(); }
 bool DuiliteVad::detectVoice(const QByteArray &data) {
     isVoice = false;
     feedFunc(vad, (char *)data.data(), data.size());
-    return false;
+    return isVoice;
 }
 
 void DuiliteVad::detect(const QByteArray &data) {

@@ -97,6 +97,13 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         exit(0);
     });
 #endif
+    enablePreVad = wakeupConfig.value("enable_prevad").toBool();
+    prevadTimer = new QTimer(this);
+    prevadTimer->setInterval(wakeupConfig.value("prevad_interval").toInt(2000));
+    connect(prevadTimer, &QTimer::timeout, this, [=]() {
+        prevadTimer->stop();
+        detectState = PREVAD;
+    });
     connect(recorder, &Recorder::dataArrive, this, [=](QByteArray data) {
         if (audioProcess != nullptr) {
             rawData.append(data);
@@ -108,6 +115,25 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
         int index = 0;
         switch (detectState) {
+        case PREVAD: {
+            preProcess();
+            int remain = cacheData.length();
+            while (remain >= vadModel->getChunkSize()) {
+                QByteArray data =
+                    cacheData.mid(index, vadModel->getChunkSize());
+                if (vadModel->detectVoice(data)) {
+                    prevadTimer->start();
+                    detectState = WAKEUP;
+                    break;
+                }
+                index += vadModel->getChunkSize();
+                remain -= vadModel->getChunkSize();
+            }
+            if (index > 0) {
+                cacheData.remove(0, index);
+            }
+            break;
+        }
         case WAKEUP: {
             preProcess();
             int remain = cacheData.length();
@@ -125,7 +151,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         }
         case VAD: {
             preProcess();
-            if(vadModel->containVoice())
+            if (vadModel->containVoice())
                 emit this->dataArrive(data);
             int remain = cacheData.length();
             while (remain >= vadModel->getChunkSize()) {
@@ -149,10 +175,16 @@ Wakeup::Wakeup(Player *player, QObject *parent)
     });
     connect(wakeupModel, &WakeupModel::detected, this, [=](bool stop) {
         if (detectState == WAKEUP) {
-            if (stop)
-                detectState = WAKEUP;
-            else {
+            if (stop) {
+                if (enablePreVad)
+                    detectState = PREVAD;
+                else
+                    detectState = WAKEUP;
+            } else {
                 qInfo() << "wakeup";
+                if (enablePreVad) {
+                    prevadTimer->stop();
+                }
                 detectState = IDLE;
                 isPlaying = player->isPlaying();
                 player->pause();

@@ -34,7 +34,7 @@ private:
     void preProcess();
 
 private:
-    enum DetectState{IDLE, WAKEUP, VAD};
+    enum DetectState{IDLE, PREVAD, WAKEUP, VAD};
     Player* player;
     WakeupModel* wakeupModel;
     VadModel* vadModel;
@@ -50,6 +50,8 @@ private:
     QByteArray rawData;
     bool isResponse;
     bool isPlaying;
+    bool enablePreVad;
+    QTimer* prevadTimer;
 };
 
 #endif // WAKEUP_H

@@ -72,15 +72,14 @@ public:
 
     virtual int getChunkSize() = 0;
 
+    virtual bool detectVoice(const QByteArray &data) = 0;
+
 signals:
     /**
      * @brief detected
      * @param stop don't find vad and stop detect
      */
     void detected(bool stop);
-
-protected:
-    virtual bool detectVoice(const QByteArray &data) = 0;
 
 protected:
     bool valid;

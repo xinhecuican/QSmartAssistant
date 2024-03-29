@@ -4,7 +4,9 @@
 		"detectSlient": 800,
 		"undetectSlient": 4000,
 		"minChunk": 3,
-		"responseSlient": 30000
+		"responseSlient": 30000,
+		"enable_prevad": false,
+		"prevad_interval": 2000
 	},
 	"plugin":{
 		"orderFile": "plugin_order.txt"
