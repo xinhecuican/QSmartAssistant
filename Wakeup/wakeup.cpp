@@ -205,8 +205,12 @@ Wakeup::Wakeup(Player *player, QObject *parent)
             return;
         }
         if (detectState == VAD) {
-            if (stop)
-                detectState = WAKEUP;
+            if (stop) {
+                if(enablePreVad)
+                    detectState = PREVAD;
+                else
+                    detectState = WAKEUP;
+            }
             else {
                 recorder->pause();
                 // if(audioProcess != nullptr)
@@ -230,7 +234,10 @@ Wakeup::~Wakeup() {
 
 void Wakeup::startWakeup() {
     recorder->startRecord();
-    detectState = WAKEUP;
+    if(enablePreVad)
+        detectState = PREVAD;
+    else
+        detectState = WAKEUP;
     detectData.clear();
 }
 
@@ -246,7 +253,10 @@ void Wakeup::stopWakeup() {
 
 void Wakeup::resume() {
     recorder->resume();
-    detectState = WAKEUP;
+    if(enablePreVad)
+        detectState = PREVAD;
+    else
+        detectState = WAKEUP;
 }
 
 void Wakeup::doResponse() {
