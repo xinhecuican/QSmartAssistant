@@ -20,6 +20,9 @@
 #if defined(WAKEUP_SNOWBOY)
 #include "Wakeup/snowboywakeup.h"
 #endif
+#if defined(WAKEUP_WEKWS)
+#include "Wakeup/wekwswakeup.h"
+#endif
 #if defined(VAD_COBRA)
 #include "Vad/cobravad.h"
 #endif
@@ -61,6 +64,9 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
 #if defined(WAKEUP_SNOWBOY)
     wakeupModel = new SnowboyWakeup(this);
+#endif
+#if defined(WAKEUP_WEKWS)
+    wakeupModel = new WekwsWakeup(this);
 #endif
 
 #if defined(VAD_COBRA)
@@ -206,12 +212,11 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         }
         if (detectState == VAD) {
             if (stop) {
-                if(enablePreVad)
+                if (enablePreVad)
                     detectState = PREVAD;
                 else
                     detectState = WAKEUP;
-            }
-            else {
+            } else {
                 recorder->pause();
                 // if(audioProcess != nullptr)
                 // audioProcess->postProcess(detectData);
@@ -234,7 +239,7 @@ Wakeup::~Wakeup() {
 
 void Wakeup::startWakeup() {
     recorder->startRecord();
-    if(enablePreVad)
+    if (enablePreVad)
         detectState = PREVAD;
     else
         detectState = WAKEUP;
@@ -253,7 +258,7 @@ void Wakeup::stopWakeup() {
 
 void Wakeup::resume() {
     recorder->resume();
-    if(enablePreVad)
+    if (enablePreVad)
         detectState = PREVAD;
     else
         detectState = WAKEUP;

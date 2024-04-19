@@ -8,6 +8,7 @@ option(WAKEUP_OPEN "open wakeup" OFF)
 option(WAKEUP_DUILITE "duilite wakeup" ON)
 option(WAKEUP_SHERPA "sherpa wakeup" OFF)
 option(WAKEUP_SNOWBOY "snowboy wakeup" OFF)
+option(WAKEUP_WEKWS "wekws wakeup" OFF)
 
 # vad
 option(VAD_COBRA "cobra vad" OFF)
@@ -69,6 +70,16 @@ if(WAKEUP_SNOWBOY)
         Wakeup/snowboywrapper.cpp Wakeup/snowboywrapper.h
     )
     add_custom_lib(snowboy)
+endif()
+
+if(WAKEUP_WEKWS)
+    message(STATUS "wakeup wekws")
+    target_compile_definitions(QSmartAssistant PUBLIC -DWAKEUP_WEKWS)
+    target_sources(QSmartAssistant PUBLIC
+        Wakeup/wekwswakeup.cpp Wakeup/wekwswakeup.h
+    )
+    add_subdirectory(../lib/wekws wekws)
+    add_custom_lib(onnxruntime)
 endif()
 
 if(VAD_COBRA)

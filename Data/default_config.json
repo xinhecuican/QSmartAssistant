@@ -139,5 +139,14 @@
         "payload": "你是一个非常实用的AI助手，可以精确简短的回答问题",
 		"proxy": "127.0.0.1:7890",
 		"api_base": "https://api.openai.com/v1/chat/completions"
-    }
+    },
+	"wekws_wakeup": {
+		"model": "avg_30_infer.int8.onnx",
+		"chunkSize": 3200,
+		"thres": 0.5,
+		"num_bin": 80,
+		"batch_size": 10,
+		"keyword": "你好小智",
+		"token": "wekws/tokens.txt"
+	}
 }
