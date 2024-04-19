@@ -11,13 +11,18 @@ function FileSuffix() {
     fi
 }
 
+
 if [ -f ${bin_path}/dump_syms ]; then
     mkdir -p ${symbol_path}
-
     ${bin_path}/dump_syms ${parent_path}/build/$1/bin/QSmartAssistant > QSmartAssistant.sym
     hash=`head -n 1 QSmartAssistant.sym | awk '{print $4}'`
     mkdir -p ${symbol_path}/QSmartAssistant/${hash}
     mv QSmartAssistant.sym ${symbol_path}/QSmartAssistant/${hash}
+    ${bin_path}/dump_syms ${parent_path}/build/$1/bin/liblpcommon.so > liblpcommon.so.sym
+    hash=`head -n 1 liblpcommon.so.sym | awk '{print $4}'`
+    mkdir -p ${symbol_path}/liblpcommon.so/${hash}
+    mv liblpcommon.so.sym ${symbol_path}/liblpcommon.so/${hash}
+
     for path in ~/.config/QSmartAssistant/plugins/*
     do
         file=`basename ${path}`

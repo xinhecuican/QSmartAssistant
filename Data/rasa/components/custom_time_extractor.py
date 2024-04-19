@@ -18,9 +18,9 @@ from rasa.shared.nlu.training_data.message import Message
 from recognizers_date_time import DateTimeRecognizer 
 from recognizers_text import Culture, ModelResult
 from datetime import datetime
-recognizer = DateTimeRecognizer(Culture.Chinese)
-model  = recognizer.get_datetime_model()
-result = model.parse("今天晚上天气")
+# recognizer = DateTimeRecognizer(Culture.Chinese)
+# model  = recognizer.get_datetime_model()
+# result = model.parse("今天晚上天气")
 @DefaultV1Recipe.register(
     DefaultV1Recipe.ComponentType.ENTITY_EXTRACTOR,
     is_trainable=False
@@ -70,9 +70,10 @@ class CustomTimeExtractor(GraphComponent, EntityExtractorMixin):
             for result in time_results:
                 values = result.resolution['values']
                 type = result.resolution['values'][0]['type']
-                if type == 'datetimerange':
+                if type == 'datetimerange' or type == "daterange":
                     value = result.resolution['values'][0]['start'] + '|' + result.resolution['values'][0]['end']
-                value = result.resolution['values'][0]['value']
+                else:
+                    value = result.resolution['values'][0]['value']
                 # 不知道上午还是下午，哪个离中午近用哪个
                 if len(values) > 1 and values[0]['type'] == 'datetime':
                     datetime1 = datetime.strptime(values[0]['value'], '%Y-%m-%d %H:%M:%S')

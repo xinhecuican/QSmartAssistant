@@ -23,9 +23,10 @@ pipeline:
   analyzer: char_wb
   min_ngram: 1
   max_ngram: 4
-- name: "LanguageModelFeaturizer"
+- name: components.lm_featurizer.LanguageModelFeaturizer
   model_name: bert
-  model_weights: "data/bert-base-chinese"
+  model_weights: "data/chinese_rbtl3"
+  from_pt: True
 - name: "RegexFeaturizer"
 - name: "DIETClassifier"
   epochs: 300
