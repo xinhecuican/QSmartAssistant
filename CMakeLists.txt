@@ -83,19 +83,19 @@ endif()
 # End Find BreakPad
 
 target_link_libraries(lpcommon PRIVATE
-    Qt::Core
-    Qt::Multimedia
-    Qt::Network
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Multimedia
+    Qt${QT_VERSION_MAJOR}::Network
 )
 
 find_package(openssl  REQUIRED)
 add_custom_file(openssl ${${LIB_NAME}_ROOT_DIR}/lib/lib*)
 
 target_link_libraries(QSmartAssistant PRIVATE
-    Qt::Core
-    Qt::Multimedia
-    Qt::Network
-    Qt::Test
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Multimedia
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Test
     ${openssl_LIBRARIES}
     lpcommon
 )
