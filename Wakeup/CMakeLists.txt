@@ -9,6 +9,7 @@ option(WAKEUP_DUILITE "duilite wakeup" ON)
 option(WAKEUP_SHERPA "sherpa wakeup" OFF)
 option(WAKEUP_SNOWBOY "snowboy wakeup" OFF)
 option(WAKEUP_WEKWS "wekws wakeup" OFF)
+option(WAKEUP_AZURE "azure wakeup" OFF)
 
 # vad
 option(VAD_COBRA "cobra vad" OFF)
@@ -80,6 +81,15 @@ if(WAKEUP_WEKWS)
     )
     add_subdirectory(../lib/wekws wekws)
     add_custom_lib(onnxruntime)
+endif()
+
+if(WAKEUP_AZURE)
+    message(STATUS "wakeup azure")
+    target_compile_definitions(QSmartAssistant PUBLIC -DWAKEUP_AZURE)
+    target_sources(QSmartAssistant PUBLIC
+        Wakeup/azurewakeup.cpp Wakeup/azurewakeup.h
+    )
+    add_custom_lib(azurekws)
 endif()
 
 if(VAD_COBRA)

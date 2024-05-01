@@ -1,0 +1,42 @@
+find_package(PkgConfig)
+set(LIB_NAME azurekws)
+set(${LIB_NAME}_ROOT_DIR ${PROJECT_SOURCE_DIR}/lib/${LIB_NAME})
+set(${LIB_NAME}_INCLUDE_BASE ${${LIB_NAME}_ROOT_DIR}/include)
+set(${LIB_NAME}_LIB_BASE ${${LIB_NAME}_ROOT_DIR}/lib)
+macro(_FIND_LIBRARY libname)
+    if(NOT ${LIB_NAME}_${libname}_LIBRARY)
+        find_library(${LIB_NAME}_${libname}_LIBRARY 
+        NAMES ${libname} 
+        HINTS ${${LIB_NAME}_LIB_BASE})
+        list(APPEND ${LIB_NAME}_LIBRARY ${${LIB_NAME}_${libname}_LIBRARY})
+    endif()
+endmacro(_FIND_LIBRARY)
+set(${LIB_NAME}_INCLUDE_DIR "${${LIB_NAME}_INCLUDE_BASE}")
+list(APPEND ${LIB_NAME}_INCLUDE_DIR "${${LIB_NAME}_INCLUDE_BASE}/c_api")
+
+if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set(${LIB_NAME}_LIB_BASE ${${LIB_NAME}_ROOT_DIR}/lib/arm64)
+elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")
+    set(${LIB_NAME}_LIB_BASE ${${LIB_NAME}_ROOT_DIR}/lib/x64)
+endif()
+_FIND_LIBRARY(Microsoft.CognitiveServices.Speech.core)
+_FIND_LIBRARY(Microsoft.CognitiveServices.Speech.extension.kws)
+_FIND_LIBRARY(Microsoft.CognitiveServices.Speech.extension.kws.ort)
+
+if(${LIB_NAME}_LIBRARY)
+    set(${LIB_NAME}_FOUND TRUE CACHE BOOL "")
+    set(${LIB_NAME}_INCLUDE_DIRS ${${LIB_NAME}_INCLUDE_DIR} CACHE STRING "")
+    set(${LIB_NAME}_LIBRARIES ${${LIB_NAME}_LIBRARY} CACHE STRING "")
+    set(CMAKE_REQUIRED_INCLUDES ${${LIB_NAME}_INCLUDE_DIR})
+    set(CMAKE_REQUIRED_LIBRARIES ${${LIB_NAME}_LIBRARIES})
+    mark_as_advanced(${LIB_NAME}_INCLUDE_DIRS ${LIB_NAME}_LIBRARIES)
+endif()
+if(${LIB_NAME}_FOUND)
+    if(NOT TARGET ${LIB_NAME})
+        add_library(${LIB_NAME} SHARED IMPORTED )
+        set_target_properties(${LIB_NAME} PROPERTIES 
+            INTERFACE_INCLUDE_DIRECTORIES "${${LIB_NAME}_INCLUDE_DIRS}"
+            IMPORTED_IMPLIB "${${LIB_NAME}_LIBRARIES}"
+            IMPORTED_LOCATION "${${LIB_NAME}_LIBRARIES}")
+    endif()
+endif()

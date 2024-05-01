@@ -23,6 +23,9 @@
 #if defined(WAKEUP_WEKWS)
 #include "Wakeup/wekwswakeup.h"
 #endif
+#if defined(WAKEUP_AZURE)
+#include "Wakeup/azurewakeup.h"
+#endif
 #if defined(VAD_COBRA)
 #include "Vad/cobravad.h"
 #endif
@@ -67,6 +70,9 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
 #if defined(WAKEUP_WEKWS)
     wakeupModel = new WekwsWakeup(this);
+#endif
+#if defined(WAKEUP_AZURE)
+    wakeupModel = new AZureWakeup(this);
 #endif
 
 #if defined(VAD_COBRA)

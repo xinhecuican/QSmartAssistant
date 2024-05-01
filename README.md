@@ -28,6 +28,24 @@
 
 内存需求：全过程离线的情况下占用大约在1.2G到1.4G之间，推荐至少2G内存，并且需要开2G的虚拟内存
 
+# 快速开始
+
+```
+git clone https://github.com/xinhecuican/QSmartAssistant
+cd QSmartAssistant
+cp Data/default_config.json Data/config.json
+cp Data/plugin_order_default.txt Data/plugin_order.txt
+
+cd scripts
+./install_snowboy.sh
+./install_sherpa_onnx.sh
+./install_onnxruntime.sh
+./install_rasa.sh
+./install_neteasejs.sh
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -B build/
+# config.json中的配置需要按需进行更改
+```
+
 # 安装和配置
 
 见[安装教程](https://github.com/xinhecuican/QSmartAssistant/wiki/%E5%AE%89%E8%A3%85)和[配置教程](https://github.com/xinhecuican/QSmartAssistant/wiki/%E9%85%8D%E7%BD%AE)

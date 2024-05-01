@@ -148,5 +148,9 @@
 		"batch_size": 10,
 		"keyword": "你好小智",
 		"token": "wekws/tokens.txt"
+	},
+	"azure": {
+		"model": "你好小智.table",
+		"chunkSize": 640
 	}
 }
