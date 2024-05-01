@@ -63,4 +63,4 @@ jobs:
         ./install_rasa.sh
         ./install_neteasejs.sh
     - name: build
-      run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DWAKEUP_SILERO=ON -DNETEASE_USE_JS=ON -B ${{ env.BUILD_PATH }}
+      run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -B ${{ env.BUILD_PATH }}
