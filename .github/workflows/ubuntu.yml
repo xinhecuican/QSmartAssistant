@@ -51,6 +51,9 @@ jobs:
       with:
         fetch-depth: 1
         submodule: true
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "latest"
     - name: install dependency
       run: |
         cd scripts
