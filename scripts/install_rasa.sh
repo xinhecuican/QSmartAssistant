@@ -11,7 +11,7 @@ source ${lib_path}/bin/activate
 pip install -U setuptools
 pip install rasa
 pip install jieba
-pip install pytorch
+pip install torch
 pip install transformers
 pip install emoji==1.7
 pip install recognizers-text-suite
