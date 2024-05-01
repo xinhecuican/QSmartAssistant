@@ -18,5 +18,7 @@ cmake \
 make -j `nproc`
 make install
 
+cp -rf /tmp/sherpa-onnx/shared/include ${lib_path}/include
+cp -rf /tmp/sherpa-onnx/shared/lib ${lib_path}/lib
 popd
 rm -rf sherpa-onnx
