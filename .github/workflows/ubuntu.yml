@@ -1,0 +1,62 @@
+name: ubuntu
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      # 矩阵配置
+      matrix:
+        include:
+          # 5.12.12
+          - qt_version: 5.12.12
+            qt_arch: gcc_64
+          # 5.15.2
+          - qt_version: 5.15.2
+            qt_arch: gcc_64
+    env:
+      BUILD_TYPE: Release
+      BUILD_PATH: build
+      assume: --release
+      qt_target: 'desktop'
+      qt_host: 'linux'
+      archiveName: 'QSmartAssistant-${{ matrix.qt_version }}-${{ matrix.qt_arch }}'
+      
+    steps:
+    - name: Install Qt
+      if: 'true'
+      # 使用外部action。这个action专门用来安装Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ matrix.qt_version }}
+        host: ${{ env.qt_host }}
+        target: ${{ env.qt_target }}
+        arch: ${{ matrix.qt_arch }}
+        install-deps: 'true'
+        cache: 'true'
+        aqtversion: '==3.1.*'
+        modules: ${{ matrix.modules }}
+        # tools: ${{ matrix.tools }}
+
+    - uses: actions/setup-python@v5.1.0
+      with:
+        python-version: 3.10
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodule: true
+    - name: install dependency
+      run: |
+        cd scripts
+        ./install_snowboy.sh
+        ./install_sherpa_onnx.sh
+        ./install_onnxruntime.sh
+        ./install_rasa.sh
+    - name: build
+      run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DWAKEUP_SILERO=ON -B ${{ env.BUILD_PATH }}
