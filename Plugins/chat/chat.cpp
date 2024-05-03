@@ -62,7 +62,7 @@ bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
         if (!chatMode)
             isImmersive = false;
     }
-    if (parsedIntent.hasIntent("CLOSE_MUSIC") && chatMode) {
+    if (parsedIntent.hasIntent("CLOSE") && chatMode) {
         isImmersive = false;
         return true;
     } else if (parsedIntent.hasIntent("CHAT") || chatMode) {

@@ -6,7 +6,9 @@ intents:
     use_entities:
     - number
     - trend
-- CLOSE_MUSIC
+- LIKE
+- CLOSE
+- UNLIKE
 - CONTINUE
 - MUSICINFO:
     use_entities:
@@ -17,7 +19,6 @@ intents:
 - CLOSE_FURNITURE
 - SYS_INFO
 - Weather
-- QUIT_ROBOT
 - CHAT
 entities:
 - human:

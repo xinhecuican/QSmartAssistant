@@ -205,7 +205,8 @@ bool NeteaseMusic::doHandle(const QString &text,
                             bool &isImmersive) {
     if (text.contains("这首歌")) {
         getCurrentTrack();
-    } else if (parsedIntent.hasIntent("CLOSE_MUSIC") || text.contains("退出")) {
+    } else if (parsedIntent.hasIntent("CLOSE") ||
+               text.contains("退出")) {
         isImmersive = false;
         helper->getPlayer()->stop();
     } else if (parsedIntent.hasIntent("PAUSE")) {
@@ -221,7 +222,14 @@ bool NeteaseMusic::doHandle(const QString &text,
         helper->getPlayer()->next();
     } else if (parsedIntent.hasIntent("CHNAGE_TO_LAST")) {
         helper->getPlayer()->previous();
-    } else if (isSearch && isSearchTrigger) {
+    }
+    else if (parsedIntent.hasIntent("LIKE")) {
+        likeCurrent(true);
+    }
+    else if(parsedIntent.hasIntent("UNLIKE")){
+        likeCurrent(false);
+    }
+    else if (isSearch && isSearchTrigger) {
         searchAlbum(parsedIntent);
     } else {
         qInfo() << "netease can't understand" << text;
@@ -392,8 +400,7 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args) {
     QStringList curlArgs;
     curlArgs << "http://127.0.0.1:" + port + "/" + name +
                     (args.size() != 0 ? "?" + query : "");
-    curlArgs << "-H"
-             << "charset: utf-8";
+    curlArgs << "-H" << "charset: utf-8";
     curlProcess.start("curl", curlArgs);
     curlProcess.waitForFinished();
     QString body = curlProcess.readAllStandardOutput();
@@ -460,13 +467,29 @@ void NeteaseMusic::searchDefault() {
     QVariantMap params;
     double possibility = ((double)rand() / (RAND_MAX));
     if (QDateTime::currentMSecsSinceEpoch() - lastRecommandTime >
-        24 * 60 * 60 * 1000) { // 每日新歌
+        24 * 60 * 60 * 1000) {
         lastRecommandTime = QDateTime::currentMSecsSinceEpoch();
+        double possibility2 = ((double)rand() / (RAND_MAX));
+        // 歌单id来源: https://nie.su/archives/2229.html
+        if (possibility2 > 0.3) {
+            params["id"] = "3136952023"; // 私人雷达id
+        } else {
+            params["id"] = "5300458264"; // 新歌雷达id
+        }
+        QVariantMap audioResult = invokeMethod("playlist_track_all", params);
+        if (audioResult["status"] == 200) {
+            QList<QVariant> songs =
+                audioResult["body"].toMap()["songs"].toList();
+            parseSongs(songs);
+        } else {
+            helper->say("网络连接出错了");
+        }
+    } else if (possibility > 0.95) { // 每日新歌
         params["limit"] = 20;
         QVariantMap result = invokeMethod("personalized_newsong", params);
         if (result["status"] == 200) {
-            QList<QVariant> songs =
-            result["body"].toMap()["result"].toList(); parseSongs(songs);
+            QList<QVariant> songs = result["body"].toMap()["result"].toList();
+            parseSongs(songs);
         }
     } else if (possibility > 0.7) { // 根据曲风偏好搜歌
         int tagId = 1000;
@@ -494,28 +517,38 @@ void NeteaseMusic::searchDefault() {
             styleCursor += songs.size();
         }
     } else { // 热门歌单
-    params["limit"] = 1;
-    params["offset"] = rand() % 499;
-    QVariantMap result = invokeMethod("top_playlist", params);
-    if (result["status"] == 200) {
-        QList<QVariant> playlists =
-            result["body"].toMap()["playlists"].toList();
-        if (playlists.size() > 0) {
-            QVariantMap playlist = playlists[0].toMap();
-            QString id = playlist["id"].toString();
-            qDebug() << "playlist id" << id;
-            params.clear();
-            params["id"] = id;
-            QVariantMap audioResult =
-                invokeMethod("playlist_track_all", params);
-            if (audioResult["status"] == 200) {
-                QList<QVariant> songs =
-                    audioResult["body"].toMap()["songs"].toList();
-                parseSongs(songs);
-            } else {
-                helper->say("网络连接出错了");
+        params["limit"] = 1;
+        params["offset"] = rand() % 499;
+        QVariantMap result = invokeMethod("top_playlist", params);
+        if (result["status"] == 200) {
+            QList<QVariant> playlists =
+                result["body"].toMap()["playlists"].toList();
+            if (playlists.size() > 0) {
+                QVariantMap playlist = playlists[0].toMap();
+                QString id = playlist["id"].toString();
+                params.clear();
+                params["id"] = id;
+                QVariantMap audioResult =
+                    invokeMethod("playlist_track_all", params);
+                if (audioResult["status"] == 200) {
+                    QList<QVariant> songs =
+                        audioResult["body"].toMap()["songs"].toList();
+                    parseSongs(songs);
+                } else {
+                    helper->say("网络连接出错了");
+                }
             }
         }
     }
+}
+
+void NeteaseMusic::likeCurrent(bool like) {
+    QVariantMap metaMap = helper->getPlayer()->getCurrentMeta().toMap();
+    if (metaMap.contains("type") && metaMap["type"] == "song") {
+        qint64 id = metaMap["id"].toLongLong();
+        QVariantMap params;
+        params["id"] = id;
+        params["like"] = like;
+        invokeMethod("like", params);
     }
 }

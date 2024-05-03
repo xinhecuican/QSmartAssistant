@@ -17,7 +17,7 @@ bool QuitRobot::handle(const QString &text, const ParsedIntent &parsedIntent,
     Q_UNUSED(text)
     Q_UNUSED(isImmersive)
     if (parsedIntent.hasIntent("QUIT_ROBOT") ||
-        parsedIntent.hasIntent("CLOSE_MUSIC")) {
+        parsedIntent.hasIntent("CLOSE")) {
         QString answer = helper->question("是否退出");
         if (answer == "是" || answer == "确定") {
             helper->exit();

@@ -61,13 +61,24 @@ nlu:
     - 暂停播放
     - 暂停播放音乐
     - 停一会
-- intent: CLOSE_MUSIC
+- intent: LIKE
+  examples: |
+    - 我喜欢这首歌
+    - 收藏这首歌
+- intent: UNLIKE
+  examples: |
+    - 我不喜欢这首歌
+    - 取消收藏
+- intent: CLOSE
   examples: |
     - 退出网易云
     - 退出播放
     - 停止播放
     - 关闭
     - 退出
+    - 关闭机器人
+    - 退出机器人
+    - 关闭智能音箱
 - intent: CONTINUE
   examples: |
     - 继续播放
@@ -126,11 +137,6 @@ nlu:
     - [明天](time)天气怎么样
     - [今天晚上](time)天气怎么样
     - 说说[今后三天](time)的天气
-- intent: QUIT_ROBOT
-  examples: |
-    - 关闭机器人
-    - 退出机器人
-    - 关闭智能音箱
 - intent: CHAT
   examples: |
     - 进入闲聊模式

@@ -47,6 +47,7 @@ private:
     void parseSongs(const QList<QVariant> &songs);
     void searchDefault();
     void login();
+    void likeCurrent(bool like);
 
 private:
     QList<QString> getAudio(QList<qint64> ids);
