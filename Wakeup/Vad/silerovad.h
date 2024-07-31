@@ -130,28 +130,26 @@ private:
     // Inputs
     std::vector<Ort::Value> ort_inputs;
 
-    std::vector<const char *> input_node_names = {"input", "sr", "h", "c"};
+    std::vector<const char *> input_node_names = {"input", "state", "sr"};
     std::vector<float> input;
+    unsigned int size_state = 2 * 1 * 128; // It's FIXED.
+    std::vector<float> _state;
     std::vector<int64_t> sr;
-    unsigned int size_hc = 2 * 1 * 64; // It's FIXED.
-    std::vector<float> _h;
-    std::vector<float> _c;
-
     int64_t input_node_dims[2] = {};
+    const int64_t state_node_dims[3] = {2, 1, 128}; 
     const int64_t sr_node_dims[1] = {1};
-    const int64_t hc_node_dims[3] = {2, 1, 64};
 
     // Outputs
     std::vector<Ort::Value> ort_outputs;
-    std::vector<const char *> output_node_names = {"output", "hn", "cn"};
+    std::vector<const char *> output_node_names = {"output", "stateN"};
 
 public:
     // Construction
     VadIterator(
         const std::string ModelPath, int Sample_rate = 16000,
-        int windows_frame_size = 64, float Threshold = 0.5,
+        int windows_frame_size = 32, float Threshold = 0.5,
         int min_silence_duration_ms = 0, int speech_pad_ms = 64,
-        int min_speech_duration_ms = 64,
+        int min_speech_duration_ms = 32,
         float max_speech_duration_s = std::numeric_limits<float>::infinity());
 };
 

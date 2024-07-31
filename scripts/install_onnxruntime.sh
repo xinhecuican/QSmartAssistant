@@ -5,7 +5,7 @@ lib_path=${parent_path}/lib/onnxruntime
 mkdir -p ${lib_path}
 
 get_arch=`arch`
-version=1.16.3
+version=1.17.1
 if [[ $get_arch =~ "x86_64" ]];then
     wget https://github.com/microsoft/onnxruntime/releases/download/v${version}/onnxruntime-linux-x64-${version}.tgz
     tar xzf onnxruntime-linux-x64-${version}.tgz

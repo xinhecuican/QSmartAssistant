@@ -98,8 +98,9 @@ void Conversation::receiveData(const QByteArray &data) {
 void Conversation::dialog(bool stop) {
     if (!stop) {
         isResponse = false;
-        if (!asr->isStream())
+        if (!asr->isStream()) {
             emit feedASR(cache, true);
+        }
         else
             emit feedASR(QByteArray(), true);
         //        asrEventLoop.exec(QEventLoop::ExcludeUserInputEvents);

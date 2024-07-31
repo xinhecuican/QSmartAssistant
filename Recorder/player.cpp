@@ -10,17 +10,20 @@ Player::Player(QObject *parent) : QObject(parent) {
             [=](QVariant meta) { emit playEnd(meta); });
     connect(playlist, &AudioPlaylist::playStart, this,
             [=](QVariant meta) { emit playStart(meta); });
-    decoder = new AudioBuffer(this);
     QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
-    QAudioFormat decoderFormat = decoder->getFormat();
+    QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
+    QAudioFormat decoderFormat = device.preferredFormat();
     if (!defaultDev.isFormatSupported(decoderFormat))
         decoderFormat = defaultDev.nearestFormat(decoderFormat);
     output = new QAudioOutput(defaultDev, decoderFormat, this);
+    output->setVolume(0.8);
     connect(output, &QAudioOutput::stateChanged, this,
             [=](QAudio::State state) {
+                qDebug() << "player" << state;
                 if (state == QAudio::IdleState) {
                     decoder->close();
-                    output->reset();
+                    decoder->deleteLater();
+                    // output->reset();
                     output->stop();
                     if (isBlockThread)
                         eventLoop.quit();
@@ -65,18 +68,18 @@ void Player::playSoundEffect(const QString &fileName, bool blockThread) {
 
     isBlockThread = blockThread;
     playerPlaying = player->state() == QMediaPlayer::PlayingState;
-    if (playerPlaying) {
+    if (blockThread && playerPlaying) {
         player->pause();
     }
+    decoder = new AudioBuffer(this);
     decoder->start(fileName);
     if (decoder->getState() == AudioBuffer::Stopped) {
         isBlockThread = false;
-        if (playerPlaying) {
+        if (isBlockThread && playerPlaying) {
             player->play();
         }
         return;
     }
-    output->setVolume(0.8);
     decoder->open(QIODevice::ReadOnly);
     output->start(decoder);
     if (blockThread) {

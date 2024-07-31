@@ -39,8 +39,10 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
         Playlist &current = audiolist[currentPriority];
         if (current.block) {
             current.block = false;
-            setMedia(current.list[current.index - 1]);
-            player->setPosition(audiolist[currentPriority].position);
+            if (current.index >= 0 && current.index <= current.list.size()) {
+                setMedia(current.list[current.index - 1]);
+                player->setPosition(audiolist[currentPriority].position);
+            }
         } else {
             if (current.list.size() <= current.index) {
                 if (currentPriority != NORMAL) {
@@ -133,6 +135,7 @@ void AudioPlaylist::clear() {
     for (auto &list : audiolist) {
         list.clear();
     }
+    currentPriority = NORMAL;
 }
 
 QUrl AudioPlaylist::getUrl(const QString &fileName) {

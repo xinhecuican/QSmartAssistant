@@ -340,6 +340,7 @@ QList<QString> NeteaseMusic::getAudio(QList<qint64> ids) {
         idList.append(QString::number(ids[i]));
     }
     params["id"] = idList.join(",");
+    params["level"] = "hires";
     QVariantMap result = invokeMethod("song_url", params);
     QMap<qint64, QString> idUrlMap;
     QVariantMap body = result["body"].toMap();
@@ -374,9 +375,10 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args) {
         args["cookie"] = cookie;
     }
 #ifndef NETEASE_USE_JS
-    QMetaObject::invokeMethod(&api, name.toUtf8(), Qt::DirectConnection,
-                              Q_RETURN_ARG(QVariantMap, ret),
-                              Q_ARG(QVariantMap, args));
+    api.invoke(name, args);
+    // QMetaObject::invokeMethod(&api, name.toUtf8(), Qt::DirectConnection,
+    //                           Q_RETURN_ARG(QVariantMap, ret),
+    //                           Q_ARG(QVariantMap, args));
 #else
     name.replace('_', '/');
     QUrl url("http://127.0.0.1:" + port + "/" + name);

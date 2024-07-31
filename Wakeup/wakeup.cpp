@@ -127,6 +127,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
         int index = 0;
         switch (detectState) {
+        // 检测到声音之后再使用唤醒模型，平时使用vad模型
         case PREVAD: {
             preProcess();
             int remain = cacheData.length();
@@ -163,13 +164,14 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         }
         case VAD: {
             preProcess();
-            if (vadModel->containVoice())
-                emit this->dataArrive(data);
             int remain = cacheData.length();
             while (remain >= vadModel->getChunkSize()) {
                 QByteArray data =
                     cacheData.mid(index, vadModel->getChunkSize());
                 vadModel->detect(data);
+                // 只捕捉带声音的信号在某些模型之下可能会忽略一些信息
+                // if (vadModel->containVoice()) 
+                    emit this->dataArrive(data);
                 index += vadModel->getChunkSize();
                 remain -= vadModel->getChunkSize();
             }
@@ -201,7 +203,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
                 isPlaying = player->isPlaying();
                 player->pause();
                 recorder->pause();
-                player->playSoundEffect(Config::getDataPath("start.wav"), true);
+                player->playSoundEffect(Config::getDataPath("start.wav"), false);
                 recorder->resume();
                 vadModel->startDetect();
                 detectState = VAD;

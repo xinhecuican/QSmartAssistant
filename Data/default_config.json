@@ -71,7 +71,6 @@
 	"netease_cloud":{
 		"phone": "xxx",
 		"password": "xxx",
-		"cookie": "",
 		"volumeStep": 10,
 		"homeDir": "xxx",
 		"port": "34793"

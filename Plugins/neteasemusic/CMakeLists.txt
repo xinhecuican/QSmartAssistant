@@ -22,23 +22,15 @@ if(NETEASE_USE_JS)
     endif()
     target_compile_definitions(${PROJECT_NAME} PUBLIC -DNETEASE_USE_JS)
 else()
-    target_include_directories(${PROJECT_NAME} PRIVATE ../../lib/netease_music/include)
-    link_directories(${PROJECT_SOURCE_DIR}/../../lib/netease_music/lib)
-    set(NETEASE_LIB_DIR ${PROJECT_SOURCE_DIR}/../../lib/netease_music/lib)
-    find_library(lib_CApi NAMES CApi  HINTS ${NETEASE_LIB_DIR})
-    find_library(lib_QCloudMusicApi NAMES QCloudMusicApi  HINTS ${NETEASE_LIB_DIR})
-    find_library(lib_crypto NAMES crypto  HINTS ${NETEASE_LIB_DIR})
-    find_library(lib_ssl NAMES ssl  HINTS ${NETEASE_LIB_DIR})
-    target_link_libraries(${PROJECT_NAME}
-        ${lib_CApi}
-        ${lib_QCloudMusicApi}
-        ${lib_crypto}
-        ${lib_ssl}
-    )
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${NETEASE_LIB_DIR}/lib* ${PLUGIN_PATH}
-    )
+    include(FetchContent)
+    FetchContent_Declare(QCloudMusicApi
+                        GIT_REPOSITORY https://github.com/xinhecuican/QCloudMusicApi.git
+                        GIT_TAG dev
+                        SOURCE_DIR ${CMAKE_SOURCE_DIR}/lib/QCloudMusicApi)
+    fetchcontent_makeavailable(QCloudMusicApi)
+
+    target_include_directories(${PROJECT_NAME} PRIVATE ../../lib/QCloudMusicApi/QCloudMusicApi)
+    target_link_libraries(${PROJECT_NAME} QCloudMusicApi)
 endif()
 
 # add_custom_file(${PROJECT_NAME} ${NETEASE_LIB_DIR}/lib*)

@@ -4,7 +4,7 @@
 
 #include "../Plugin.h"
 #ifndef NETEASE_USE_JS
-#include "module.h"
+#include "apihelper.h"
 #else
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
@@ -55,7 +55,7 @@ private:
 
 private:
 #ifndef NETEASE_USE_JS
-    NeteaseCloudMusicApi api;
+    ApiHelper api;
 #else
     QProcess process;
     QNetworkAccessManager manager;
