@@ -5,7 +5,7 @@
 AudioBuffer::AudioBuffer(QObject* parent)
     :QIODevice(parent),
     decoder(new QAudioDecoder(parent)),
-    buffer(96000),
+    buffer(160000),
     isFinish(false){
 
     setOpenMode(QIODevice::ReadOnly);
@@ -71,6 +71,14 @@ void AudioBuffer::start(const QString& fileName){
     state = Playing;
     buffer.reset();
     decoder->start();
+    emit stateChange(state);
+}
+
+void AudioBuffer::start(const QByteArray& data){
+    isFinish = false;
+    state = Playing;
+    buffer.reset();
+    buffer.write(data.data(), data.size());
     emit stateChange(state);
 }
 

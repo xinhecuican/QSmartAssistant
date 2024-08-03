@@ -1,68 +1,44 @@
 #ifndef UTILS_H
 #define UTILS_H
-#include <stdint.h>
-#include <QString>
 #include <QMap>
+#include <QString>
+#include <stdint.h>
 
-static int16_t float2int16(float f){
-    if(f < -0.999999f){
+static int16_t float2int16(float f) {
+    if (f < -0.999999f) {
         return INT16_MIN;
-    }
-    else if(f > 0.999999f){
+    } else if (f > 0.999999f) {
         return INT16_MAX;
-    }
-    else{
-        return static_cast<int16_t>(f*32767.0f);
+    } else {
+        return static_cast<int16_t>(f * 32767.0f);
     }
 }
 
-static qint64 chineseToNum(const QString &chinese)
-{
+static qint64 chineseToNum(const QString &chinese) {
     QString str = chinese;
-    int pos = chinese.indexOf("之");
-    if(pos != -1){
-        str = chinese.mid(pos+1);
-    }
-    if(str.endsWith("%")){
-        str.remove(str.size()-1, 1);
+    if (str.endsWith("%")) {
+        str.remove(str.size() - 1, 1);
     }
     bool success = false;
-    int res = chinese.toInt(&success);
-    if(success){
+    int res = str.toInt(&success);
+    if (success) {
         return res;
     }
-    static const QMap<QString, qint64> chineseChar {
-                                                   {u8"零", 0},
-                                                   {u8"一", 1},
-                                                   {u8"二", 2},
-                                                   {u8"三", 3},
-                                                   {u8"四", 4},
-                                                   {u8"五", 5},
-                                                   {u8"六", 6},
-                                                   {u8"七", 7},
-                                                   {u8"八", 8},
-                                                   {u8"九", 9},
-                                                   {u8"壹", 1},
-                                                   {u8"贰", 2},
-                                                   {u8"叁", 3},
-                                                   {u8"肆", 4},
-                                                   {u8"伍", 5},
-                                                   {u8"陆", 6},
-                                                   {u8"柒", 7},
-                                                   {u8"捌", 8},
-                                                   {u8"玖", 9},
-                                                   };
-    static const QMap<QString, qint64> chineseUnit {
-                                                   {u8"拾", 10},
-                                                   {u8"佰", 100},
-                                                   {u8"仟", 1000},
-                                                   {u8"萬", 10000},
-                                                   {u8"十", 10},
-                                                   {u8"百", 100},
-                                                   {u8"千", 1000},
-                                                   {u8"万", 10000},
-                                                   {u8"亿", 100000000},
-                                                   };
+    int pos = chinese.indexOf("之");
+    if (pos != -1) {
+        str = chinese.mid(pos + 1);
+    }
+    static const QMap<QString, qint64> chineseChar{
+        {u8"零", 0}, {u8"一", 1}, {u8"二", 2}, {u8"三", 3}, {u8"四", 4},
+        {u8"五", 5}, {u8"六", 6}, {u8"七", 7}, {u8"八", 8}, {u8"九", 9},
+        {u8"壹", 1}, {u8"贰", 2}, {u8"叁", 3}, {u8"肆", 4}, {u8"伍", 5},
+        {u8"陆", 6}, {u8"柒", 7}, {u8"捌", 8}, {u8"玖", 9},
+    };
+    static const QMap<QString, qint64> chineseUnit{
+        {u8"拾", 10},    {u8"佰", 100},   {u8"仟", 1000},
+        {u8"萬", 10000}, {u8"十", 10},    {u8"百", 100},
+        {u8"千", 1000},  {u8"万", 10000}, {u8"亿", 100000000},
+    };
     qint64 ans = 0;
     qint64 firstUnit = 1;
     qint64 secondUnit = 1;
@@ -77,12 +53,14 @@ static qint64 chineseToNum(const QString &chinese)
         } else if (chineseChar.contains(ch)) {
             return chineseChar.value(ch);
         } else {
-            return 0;
+            return ch.digitValue() - '0';
         }
     }
-    for(int i = str.length() - 1; i > -1; --i) {
+    for (int i = str.length() - 1; i > -1; --i) {
         ch = str.at(i);
-        tempUnit = chineseUnit.contains(ch) ? chineseUnit.value(ch) : 1;
+        bool unitContain = chineseUnit.contains(ch);
+        bool charContain = chineseChar.contains(ch);
+        tempUnit = unitContain ? chineseUnit.value(ch) : 1;
         if (tempUnit > firstUnit) {
             firstUnit = tempUnit;
             secondUnit = 1;
@@ -91,7 +69,8 @@ static qint64 chineseToNum(const QString &chinese)
             secondUnit = tempUnit;
             continue;
         }
-        ans += firstUnit * secondUnit * (chineseChar.contains(ch) ? chineseChar.value(ch) : -1);
+        ans +=
+            firstUnit * secondUnit * (charContain ? chineseChar.value(ch) : ch.digitValue() - '0');
     }
     return ans;
 }

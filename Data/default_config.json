@@ -6,7 +6,9 @@
 		"minChunk": 3,
 		"responseSlient": 30000,
 		"enable_prevad": false,
-		"prevad_interval": 2000
+		"prevad_interval": 2000,
+		"start_voice": "start.wav",
+		"end_voice": "end.wav"
 	},
 	"plugin":{
 		"orderFile": "plugin_order.txt"

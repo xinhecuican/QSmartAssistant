@@ -15,26 +15,26 @@ Player::Player(QObject *parent) : QObject(parent) {
     QAudioFormat decoderFormat = device.preferredFormat();
     if (!defaultDev.isFormatSupported(decoderFormat))
         decoderFormat = defaultDev.nearestFormat(decoderFormat);
+    decoder = new AudioBuffer(this);
     output = new QAudioOutput(defaultDev, decoderFormat, this);
-    output->setVolume(0.8);
+    output->setVolume(0.5);
     connect(output, &QAudioOutput::stateChanged, this,
             [=](QAudio::State state) {
-                qDebug() << "player" << state;
                 if (state == QAudio::IdleState) {
                     decoder->close();
-                    decoder->deleteLater();
                     // output->reset();
                     output->stop();
-                    if (isBlockThread)
+                    if (isBlockThread) {
                         eventLoop.quit();
-                    else if (playerPlaying)
                         player->play();
+                    }
                 } else if (state == QAudio::StoppedState) {
                     if (output->error() != QAudio::NoError) {
                         qWarning() << output->error();
                     }
                 }
             });
+
     getVolumeProcess.setProgram("amixer");
     getVolumeProcess.setArguments({"get", "Master"});
     volume = 0;
@@ -71,7 +71,6 @@ void Player::playSoundEffect(const QString &fileName, bool blockThread) {
     if (blockThread && playerPlaying) {
         player->pause();
     }
-    decoder = new AudioBuffer(this);
     decoder->start(fileName);
     if (decoder->getState() == AudioBuffer::Stopped) {
         isBlockThread = false;
@@ -80,6 +79,25 @@ void Player::playSoundEffect(const QString &fileName, bool blockThread) {
         }
         return;
     }
+    decoder->open(QIODevice::ReadOnly);
+    output->start(decoder);
+    if (blockThread) {
+        eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+        if (playerPlaying)
+            player->play();
+    }
+}
+
+void Player::playSoundEffect(const QByteArray &data, bool blockThread) {
+    if (output->state() == QAudio::ActiveState) {
+        output->stop();
+    }
+    isBlockThread = blockThread;
+    playerPlaying = player->state() == QMediaPlayer::PlayingState;
+    if (blockThread && playerPlaying) {
+        player->pause();
+    }
+    decoder->start(data);
     decoder->open(QIODevice::ReadOnly);
     output->start(decoder);
     if (blockThread) {

@@ -205,8 +205,8 @@ bool NeteaseMusic::doHandle(const QString &text,
                             bool &isImmersive) {
     if (text.contains("这首歌")) {
         getCurrentTrack();
-    } else if (parsedIntent.hasIntent("CLOSE") ||
-               text.contains("退出")) {
+    }
+    if (parsedIntent.hasIntent("CLOSE") || text.contains("退出")) {
         isImmersive = false;
         helper->getPlayer()->stop();
     } else if (parsedIntent.hasIntent("PAUSE")) {
@@ -222,14 +222,11 @@ bool NeteaseMusic::doHandle(const QString &text,
         helper->getPlayer()->next();
     } else if (parsedIntent.hasIntent("CHNAGE_TO_LAST")) {
         helper->getPlayer()->previous();
-    }
-    else if (parsedIntent.hasIntent("LIKE")) {
+    } else if (parsedIntent.hasIntent("LIKE")) {
         likeCurrent(true);
-    }
-    else if(parsedIntent.hasIntent("UNLIKE")){
+    } else if (parsedIntent.hasIntent("UNLIKE")) {
         likeCurrent(false);
-    }
-    else if (isSearch && isSearchTrigger) {
+    } else if (isSearch && isSearchTrigger) {
         searchAlbum(parsedIntent);
     } else {
         qInfo() << "netease can't understand" << text;

@@ -4,6 +4,7 @@
 #include <QAudioDecoder>
 #include <QQueue>
 #include <QBuffer>
+#include <QDebug>
 
 class AudioBuffer : public QIODevice
 {
@@ -15,6 +16,7 @@ public:
     State getState() const {return state;}
     QAudioFormat getFormat();
     void start(const QString& fileName);
+    void start(const QByteArray& data);
     void setBufferSize(int size);
 
 signals:

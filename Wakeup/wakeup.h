@@ -48,6 +48,8 @@ private:
 #endif
     QByteArray cacheData;
     QByteArray rawData;
+    QByteArray startVoice;
+    QByteArray endVoice;
     bool isResponse;
     bool isPlaying;
     bool enablePreVad;

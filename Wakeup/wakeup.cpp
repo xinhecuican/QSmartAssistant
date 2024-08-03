@@ -2,6 +2,7 @@
 #include "../Recorder/player.h"
 #include "../Utils/AudioWriter.h"
 #include "../Utils/config.h"
+#include "../Utils/wavfilereader.h"
 #include <QDebug>
 #include <QSound>
 #include <QTimer>
@@ -109,6 +110,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         exit(0);
     });
 #endif
+
     enablePreVad = wakeupConfig.value("enable_prevad").toBool();
     prevadTimer = new QTimer(this);
     prevadTimer->setInterval(wakeupConfig.value("prevad_interval").toInt(2000));
@@ -116,6 +118,23 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         prevadTimer->stop();
         detectState = PREVAD;
     });
+
+    AC::WavFileReader startVoiceReader;
+    QString startFileName = wakeupConfig.value("start_voice").toString("start.wav");
+    startVoiceReader.OpenWavFile(Config::getDataPath(startFileName).toStdString());
+    int startVoiceLen = startVoiceReader.GetDataLength();
+    startVoice.resize(startVoiceLen);
+    startVoiceReader.ReadData(startVoice.data(), startVoiceLen);
+    startVoiceReader.CloseFlie();
+
+    AC::WavFileReader endVoiceReader;
+    QString endFileName = wakeupConfig.value("end_voice").toString("end.wav");
+    endVoiceReader.OpenWavFile(Config::getDataPath(startFileName).toStdString());
+    int endVoiceLen = endVoiceReader.GetDataLength();
+    endVoice.resize(endVoiceLen);
+    endVoiceReader.ReadData(endVoice.data(), endVoiceLen);
+    endVoiceReader.CloseFlie();
+
     connect(recorder, &Recorder::dataArrive, this, [=](QByteArray data) {
         if (audioProcess != nullptr) {
             rawData.append(data);

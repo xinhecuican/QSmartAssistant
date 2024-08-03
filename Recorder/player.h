@@ -8,6 +8,7 @@
 #include <QMediaPlayer>
 #include <QObject>
 #include <QProcess>
+#include <QSoundEffect>
 
 class LPCOMMON_EXPORT Player : public QObject {
     Q_OBJECT
@@ -25,6 +26,7 @@ public:
     void stop();
     void resume();
     void playSoundEffect(const QString &fileName, bool blockThread = false);
+    void playSoundEffect(const QByteArray& data, bool blockThread = false);
     void setVolume(int volume);
     int getVolume();
     void modifyVolume(int value);
