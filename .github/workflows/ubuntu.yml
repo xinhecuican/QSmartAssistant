@@ -62,5 +62,18 @@ jobs:
         ./install_onnxruntime.sh
         ./install_rasa.sh
         ./install_neteasejs.sh
+        cd ../Data
+        wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2
+        tar xvf sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2
+        rm sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2
+        cp default_config.json config.json
+        cp plugin_order_default.txt plugin_order.txt
     - name: build
       run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -B ${{ env.BUILD_PATH }}
+    - name: test
+      run: |
+        mkdir build_test && cd build_test
+        cmake -DCMAKE_BUILD_TYPE=Debug -DTEST=ON ..
+        make -j8
+        cd Debug/bin
+        ./QSmartAssistant asrSherpa hassRegex

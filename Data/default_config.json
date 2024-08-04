@@ -32,8 +32,8 @@
 		"model": "nihao_wenwen.tflite"
 	},
 	"sherpa":{
-		"model": "sherpa_paraformer/model.int8.onnx",
-		"tokens": "sherpa_paraformer/tokens.txt",
+		"model": "sherpa-onnx-paraformer-zh-2024-03-09/model.int8.onnx",
+		"tokens": "sherpa-onnx-paraformer-zh-2024-03-09/tokens.txt",
 		"stream": false
 	},
 	"sherpa_tts":{

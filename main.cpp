@@ -5,7 +5,7 @@
 #ifdef TEST
 #include "Test/tst_sherpa.h"
 #include <QTest>
-QTEST_MAIN(tst_sherpa);
+QTEST_GUILESS_MAIN(tst_sherpa);
 #else
 #ifdef BREAKPAD
 #include "client/linux/handler/exception_handler.h"

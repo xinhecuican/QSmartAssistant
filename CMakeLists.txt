@@ -107,6 +107,7 @@ if(TEST)
     target_sources(QSmartAssistant PUBLIC
         Test/tst_sherpa.h Test/TestPluginHelper.h
     )
+    target_compile_definitions(QSmartAssistant PUBLIC -DTEST)
 endif()
 if(DEBUG_PROCESS)
     target_compile_definitions(QSmartAssistant  PUBLIC -DDEBUG_PROCESS)
