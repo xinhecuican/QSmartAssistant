@@ -84,7 +84,6 @@ void Hass::recvMessage(const QString &text, const ParsedIntent &parsedIntent,
 QJsonObject Hass::parseParams(const Intent &intent,
                               const HassService &service) {
     QJsonObject params = parseObject(intent, service.params);
-    intent.toString(0);
     return params;
 }
 

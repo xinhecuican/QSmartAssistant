@@ -26,7 +26,8 @@ Player::Player(QObject *parent) : QObject(parent) {
                     output->stop();
                     if (isBlockThread) {
                         eventLoop.quit();
-                        player->play();
+                        if (playerPlaying)
+                            player->play();
                     }
                 } else if (state == QAudio::StoppedState) {
                     if (output->error() != QAudio::NoError) {

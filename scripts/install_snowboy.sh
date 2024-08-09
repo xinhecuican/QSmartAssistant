@@ -24,7 +24,7 @@ mkdir -p ${lib_path}/include
 mkdir -p ${lib_path}/lib
 pushd snowboy
 mv include/snowboy-detect.h ${lib_path}/include
-mv resoures/common.res ${parent_path}/Data
+mv resources/common.res ${parent_path}/Data
 libname=libsnowboy-detect.a
 get_arch=`arch`
 
