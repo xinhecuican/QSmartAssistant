@@ -8,6 +8,7 @@
 #include "../Utils/config.h"
 #include "../Utils/wavfilereader.h"
 #include "TestPluginHelper.h"
+#include "../Wakeup/Vad/silerovad.h"
 #include <QLibrary>
 #include <QtTest/QtTest>
 using namespace AC;
@@ -20,6 +21,23 @@ private slots:
     void initTestCase() {
         Config::instance()->loadConfig();
         mplayer = new Player(this);
+    }
+    void vad() {
+        SileroVad* vad = new SileroVad(this);
+        QFile file(Config::getDataPath("short_test.wav"));
+        file.open(QIODevice::ReadOnly);
+        QByteArray data = file.readAll();
+        file.close();
+        bool detected = false;
+        for(int i=0; i<data.size(); i+=vad->getChunkSize()){
+            if(data.size() - i < vad->getChunkSize()) break;
+            QByteArray testData = data.mid(i, vad->getChunkSize());
+            bool detect = vad->detectVoice(testData);
+            if(detect){
+                detected = true;
+            }
+        }
+        QCOMPARE(detected, true);
     }
     void asrSherpa() {
         WavFileReader reader;
@@ -45,6 +63,7 @@ private slots:
         QFile file(Config::getDataPath("short_test.wav"));
         file.open(QIODevice::ReadOnly);
         QByteArray data = file.readAll();
+        file.close();
         mplayer->playRaw(data, 8000);
         QBuffer buffer(&data);
         QMediaPlayer *player = new QMediaPlayer;

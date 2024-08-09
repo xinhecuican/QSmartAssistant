@@ -222,7 +222,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
                 isPlaying = player->isPlaying();
                 player->pause();
                 recorder->pause();
-                player->playSoundEffect(Config::getDataPath("start.wav"), false);
+                player->playSoundEffect(Config::getDataPath("start.wav"), true);
                 recorder->resume();
                 vadModel->startDetect();
                 detectState = VAD;

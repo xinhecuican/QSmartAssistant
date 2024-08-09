@@ -68,7 +68,9 @@
 	},
 	"silero":{
 		"model": "silero_vad.onnx",
-		"chunkSize": 640
+		"chunkSize": 1024,
+        "thresh": 0.1,
+		"abandonNum": 5
 	},
 	"netease_cloud":{
 		"phone": "xxx",

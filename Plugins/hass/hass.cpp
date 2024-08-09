@@ -85,7 +85,6 @@ QJsonObject Hass::parseParams(const Intent &intent,
                               const HassService &service) {
     QJsonObject params = parseObject(intent, service.params);
     intent.toString(0);
-    qDebug() << params;
     return params;
 }
 

@@ -88,53 +88,43 @@ private:
 
 public:
     void reset_states();
-    void process(const std::vector<float> &input_wav);
-    void process(const std::vector<float> &input_wav,
-                 std::vector<float> &output_wav);
-    void collect_chunks(const std::vector<float> &input_wav,
-                        std::vector<float> &output_wav);
-    const std::vector<timestamp_t> get_speech_timestamps() const {
-        return speeches;
-    }
-    void drop_chunks(const std::vector<float> &input_wav,
-                     std::vector<float> &output_wav);
     bool vadDetect(const std::vector<float> &input_wav);
 
 private:
     // model config
-    int64_t window_size_samples; // Assign when init, support 256 512 768 for
-                                 // 8k; 512 1024 1536 for 16k.
-    int sample_rate;             // Assign when init support 16000 or 8000
-    int sr_per_ms;               // Assign when init, support 8 or 16
-    float threshold;
-    uint32_t min_silence_samples;               // sr_per_ms * #ms
-    uint32_t min_silence_samples_at_max_speech; // sr_per_ms * #98
-    int min_speech_samples;                     // sr_per_ms * #ms
+    int64_t window_size_samples;  // Assign when init, support 256 512 768 for 8k; 512 1024 1536 for 16k.
+    int sample_rate;  //Assign when init support 16000 or 8000      
+    int sr_per_ms;   // Assign when init, support 8 or 16
+    float threshold; 
+    int min_silence_samples; // sr_per_ms * #ms
+    int min_silence_samples_at_max_speech; // sr_per_ms * #98
+    int min_speech_samples; // sr_per_ms * #ms
     float max_speech_samples;
-    int speech_pad_samples; // usually a
+    int speech_pad_samples; // usually a 
     int audio_length_samples;
 
     // model states
     bool triggered = false;
     unsigned int temp_end = 0;
-    unsigned int current_sample = 0;
-    // MAX 4294967295 samples / 8sample per ms / 1000 / 60 = 8947 minutes
+    unsigned int current_sample = 0;    
+    // MAX 4294967295 samples / 8sample per ms / 1000 / 60 = 8947 minutes  
     int prev_end;
     int next_start = 0;
 
-    // Output timestamp
+    //Output timestamp
     std::vector<timestamp_t> speeches;
     timestamp_t current_speech;
 
     // Onnx model
     // Inputs
     std::vector<Ort::Value> ort_inputs;
-
+    
     std::vector<const char *> input_node_names = {"input", "state", "sr"};
     std::vector<float> input;
     unsigned int size_state = 2 * 1 * 128; // It's FIXED.
     std::vector<float> _state;
     std::vector<int64_t> sr;
+
     int64_t input_node_dims[2] = {};
     const int64_t state_node_dims[3] = {2, 1, 128}; 
     const int64_t sr_node_dims[1] = {1};
@@ -170,6 +160,8 @@ private:
     qint64 currentSlient;
     bool findVoice;
     std::vector<float> samples;
+    int abandonNum = 5;
+    int abandonCurrent = 0;
 };
 
 #endif // SILEROVAD_H
