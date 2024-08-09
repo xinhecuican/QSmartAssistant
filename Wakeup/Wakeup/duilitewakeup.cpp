@@ -35,9 +35,10 @@ DuiliteWakeup::DuiliteWakeup(QObject* parent)
     std::string resS = cfg.toStdString();
     char* resData = (char*)resS.c_str();
     wakeup = ((struct duilite_wakeup*(*)(char*, duilite_callback, void*))lib.resolve("duilite_wakeup_new"))(resData, wakeupCallback, this);
-    QString params = "{\"env\": \"words=%1;thresh=%2;\"}";
+    QString params = "{\"env\": \"words=%1;thresh=%2;subword_wakeup=%3\"}";
     std::string paramS = params.arg(duiliteConfig.value("wakeword").toString())
-                             .arg(duiliteConfig.value("thresh").toString()).toStdString();
+                             .arg(duiliteConfig.value("thresh").toString())
+                             .arg(duiliteConfig.value("subword").toString()).toStdString();
     ((int(*)(struct duilite_wakeup*, char*))lib.resolve("duilite_wakeup_start"))(wakeup, (char*)paramS.c_str());
     feedFunc = (int(*)(struct duilite_wakeup*,char*,int))lib.resolve("duilite_wakeup_feed");
 }

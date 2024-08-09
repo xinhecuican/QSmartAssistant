@@ -84,6 +84,7 @@
 		"res": "wakeup_far.bin",
 		"wakeword": "ni hao xiao zhi",
 		"thresh": "0.15",
+		"subword": "0",
 		"chunkSize": 640,
 		"asrRes": "ngram_lasr_v1.16_221218_dymc_oneshot_multidecoder.bin",
 		"gram": "gram.gram",
