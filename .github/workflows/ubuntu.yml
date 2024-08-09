@@ -58,7 +58,7 @@ jobs:
       run: |
         cd scripts
         ./install_snowboy.sh
-        ./install_opnssl.sh
+        ./install_openssl.sh
         ./install_sherpa_onnx.sh
         ./install_onnxruntime.sh
         ./install_rasa.sh
