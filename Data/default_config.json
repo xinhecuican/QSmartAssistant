@@ -107,11 +107,16 @@
 			},
 			{
 				"intent": "CLOSE_FURNITURE",
-				"slotName": "furniture",
-				"slotValue": "热水器",
+				"slots": [
+					{
+						"slotName": "furniture",
+						"slotValue": "热水器"
+					}
+				],
 				"path": "/api/services/switch/turn_off",
 				"params": {
-					"entity_id": "switch.cuco_cp2d_46fc_switch"
+					"entity_id": "switch.cuco_cp2d_46fc_switch",
+					"time": "{number|--}"
 				}
 			}
 		]

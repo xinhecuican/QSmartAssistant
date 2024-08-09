@@ -182,5 +182,35 @@ private slots:
         qDebug() << result;
         QCOMPARE(result, "test增大有多少30");
     }
+
+    void hassParam() {
+        QString pluginName = "Hass";
+        QPluginLoader loader(QDir::homePath() +
+                             "/.config/QSmartAssistant/plugins/lib" +
+                             pluginName + ".so");
+        QObject *plugin = loader.instance();
+        if (plugin) {
+            auto info = qobject_cast<Plugin *>(plugin);
+            if (info) {
+                connect(plugin, SIGNAL(sendMessage(PluginMessage)), this,
+                        SLOT(handleMessage(PluginMessage)));
+                info->setPluginHelper(new TestPluginHelper);
+                qInfo() << "load plugin" << pluginName << "success";
+                ParsedIntent parsedIntent;
+                Intent intent;
+                intent.name = "OPEN_FURNITURE";
+                intent.appendSlot(IntentSlot("furniture", "热水器", 0));
+                intent.appendSlot(IntentSlot("number", "20", 0));
+                parsedIntent.append(intent);
+                bool immersive = false;
+                info->handle("热水器开20分钟", parsedIntent, immersive);
+            } else {
+                qInfo() << "load Plugin" << pluginName << "cast fail";
+            }
+        } else {
+            qInfo() << "load plugin" << pluginName << "fail";
+        }
+        QTest::qWait(3000);
+    }
 };
 #endif // TST_SHERPA_H

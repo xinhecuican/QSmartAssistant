@@ -73,7 +73,7 @@ jobs:
     - name: test
       run: |
         mkdir build_test && cd build_test
-        cmake -DCMAKE_BUILD_TYPE=Debug -DTEST=ON ..
+        cmake -DCMAKE_BUILD_TYPE=Debug -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -DTEST=ON ..
         make -j8
         cd Debug/bin
         ./QSmartAssistant asrSherpa hassRegex

@@ -108,6 +108,7 @@ nlu:
     - 打开[卧室]{"entity": "location","role": "home"}的[灯](furniture)
     - 打开[客厅]{"entity": "location","role": "home"}的[风扇](furniture)
     - 打开[扫地机器人](furniture)
+    - [热水器](furniture)开[20](number)分钟
 - intent: CLOSE_FURNITURE
   examples: |
     - 关闭[空调](furniture)
@@ -120,6 +121,11 @@ nlu:
     - 关闭[卧室]{"entity": "location","role": "home"}的[灯](furniture)
     - 关闭[客厅]{"entity": "location","role": "home"}的[风扇](furniture)
     - 关闭[扫地机器人](furniture)
+- intent: FURNITURE_INFO
+  examples: |
+    - [卧室]{"entity": "location","role": "home"}的温度
+    - [灯](furniture)是否开启
+    - [客厅]{"entity": "location","role": "home"}是否有人
 - intent: SYS_INFO
   examples: |
     - 当前系统信息

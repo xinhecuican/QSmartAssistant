@@ -21,15 +21,18 @@ signals:
     void sendMessage(PluginMessage message) override;
 private:
     struct HassService{
+        bool notify = false;
         QString pattern;
         QString path;
         QJsonObject params;
-        QString slotName;
-        QString slotValue;
+        QList<QString> slotName;
+        QList<QString> slotValue;
     };
 private:
-    void executeService(const QString& path, const QJsonObject& params);
+    void executeService(const QString& path, const QJsonObject& params, bool notify);
     QJsonObject parseParams(const Intent& intent, const HassService& service);
+    QJsonObject parseObject(const Intent& intent, const QJsonObject& object);
+    QString parseValue(const Intent& intent, const QJsonValue& value);
 private:
     QMap<QString, QList<HassService>> services;
     QString urlPrefix;

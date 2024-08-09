@@ -16,8 +16,11 @@ void SystemInfo::recvMessage(const QString &text,
 
 bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent,
                         bool &isImmersive) {
-    Q_UNUSED(text)
     Q_UNUSED(isImmersive)
+    if (text == "重新加载设置") {
+        helper->getConfig()->loadConfig();
+        return true;
+    }
     for (auto &intent : parsedIntent.intents) {
         if (intent.name == "SYS_INFO") {
             QFile temperature("/sys/class/thermal/thermal_zone0/temp");
