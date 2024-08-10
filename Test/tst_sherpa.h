@@ -7,10 +7,11 @@
 #include "../Recorder/recorder.h"
 #include "../Utils/config.h"
 #include "../Utils/wavfilereader.h"
-#include "TestPluginHelper.h"
 #include "../Wakeup/Vad/silerovad.h"
+#include "TestPluginHelper.h"
 #include <QLibrary>
 #include <QtTest/QtTest>
+#include <QRegularExpression>
 using namespace AC;
 
 class tst_sherpa : public QObject {
@@ -23,17 +24,18 @@ private slots:
         mplayer = new Player(this);
     }
     void vad() {
-        SileroVad* vad = new SileroVad(this);
+        SileroVad *vad = new SileroVad(this);
         QFile file(Config::getDataPath("short_test.wav"));
         file.open(QIODevice::ReadOnly);
         QByteArray data = file.readAll();
         file.close();
         bool detected = false;
-        for(int i=0; i<data.size(); i+=vad->getChunkSize()){
-            if(data.size() - i < vad->getChunkSize()) break;
+        for (int i = 0; i < data.size(); i += vad->getChunkSize()) {
+            if (data.size() - i < vad->getChunkSize())
+                break;
             QByteArray testData = data.mid(i, vad->getChunkSize());
             bool detect = vad->detectVoice(testData);
-            if(detect){
+            if (detect) {
                 detected = true;
             }
         }
@@ -66,10 +68,8 @@ private slots:
         file.close();
         mplayer->playRaw(data, 8000);
         QBuffer buffer(&data);
-        QMediaPlayer *player = new QMediaPlayer;
+        Player *player = new Player;
         QFileInfo fileInfo(Config::getDataPath("short_test.wav"));
-        player->setMedia(
-            QMediaContent(QUrl::fromLocalFile(fileInfo.absoluteFilePath())));
         mplayer->playSoundEffect(Config::getDataPath("start.wav"), false);
         QTest::qWait(4000);
     }
@@ -161,12 +161,17 @@ private slots:
         } while (size);
         AudioWriter::changeVol(cache, 16);
         QAudioFormat format;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        format.setSampleFormat(QAudioFormat::Int16);
+        format.setChannelConfig(QAudioFormat::ChannelConfigMono);
+#else
         format.setByteOrder(QAudioFormat::LittleEndian);
-        format.setChannelCount(1);
         format.setCodec("audio/pcm");
-        format.setSampleRate(8000);
         format.setSampleSize(16);
         format.setSampleType(QAudioFormat::SignedInt);
+#endif
+        format.setChannelCount(1);
+        format.setSampleRate(8000);
         AudioWriter::writeWav("short_test16.wav", cache, format);
     }
 
@@ -174,29 +179,36 @@ private slots:
         Intent intent;
         intent.appendSlot(IntentSlot("trend", "增大", 0));
         intent.appendSlot(IntentSlot("number", "30", 0));
-        QRegExp keyFinder("\\{(.*)\\}");
-        keyFinder.setMinimal(true);
-        QString value = "test{trend}有多少{number}";
+        QString value = "test{trend|--}有多少{number|--}";
+        QRegularExpression keyFinder(
+            "\\{(.*)\\|(.*)\\}", QRegularExpression::InvertedGreedinessOption);
         QString result = "";
         int pos = 0;
         int lastPos = 0;
-        while ((pos = keyFinder.indexIn(value, pos)) != -1) {
-            pos += keyFinder.matchedLength();
-            QString key = keyFinder.cap(1);
-            bool success = false;
-            IntentSlot slot = intent.getSlot(key, success);
-            if (success) {
-                result += value.midRef(lastPos, keyFinder.pos(1) - lastPos - 1);
-                result += slot.value;
+
+        while (pos < value.size()) {
+            QRegularExpressionMatch match = keyFinder.match(value, pos);
+            if (match.hasMatch()) {
+                QString key = match.captured(1);
+                bool success = false;
+                IntentSlot slot = intent.getSlot(key, success);
+                if (success) {
+                    result += value.mid(lastPos,
+                                        match.capturedStart(1) - lastPos - 1);
+                    result += slot.value;
+                } else {
+                    QString defaultValue = match.captured(2);
+                    if (defaultValue != "--") {
+                        result += defaultValue;
+                    }
+                }
+                pos = match.capturedEnd();
                 lastPos = pos;
-            } else {
-                qWarning() << "hass params unfind" << key;
-                result += value.midRef(lastPos, keyFinder.pos(1) - lastPos - 1);
-                lastPos = pos;
-            }
+            } else
+                break;
         }
         if (lastPos < value.size()) {
-            result += value.midRef(lastPos);
+            result += value.mid(lastPos);
         }
         qDebug() << result;
         QCOMPARE(result, "test增大有多少30");
