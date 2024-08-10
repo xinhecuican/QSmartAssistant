@@ -4,7 +4,6 @@
 #include "../Utils/config.h"
 #include "../Utils/wavfilereader.h"
 #include <QDebug>
-#include <QSound>
 #include <QTimer>
 #if defined(WAKEUP_PORCUPINE)
 #include "Wakeup/porcupinewakeup.h"
@@ -220,9 +219,9 @@ Wakeup::Wakeup(Player *player, QObject *parent)
                 }
                 detectState = IDLE;
                 isPlaying = player->isPlaying();
-                player->pause();
                 recorder->pause();
                 player->playSoundEffect(Config::getDataPath("start.wav"), true);
+                player->pause();
                 recorder->resume();
                 vadModel->startDetect();
                 detectState = VAD;

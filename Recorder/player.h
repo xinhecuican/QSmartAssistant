@@ -3,12 +3,18 @@
 #include "../Utils/LPcommonGlobal.h"
 #include "audiobuffer.h"
 #include "audioplaylist.h"
-#include <QAudioOutput>
+
 #include <QEventLoop>
 #include <QMediaPlayer>
 #include <QObject>
 #include <QProcess>
 #include <QSoundEffect>
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#include <QMediaDevices>
+#include <QAudioDevice>
+#include <QAudioSink>
+#endif
+#include <QAudioOutput>
 
 class LPCOMMON_EXPORT Player : public QObject {
     Q_OBJECT
@@ -26,7 +32,6 @@ public:
     void stop();
     void resume();
     void playSoundEffect(const QString &fileName, bool blockThread = false);
-    void playSoundEffect(const QByteArray& data, bool blockThread = false);
     void setVolume(int volume);
     int getVolume();
     void modifyVolume(int value);
@@ -48,13 +53,11 @@ signals:
 
 private:
     QMediaPlayer *player;
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    QAudioOutput* playerOut;
+#endif
     AudioPlaylist *playlist;
-    QEventLoop eventLoop;
-    bool playerPlaying;
-    bool isBlockThread;
     bool isPause;
-    QAudioOutput *output;
-    AudioBuffer *decoder;
     QProcess getVolumeProcess;
     int volume;
 };

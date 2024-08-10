@@ -8,10 +8,15 @@ set(CMAKE_AUTOMOC ON)
 
 option(NETEASE_USE_JS "use node js api" OFF)
 
-find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia)
 PLUGIN_COMMON()
-target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Multimedia lpcommon)
+target_link_libraries(
+    ${PROJECT_NAME} 
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Multimedia 
+    lpcommon)
+
 if(NETEASE_USE_JS)
     message(STATUS "netease use js")
     find_file(NeteaseAPP app.js

@@ -135,9 +135,9 @@ void Chat::handleInner(const QString &text, const ParsedIntent &intent,
                     if (stream) {
                         for (int i = 0; i < content.size(); i++) {
                             if (content[i] == '\t' || content[i] == '.' ||
-                                content[i] == "。" || content[i] == "！" ||
+                                content[i] == QChar(0x3002) || content[i] == QChar(0xff01) ||
                                 content[i] == '!' || content[i] == '?' ||
-                                content[i] == "？" || content[i] == "；" ||
+                                content[i] == QChar(0xff1f) || content[i] == QChar(0xff1b) ||
                                 content[i] == '\n') {
                                 split = true;
                                 list.append(content.mid(begin, i - begin));

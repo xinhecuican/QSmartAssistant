@@ -6,35 +6,26 @@
 Player::Player(QObject *parent) : QObject(parent) {
     player = new QMediaPlayer(this);
     playlist = new AudioPlaylist(player);
+    isPause = false;
     connect(playlist, &AudioPlaylist::playEnd, this,
             [=](QVariant meta) { emit playEnd(meta); });
     connect(playlist, &AudioPlaylist::playStart, this,
             [=](QVariant meta) { emit playStart(meta); });
-    QAudioDeviceInfo defaultDev = QAudioDeviceInfo::defaultOutputDevice();
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    QAudioDevice device = QMediaDevices::defaultAudioOutput();
+#else
     QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
+#endif
     QAudioFormat decoderFormat = device.preferredFormat();
-    if (!defaultDev.isFormatSupported(decoderFormat))
-        decoderFormat = defaultDev.nearestFormat(decoderFormat);
-    decoder = new AudioBuffer(this);
-    output = new QAudioOutput(defaultDev, decoderFormat, this);
-    output->setVolume(0.5);
-    connect(output, &QAudioOutput::stateChanged, this,
-            [=](QAudio::State state) {
-                if (state == QAudio::IdleState) {
-                    decoder->close();
-                    // output->reset();
-                    output->stop();
-                    if (isBlockThread) {
-                        eventLoop.quit();
-                        if (playerPlaying)
-                            player->play();
-                    }
-                } else if (state == QAudio::StoppedState) {
-                    if (output->error() != QAudio::NoError) {
-                        qWarning() << output->error();
-                    }
-                }
-            });
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    if (!device.isFormatSupported(decoderFormat))
+        decoderFormat = device.nearestFormat(decoderFormat);
+    output = new QAudioOutput(device, decoderFormat, this);
+    connect(output, &QAudioOutput::stateChanged, this, &Player::onStateChange);
+#else
+    playerOut = new QAudioOutput(device, this);
+    player->setAudioOutput(playerOut);
+#endif
 
     getVolumeProcess.setProgram("amixer");
     getVolumeProcess.setArguments({"get", "Master"});
@@ -47,7 +38,11 @@ void Player::play(const QString &fileName,
 }
 
 void Player::pause() {
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    if (player->playbackState() == QMediaPlayer::PlayingState) {
+#else
     if (player->state() == QMediaPlayer::PlayingState) {
+#endif
         isPause = true;
         player->pause();
     }
@@ -66,46 +61,8 @@ void Player::stop() {
 }
 
 void Player::playSoundEffect(const QString &fileName, bool blockThread) {
-
-    isBlockThread = blockThread;
-    playerPlaying = player->state() == QMediaPlayer::PlayingState;
-    if (blockThread && playerPlaying) {
-        player->pause();
-    }
-    decoder->start(fileName);
-    if (decoder->getState() == AudioBuffer::Stopped) {
-        isBlockThread = false;
-        if (isBlockThread && playerPlaying) {
-            player->play();
-        }
-        return;
-    }
-    decoder->open(QIODevice::ReadOnly);
-    output->start(decoder);
-    if (blockThread) {
-        eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
-        if (playerPlaying)
-            player->play();
-    }
-}
-
-void Player::playSoundEffect(const QByteArray &data, bool blockThread) {
-    if (output->state() == QAudio::ActiveState) {
-        output->stop();
-    }
-    isBlockThread = blockThread;
-    playerPlaying = player->state() == QMediaPlayer::PlayingState;
-    if (blockThread && playerPlaying) {
-        player->pause();
-    }
-    decoder->start(data);
-    decoder->open(QIODevice::ReadOnly);
-    output->start(decoder);
-    if (blockThread) {
-        eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
-        if (playerPlaying)
-            player->play();
-    }
+    playlist->playSound(fileName, blockThread);
+    return;
 }
 
 void Player::setVolume(int volume) {
@@ -147,7 +104,11 @@ void Player::playRaw(const QByteArray &data, int sampleRate,
 }
 
 bool Player::isPlaying() const {
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    return player->playbackState() == QMediaPlayer::PlayingState;
+#else
     return player->state() == QMediaPlayer::PlayingState;
+#endif
 }
 
 QVariant Player::getCurrentMeta() const { return playlist->getCurrentMeta(); }

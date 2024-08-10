@@ -40,9 +40,16 @@ public:
         wavHeader.nAudioFormat = 1;
         wavHeader.nSampleRate = format.sampleRate();
         wavHeader.nChannelNumber = format.channelCount();
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+        wavHeader.nBytesPerSample = format.channelCount() * format.bytesPerSample();
+        wavHeader.nBytesPerSecond = format.sampleRate() * format.channelCount() * format.bytesPerSample();
+        wavHeader.nBitsPerSample = format.bytesPerSample() * 8;
+
+#else
         wavHeader.nBytesPerSample = format.channelCount() * format.sampleSize() / 8;
         wavHeader.nBytesPerSecond = format.sampleRate() * format.channelCount() * format.sampleSize() / 8;
         wavHeader.nBitsPerSample = format.sampleSize();
+#endif
         QFile file(path);
         if(!file.open(QIODevice::WriteOnly | QIODevice::Truncate)){
             qCritical() << path << "open error";

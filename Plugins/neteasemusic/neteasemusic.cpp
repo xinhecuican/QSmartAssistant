@@ -28,7 +28,7 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
     QString homeDir = neteaseConfig.value("homeDir").toString();
     QString port = neteaseConfig.value("port").toString();
     this->port = "3000";
-    if (port != 0) {
+    if (port != "") {
         this->port = port;
         qputenv("PORT", port.toStdString().c_str());
     }

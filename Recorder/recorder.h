@@ -3,9 +3,14 @@
 #include <QObject>
 #include <QAudioFormat>
 #include <QThread>
-#include <QAudioInput>
-#include "recordhandler.h"
 #include "../Utils/LPcommonGlobal.h"
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#include <QMediaDevices>
+#include <QAudioDevice>
+#include <QAudioSource>
+#else
+#include <QAudioInput>
+#endif
 
 class LPCOMMON_EXPORT Recorder : public QObject {
     Q_OBJECT
@@ -22,7 +27,11 @@ signals:
     void dataArrive(QByteArray data);
 private:
     QAudioFormat format;
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    QAudioSource* input;
+#else
     QAudioInput* input;
+#endif
     QIODevice* buffer;
     int chunkSize;
     QThread thread;

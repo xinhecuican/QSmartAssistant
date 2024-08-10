@@ -2,6 +2,7 @@
 #include "../Recorder/player.h"
 #include "../Utils/config.h"
 #include <QDebug>
+#include <QRegularExpression>
 #if defined(ASR_SHERPA)
 #include "ASR/sherpaasr.h"
 #endif
@@ -116,7 +117,7 @@ void Conversation::say(const QString &text, bool block, const QString &type) {
     }
     qInfo() << "say" << text;
     QStringList list =
-        text.split(QRegExp("[\t.。!\?？！；\n]"), Qt::SkipEmptyParts);
+        text.split(QRegularExpression("[\t.。!\?？！；\n]"), Qt::SkipEmptyParts);
     endIndex = index + list.size() - 1;
     for (QString &line : list) {
         if (line != "")

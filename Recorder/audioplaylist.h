@@ -3,10 +3,16 @@
 #include "../Utils/AudioWriter.h"
 #include <QBuffer>
 #include <QDir>
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#include <QMediaCaptureSession>
+#include <QUrl>
+#else
 #include <QMediaContent>
+#endif
 #include <QMediaPlayer>
 #include <QObject>
 #include <QTemporaryFile>
+#include <QEventLoop>
 
 class AudioPlaylist : public QObject {
     Q_OBJECT
@@ -21,6 +27,7 @@ public:
                 const QVariant &meta);
     void play(int index, AudioPriority priority);
     void playNext(bool abandonCurrent = false);
+    void playSound(const QString &fileName, bool blockThread);
     void playPrevious();
     void clear();
     QVariant getCurrentMeta() const;
@@ -88,6 +95,10 @@ private:
     QMediaPlayer *player;
     AudioPriority currentPriority;
     QVariant currentMeta;
+    bool isSound;
+    bool isBlock;
+    bool isPlaying;
+    QEventLoop eventLoop;
 };
 
 #endif // AUDIOPLAYLIST_H

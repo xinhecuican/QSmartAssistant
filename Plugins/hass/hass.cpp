@@ -1,6 +1,6 @@
 #include "hass.h"
 #include "../../Utils/config.h"
-
+#include <QRegularExpression>
 Hass::Hass() {}
 
 QString Hass::getName() { return "Hass"; }
@@ -12,7 +12,7 @@ bool Hass::handle(const QString &text, const ParsedIntent &parsedIntent,
         QList<HassService> hassServices = services[intent.name];
         for (auto &service : hassServices) {
             if (service.pattern != "") {
-                if (text.contains(QRegExp(service.pattern))) {
+                if (text.contains(QRegularExpression(service.pattern))) {
                     QJsonObject params = parseParams(intent, service);
                     executeService(service.path, params, service.notify);
                     return true;
@@ -103,31 +103,34 @@ QJsonObject Hass::parseObject(const Intent &intent, const QJsonObject &object) {
 }
 
 QString Hass::parseValue(const Intent &intent, const QJsonValue &v) {
-    QRegExp keyFinder("\\{(.*)\\|(.*)\\}");
-    keyFinder.setMinimal(true);
+    QRegularExpression keyFinder("\\{(.*)\\|(.*)\\}", QRegularExpression::InvertedGreedinessOption);
     QString value = v.toString();
     QString result = "";
     int pos = 0;
     int lastPos = 0;
-    while ((pos = keyFinder.indexIn(value, pos)) != -1) {
-        pos += keyFinder.matchedLength();
-        QString key = keyFinder.cap(1);
-        bool success = false;
-        IntentSlot slot = intent.getSlot(key, success);
-        if (success) {
-            result += value.midRef(lastPos, keyFinder.pos(1) - lastPos - 1);
-            result += slot.value;
-            lastPos = pos;
-        } else {
-            QString defaultValue = keyFinder.cap(2);
-            if (defaultValue != "--") {
-                result += defaultValue;
+
+    while(pos < value.size()) {
+        QRegularExpressionMatch match = keyFinder.match(value, pos);
+        if(match.hasMatch()){
+            QString key = match.captured(1);
+            bool success = false;
+            IntentSlot slot = intent.getSlot(key, success);
+            if (success) {
+                result += value.mid(lastPos, match.capturedStart(1) - lastPos - 1);
+                result += slot.value;
+            } else {
+                QString defaultValue = match.captured(2);
+                if (defaultValue != "--") {
+                    result += defaultValue;
+                }
             }
+            pos = match.capturedEnd();
             lastPos = pos;
         }
+        else break;
     }
     if (lastPos < value.size()) {
-        result += value.midRef(lastPos);
+        result += value.mid(lastPos);
     }
     return result;
 }

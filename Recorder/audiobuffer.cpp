@@ -1,5 +1,11 @@
 #include "audiobuffer.h"
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#include <QMediaDevices>
+#include <QAudioDevice>
+#include <QUrl>
+#else
 #include <QAudioDeviceInfo>
+#endif
 #include <QFileInfo>
 
 AudioBuffer::AudioBuffer(QObject* parent)
@@ -10,14 +16,21 @@ AudioBuffer::AudioBuffer(QObject* parent)
 
     setOpenMode(QIODevice::ReadOnly);
     connect(decoder, &QAudioDecoder::bufferReady, this, [=](){
-
-        const QAudioBuffer& buffer = decoder->read();
-        const int length = buffer.byteCount();
-        const char *data = buffer.data<char>();
-        this->buffer.write(data, length);
-        emit readyRead();
+        qDebug() << decoder->bufferAvailable();
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+        if(decoder->bufferAvailable()){
+#endif
+            const QAudioBuffer& buffer = decoder->read();
+            const int length = buffer.byteCount();
+            const char *data = buffer.data<char>();
+            this->buffer.write(data, length);
+            emit readyRead();
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+        }
+#endif
     });
     connect(decoder, &QAudioDecoder::finished, this, [=](){
+        qDebug() << "finished";
         isFinish = true;
     });
     connect(decoder, QOverload<QAudioDecoder::Error>::of(&QAudioDecoder::error), this, [=](QAudioDecoder::Error error){
@@ -26,7 +39,11 @@ AudioBuffer::AudioBuffer(QObject* parent)
         state = Stopped;
         emit stateChange(state);
     });
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    QAudioDevice device = QMediaDevices::defaultAudioOutput();
+#else
     QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
+#endif
     QAudioFormat format = device.preferredFormat();
     decoder->setAudioFormat(format);
     state = Idle;
@@ -49,6 +66,7 @@ qint64 AudioBuffer::readData(char* data, qint64 size) {
     else{
         size = 0;
     }
+    qDebug() << state << size;
     return size;
 }
 
@@ -66,7 +84,11 @@ QAudioFormat AudioBuffer::getFormat(){
 
 void AudioBuffer::start(const QString& fileName){
     QFileInfo info(fileName);
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    decoder->setSource(QUrl::fromLocalFile(info.absoluteFilePath()));
+#else
     decoder->setSourceFilename(info.absoluteFilePath());
+#endif
     isFinish = false;
     state = Playing;
     buffer.reset();
