@@ -17,12 +17,7 @@ Player::Player(QObject *parent) : QObject(parent) {
     QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
 #endif
     QAudioFormat decoderFormat = device.preferredFormat();
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-    if (!device.isFormatSupported(decoderFormat))
-        decoderFormat = device.nearestFormat(decoderFormat);
-    output = new QAudioOutput(device, decoderFormat, this);
-    connect(output, &QAudioOutput::stateChanged, this, &Player::onStateChange);
-#else
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
     playerOut = new QAudioOutput(device, this);
     player->setAudioOutput(playerOut);
 #endif
