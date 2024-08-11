@@ -31,10 +31,6 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
                                 player->setPosition(position);
                             }
                         }
-                        if (status == QMediaPlayer::NoMedia ||
-                                   status == QMediaPlayer::EndOfMedia) {
-                            isPosition = false;
-                        }
                         // else if(status == QMediaPlayer::LoadingMedia){
                         //     player->play();
                         // }
@@ -128,11 +124,7 @@ void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
     audiolist[priority].append(url, meta);
     if (state != QMediaPlayer::PausedState) {
         if (priority > currentPriority) {
-            if (state == QMediaPlayer::PlayingState) {
-                player->pause();
-                audiolist[currentPriority].block = true;
-                audiolist[currentPriority].position = player->position();
-            }
+            pause();
             currentPriority = priority;
         }
 
@@ -152,11 +144,7 @@ void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
     audiolist[priority].append(url, meta);
     if (state != QMediaPlayer::PausedState) {
         if (priority > currentPriority) {
-            if (state == QMediaPlayer::PlayingState) {
-                player->pause();
-                audiolist[currentPriority].block = true;
-                audiolist[currentPriority].position = player->position();
-            }
+            pause();
             currentPriority = priority;
         }
 
@@ -281,7 +269,11 @@ void AudioPlaylist::pause() {
 #endif
     if (state == QMediaPlayer::PlayingState) {
         audiolist[currentPriority].block = true;
-        audiolist[currentPriority].position = player->position();
+        qDebug() << player->position();
+        if (!isPosition)
+            audiolist[currentPriority].position = player->position();
+        else
+            isPosition = false;
         player->pause();
     }
 }

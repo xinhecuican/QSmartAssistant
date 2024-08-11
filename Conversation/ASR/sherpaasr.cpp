@@ -27,6 +27,11 @@ SherpaASR::SherpaASR(QObject *parent) : ASRModel(parent) {
         config.decoding_method = "greedy_search";
         if (model.contains("paraformer")) {
             config.model_config.paraformer.model = modelS.c_str();
+        } else if (model.contains("tranducer")) {
+            config.model_config.transducer.decoder = modelS1.c_str();
+            config.model_config.transducer.encoder = modelS2.c_str();
+            modelS = model.arg("joiner").toStdString();
+            config.model_config.transducer.joiner = modelS.c_str();
         } else if (model.contains("ctc")) {
             config.model_config.nemo_ctc.model = modelS.c_str();
         } else if (model.contains("sense")) {
@@ -92,7 +97,8 @@ void SherpaASR::detect(const QByteArray &data, bool isLast) {
             for (int i = 0; i < currentLength; i++) {
                 samples[i] = intData[i + currentPos] / 32768.;
             }
-            SherpaOnnxAcceptWaveformOffline(stream, 16000, samples, currentLength);
+            SherpaOnnxAcceptWaveformOffline(stream, 16000, samples,
+                                            currentLength);
             currentPos += 16000;
         }
         SherpaOnnxDecodeOfflineStream(recognizer, stream);
@@ -115,7 +121,8 @@ void SherpaASR::detect(const QByteArray &data, bool isLast) {
             for (int i = 0; i < currentLength; i++) {
                 samples[i] = intData[i + currentPos] / 32768.;
             }
-            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples, currentLength);
+            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples,
+                                                 currentLength);
             currentPos += 16000;
         }
         // add padding
@@ -123,7 +130,8 @@ void SherpaASR::detect(const QByteArray &data, bool isLast) {
             for (int i = 0; i < 4800; i++) {
                 samples[i] = 0;
             }
-            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples, 4800);
+            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples,
+                                                 4800);
             SherpaOnnxOnlineStreamInputFinished(onlineStream);
         }
         while (SherpaOnnxIsOnlineStreamReady(onlineRecognizer, onlineStream))
@@ -131,7 +139,8 @@ void SherpaASR::detect(const QByteArray &data, bool isLast) {
         const SherpaOnnxOnlineRecognizerResult *r =
             SherpaOnnxGetOnlineStreamResult(onlineRecognizer, onlineStream);
         QString result = "";
-        if (SherpaOnnxOnlineStreamIsEndpoint(onlineRecognizer, onlineStream) || isLast) {
+        if (SherpaOnnxOnlineStreamIsEndpoint(onlineRecognizer, onlineStream) ||
+            isLast) {
             if (strlen(r->text)) {
                 result = r->text;
             }
