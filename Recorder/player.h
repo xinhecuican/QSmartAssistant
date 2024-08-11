@@ -9,10 +9,10 @@
 #include <QObject>
 #include <QProcess>
 #include <QSoundEffect>
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-#include <QMediaDevices>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QAudioDevice>
 #include <QAudioSink>
+#include <QMediaDevices>
 #endif
 #include <QAudioOutput>
 
@@ -31,7 +31,8 @@ public:
     void pause();
     void stop();
     void resume();
-    void playSoundEffect(const QString &fileName, bool blockThread = false);
+    void playSoundEffect(const QString &fileName, bool blockThread = false,
+                         bool currentPlaying = false);
     void setVolume(int volume);
     int getVolume();
     void modifyVolume(int value);
@@ -53,8 +54,8 @@ signals:
 
 private:
     QMediaPlayer *player;
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-    QAudioOutput* playerOut;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QAudioOutput *playerOut;
 #endif
     AudioPlaylist *playlist;
     bool isPause;

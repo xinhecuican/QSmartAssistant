@@ -27,8 +27,9 @@ public:
                 const QVariant &meta);
     void play(int index, AudioPriority priority);
     void playNext(bool abandonCurrent = false);
-    void playSound(const QString &fileName, bool blockThread);
+    void playSound(const QString &fileName, bool blockThread, bool currentPlaying);
     void playPrevious();
+    void pause();
     void clear();
     QVariant getCurrentMeta() const;
     bool normalEnd();
@@ -86,7 +87,7 @@ private:
             block = false;
             index = 0;
         }
-        bool isLast() { return list.size() == index - 1; }
+        bool isLast() { return list.size() == index; }
     };
     void setMedia(const AudioMedia &media);
 
@@ -95,9 +96,11 @@ private:
     QMediaPlayer *player;
     AudioPriority currentPriority;
     QVariant currentMeta;
-    bool isSound;
+    bool isSound = false;
     bool isBlock;
     bool isPlaying;
+    bool isPosition = false;
+    qint64 position;
     QEventLoop eventLoop;
 };
 

@@ -30,12 +30,14 @@ signals:
 
 private:
     struct MusicInfo {
+        bool send;
         qint64 id;
         QString url;
         QString name;
         QString artist;
     };
-    QMap<qint64, MusicInfo> musicInfoMap;
+    QList<MusicInfo> readyMusic;
+    QMap<qint64, MusicInfo> playingMap;
 
 private:
     bool doHandle(const QString &text, const ParsedIntent &parsedIntent,
@@ -45,6 +47,7 @@ private:
     void setPlaylist(const QList<QString> &singer, const QList<QString> &song);
     QVariantMap invokeMethod(QString name, QVariantMap &args);
     void parseSongs(const QList<QVariant> &songs);
+    bool parseUrl(MusicInfo& info);
     void searchDefault();
     void login();
     void likeCurrent(bool like);

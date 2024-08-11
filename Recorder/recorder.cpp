@@ -81,6 +81,7 @@ QAudioFormat Recorder::getFormat(){
 void Recorder::pause(){
 //    emit pauseHandler();
     input->suspend();
+    
 }
 
 void Recorder::resume(){

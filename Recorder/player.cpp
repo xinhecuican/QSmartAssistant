@@ -11,13 +11,13 @@ Player::Player(QObject *parent) : QObject(parent) {
             [=](QVariant meta) { emit playEnd(meta); });
     connect(playlist, &AudioPlaylist::playStart, this,
             [=](QVariant meta) { emit playStart(meta); });
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QAudioDevice device = QMediaDevices::defaultAudioOutput();
 #else
     QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
 #endif
     QAudioFormat decoderFormat = device.preferredFormat();
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     playerOut = new QAudioOutput(device, this);
     player->setAudioOutput(playerOut);
 #endif
@@ -33,21 +33,11 @@ void Player::play(const QString &fileName,
 }
 
 void Player::pause() {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-    if (player->playbackState() == QMediaPlayer::PlayingState) {
-#else
-    if (player->state() == QMediaPlayer::PlayingState) {
-#endif
-        isPause = true;
-        player->pause();
-    }
+    playlist->pause();
 }
 
 void Player::resume() {
-    if (isPause) {
-        isPause = false;
-        player->play();
-    }
+    playlist->playNext();
 }
 
 void Player::stop() {
@@ -55,8 +45,8 @@ void Player::stop() {
     playlist->clear();
 }
 
-void Player::playSoundEffect(const QString &fileName, bool blockThread) {
-    playlist->playSound(fileName, blockThread);
+void Player::playSoundEffect(const QString &fileName, bool blockThread, bool currentPlaying) {
+    playlist->playSound(fileName, blockThread, currentPlaying);
     return;
 }
 
@@ -99,7 +89,7 @@ void Player::playRaw(const QByteArray &data, int sampleRate,
 }
 
 bool Player::isPlaying() const {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     return player->playbackState() == QMediaPlayer::PlayingState;
 #else
     return player->state() == QMediaPlayer::PlayingState;

@@ -14,28 +14,40 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
     player->connect(player, &QMediaPlayer::mediaStatusChanged, player,
                     [=](QMediaPlayer::MediaStatus status) {
                         if (status == QMediaPlayer::EndOfMedia) {
-                            if(isSound) {
+                            if (isSound) {
                                 isSound = false;
-                                if(isBlock)
+                                if (isBlock)
                                     eventLoop.quit();
-                                if(isPlaying)
+                                if (isPlaying)
                                     playNext();
+                                return;
                             }
                             emit playEnd(getCurrentMeta());
                             playNext();
+                        }
+                        if (status == QMediaPlayer::BufferedMedia) {
+                            if (isPosition) {
+                                isPosition = false;
+                                player->setPosition(position);
+                            }
+                        }
+                        if (status == QMediaPlayer::NoMedia ||
+                                   status == QMediaPlayer::EndOfMedia) {
+                            isPosition = false;
                         }
                         // else if(status == QMediaPlayer::LoadingMedia){
                         //     player->play();
                         // }
                     });
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-    player->connect(player, &QMediaPlayer::errorOccurred, this, [=](QMediaPlayer::Error error, const QString &errorString){
-        if (error != QMediaPlayer::NoError) {
-            qWarning() << "media player error" << error;
-            emit playEnd(getCurrentMeta());
-            playNext();
-        }
-    });
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    player->connect(player, &QMediaPlayer::errorOccurred, this,
+                    [=](QMediaPlayer::Error error, const QString &errorString) {
+                        if (error != QMediaPlayer::NoError) {
+                            qWarning() << "media player error" << error;
+                            emit playEnd(getCurrentMeta());
+                            playNext();
+                        }
+                    });
 #else
     player->connect(player,
                     QOverload<QMediaPlayer::Error>::of(&QMediaPlayer::error),
@@ -49,7 +61,7 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
 }
 
 void AudioPlaylist::playNext(bool abandonCurrent) {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaPlayer::PlaybackState state = player->playbackState();
 #else
     QMediaPlayer::State state = player->state();
@@ -63,7 +75,8 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
             current.block = false;
             if (current.index >= 0 && current.index <= current.list.size()) {
                 setMedia(current.list[current.index - 1]);
-                player->setPosition(audiolist[currentPriority].position);
+                isPosition = true;
+                position = current.position;
             }
         } else {
             if (current.list.size() <= current.index) {
@@ -106,7 +119,7 @@ void AudioPlaylist::playPrevious() {
 
 void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
                              const QVariant &meta) {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaPlayer::PlaybackState state = player->playbackState();
 #else
     QMediaPlayer::State state = player->state();
@@ -129,7 +142,7 @@ void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
 
 void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
                            AudioPriority priority, const QVariant &meta) {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaPlayer::PlaybackState state = player->playbackState();
 #else
     QMediaPlayer::State state = player->state();
@@ -183,7 +196,7 @@ QUrl AudioPlaylist::getUrl(const QString &fileName) {
 }
 
 void AudioPlaylist::setMedia(const AudioMedia &media) {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     player->setSource(media.url);
 #else
     player->setMedia(media.url);
@@ -196,14 +209,7 @@ void AudioPlaylist::setMedia(const AudioMedia &media) {
 QVariant AudioPlaylist::getCurrentMeta() const { return currentMeta; }
 
 bool AudioPlaylist::normalEnd() {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-    QMediaPlayer::PlaybackState state = player->playbackState();
-#else
-    QMediaPlayer::State state = player->state();
-#endif
-    return currentPriority == NORMAL &&
-           state != QMediaPlayer::PlayingState &&
-           audiolist[currentPriority].isLast();
+    return currentPriority == NORMAL && audiolist[currentPriority].isLast();
 }
 
 void AudioPlaylist::clearType(const QString &id, AudioPriority priority) {
@@ -245,31 +251,37 @@ int AudioPlaylist::getAudioNumber(AudioPriority priority) const {
     return audiolist[priority].list.size();
 }
 
-void AudioPlaylist::playSound(const QString& fileName, bool blockThread){
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+void AudioPlaylist::playSound(const QString &fileName, bool blockThread,
+                              bool currentPlaying) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaPlayer::PlaybackState state = player->playbackState();
 #else
     QMediaPlayer::State state = player->state();
 #endif
-    isPlaying = state == QMediaPlayer::PlayingState;
+    isPlaying = currentPlaying;
     isBlock = blockThread;
     isSound = true;
-    if(isPlaying){
-        qDebug() << isPlaying;
-        player->pause();
-        audiolist[currentPriority].block = true;
-        audiolist[currentPriority].position = player->position();
-    }
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    pause();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     player->setSource(QUrl::fromLocalFile(fileName));
 #else
     player->setMedia(QMediaContent(QUrl::fromLocalFile(fileName)));
 #endif
     player->play();
-    if(isBlock){
+    if (isBlock) {
         eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
-        if(isPlaying){
-            playNext();
-        }
+    }
+}
+
+void AudioPlaylist::pause() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QMediaPlayer::PlaybackState state = player->playbackState();
+#else
+    QMediaPlayer::State state = player->state();
+#endif
+    if (state == QMediaPlayer::PlayingState) {
+        audiolist[currentPriority].block = true;
+        audiolist[currentPriority].position = player->position();
+        player->pause();
     }
 }

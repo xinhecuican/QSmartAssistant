@@ -51,10 +51,25 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
         QVariantMap metaMap = meta.toMap();
         if (metaMap.contains("type") && metaMap["type"] == "song") {
             qint64 id = metaMap["id"].toLongLong();
-            musicInfoMap.remove(id);
+            playingMap.remove(id);
         }
         if (helper->getPlayer()->normalEnd()) {
-            searchDefault();
+            if (readyMusic.size() == 0) {
+                searchDefault();
+            } else {
+                int len = readyMusic.size() >= 3 ? 3 : readyMusic.size();
+                int current = 0;
+                auto iter = readyMusic.begin();
+                while(iter != readyMusic.end() && current < len) {
+                    MusicInfo info = *iter;
+                    bool success = parseUrl(info);
+                    if (success) {
+                        playingMap.insert(info.id, info);
+                    }
+                    iter = readyMusic.erase(iter);
+                    current++;
+                }
+            }
             // helper->quitImmersive(getName());
         }
     });
@@ -62,7 +77,7 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
         QVariantMap metaMap = meta.toMap();
         if (metaMap.contains("type") && metaMap["type"] == "song") {
             qint64 id = metaMap["id"].toLongLong();
-            MusicInfo musicInfo = musicInfoMap[id];
+            MusicInfo musicInfo = playingMap[id];
             qInfo() << "play" << musicInfo.name << musicInfo.artist
                     << musicInfo.url;
         }
@@ -239,7 +254,7 @@ void NeteaseMusic::getCurrentTrack() {
     QVariantMap meta = helper->getPlayer()->getCurrentMeta().toMap();
     if (meta.contains("type") && meta["type"] == "song") {
         qint64 id = meta["id"].toLongLong();
-        MusicInfo musicInfo = musicInfoMap[id];
+        MusicInfo musicInfo = playingMap[id];
         helper->say("这首歌叫" + musicInfo.name + ".歌手是" + musicInfo.artist);
     }
 }
@@ -299,30 +314,7 @@ void NeteaseMusic::setPlaylist(const QList<QString> &singerName,
         if (result["status"] == 200) {
             QList<QVariant> songs =
                 result["body"].toMap()["result"].toMap()["songs"].toList();
-            if (songs.size() > 0) {
-                QList<qint64> ids;
-                for (int i = 0; i < 3 && i < songs.size(); i++) {
-                    QVariantMap song = songs[i].toMap();
-                    ids.append(song["id"].toLongLong());
-                }
-                QList<QString> urls = getAudio(ids);
-                for (int i = 0; i < urls.size(); i++) {
-                    if (urls[i] != "") {
-                        QVariantMap song = songs.at(i).toMap();
-                        MusicInfo musicInfo;
-                        musicInfo.id = ids[i];
-                        musicInfo.url = urls[i];
-                        musicInfo.name = song["name"].toString();
-                        musicInfo.artist = getArtist(song);
-                        musicInfoMap.insert(ids[i], musicInfo);
-                        QVariantMap meta = {{"type", "song"},
-                                            {"id", musicInfo.id}};
-                        helper->getPlayer()->play(musicInfo.url,
-                                                  AudioPlaylist::NORMAL, meta);
-                        break;
-                    }
-                }
-            }
+            parseSongs(songs);
         }
     } else {
         searchDefault();
@@ -439,30 +431,48 @@ void NeteaseMusic::parseSongs(const QList<QVariant> &songs) {
             QVariantMap song = songs[i].toMap();
             ids.append(song["id"].toLongLong());
         }
-        QList<QString> urls = getAudio(ids);
         int currentNumber = helper->getPlayer()->getAudioNumber();
         bool isPlaying = helper->getPlayer()->isPlaying();
-        for (int i = 0; i < urls.size(); i++) {
-            if (urls[i] != "") {
-                QVariantMap song = songs.at(i).toMap();
-                MusicInfo musicInfo;
-                musicInfo.id = ids[i];
-                musicInfo.url = urls[i];
-                musicInfo.name = song["name"].toString();
-                musicInfo.artist = getArtist(song);
-                musicInfoMap.insert(ids[i], musicInfo);
-                QVariantMap meta = {{"type", "song"}, {"id", musicInfo.id}};
-                helper->getPlayer()->play(musicInfo.url, AudioPlaylist::NORMAL,
-                                          meta);
+        bool parseSuccess = false;
+        for (int i = 0; i < ids.size(); i++) {
+            QVariantMap song = songs.at(i).toMap();
+            MusicInfo musicInfo;
+            musicInfo.send = false;
+            musicInfo.id = ids[i];
+            musicInfo.name = song["name"].toString();
+            musicInfo.artist = getArtist(song);
+            // 一次解析太多会导致url超时失效
+            if (i < 3) {
+                bool success = parseUrl(musicInfo);
+                if (success) {
+                    parseSuccess = true;
+                    playingMap.insert(ids[i], musicInfo);
+                }
+            } else {
+                readyMusic.append(musicInfo);
             }
         }
-        if (urls.size() != 0 && isPlaying) {
+        if (parseSuccess && isPlaying) {
             helper->getPlayer()->play(currentNumber);
         }
     }
 }
 
+bool NeteaseMusic::parseUrl(MusicInfo &info) {
+    QList<qint64> id = {info.id};
+    QList<QString> urls = getAudio(id);
+    if (urls[0] != "") {
+        info.send = true;
+        info.url = urls[0];
+        QVariantMap meta = {{"type", "song"}, {"id", info.id}};
+        helper->getPlayer()->play(info.url, AudioPlaylist::NORMAL, meta);
+        return true;
+    }
+    return false;
+}
+
 void NeteaseMusic::searchDefault() {
+    readyMusic.clear();
     QVariantMap params;
     double possibility = ((double)rand() / (RAND_MAX));
     if (QDateTime::currentMSecsSinceEpoch() - lastRecommandTime >
@@ -470,7 +480,7 @@ void NeteaseMusic::searchDefault() {
         lastRecommandTime = QDateTime::currentMSecsSinceEpoch();
         double possibility2 = ((double)rand() / (RAND_MAX));
         // 歌单id来源: https://nie.su/archives/2229.html
-        if (possibility2 > 0.3) {
+        if (possibility2 > 0.5) {
             params["id"] = "3136952023"; // 私人雷达id
         } else {
             params["id"] = "5300458264"; // 新歌雷达id
@@ -483,14 +493,14 @@ void NeteaseMusic::searchDefault() {
         } else {
             helper->say("网络连接出错了");
         }
-    } else if (possibility > 0.95) { // 每日新歌
+    } else if (possibility > 0.7) { // 每日新歌
         params["limit"] = 20;
         QVariantMap result = invokeMethod("personalized_newsong", params);
         if (result["status"] == 200) {
             QList<QVariant> songs = result["body"].toMap()["result"].toList();
             parseSongs(songs);
         }
-    } else if (possibility > 0.7) { // 根据曲风偏好搜歌
+    } else if (possibility > 0.4) { // 根据曲风偏好搜歌
         int tagId = 1000;
         if (preferTags.size() > 0) {
             int index = 0;
