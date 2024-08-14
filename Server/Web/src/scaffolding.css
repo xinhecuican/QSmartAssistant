@@ -1,0 +1,16 @@
+ul,ol {
+    padding: 0;
+}
+
+li {
+    list-style: none;
+}
+
+a {
+    color: #666;
+}
+
+a:hover {
+    color: #222;
+    text-decoration: none;
+}

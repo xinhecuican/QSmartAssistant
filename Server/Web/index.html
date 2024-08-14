@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QSmartAssistant</title>
+  <link href="src/bootstrap.css" rel="stylesheet">
+  <link href="src/scaffolding.css" rel="stylesheet">
+  <style>
+    .mbg {
+      margin: 40px 0;
+      padding: 20px 0;
+      background: rgba(0, 0, 0, 0.3);
+      color: #222222;
+    }
+
+    .media {
+      background-color: rgba(240, 240, 240, 1);
+      border-radius: 10px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="row">
+    <div class="col-md-9">
+      <div class="panel panel-default">
+        <!-- <div class="panel-heading">
+          <h3 class="panel-title">QSmartAssistant</h3>
+        </div> -->
+        <div class="panel-body">
+          <div class="well" id="contentList">
+
+          </div>
+          <form class="form-inline">
+            <textarea class="form-control" id="content" style="width: 90%;"></textarea>
+            <button class="btn btn-primary form-control" type="button" id="btSend" style="width: auto;">发送</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script src="src/jquery.min.js"></script>
+<script src="src/bootstrap.js"></script>
+<script src="src/base.js"></script>
+<script>
+  window.onload = function(){
+    let autoHeight = 0;
+    //函数：获取尺寸    //获取浏览器窗口高度
+    if (window.innerHeight)
+      autoHeight = window.innerHeight;
+    else if ((document.body) && (document.body.clientHeight))
+      autoHeight = document.body.clientHeight;    //通过深入Document内部对body进行检测，获取浏览器窗口高度
+    if (document.documentElement && document.documentElement.clientHeight)
+      autoHeight = document.documentElement.clientHeight;    //DIV高度为浏览器窗口的高度
+    autoHeight = autoHeight - ($('#content').height() + 100);
+    if(document.body.offsetHeight < autoHeight){
+      $('#contentList').css({"height":autoHeight,"overflow-y":"scroll"})
+    }
+  };
+  $('#btSend').click(()=>{
+    let content = $('#content').val()
+    console.log(content)
+    let html = ''
+    html += `
+      <div class="media">
+        <div class="media-left media-top">
+            <img src="src/human.png" class="media-object" style="width:90px"/>
+        </div>
+        <div class="media-body">
+            <h5>${content}</h5>
+        </div>
+      </div>
+    `
+    $('#contentList').append(html)
+    $.ajax({
+      method: 'GET',
+      url: `${window.location.origin}/intent`,
+      data: `text=${content}`,
+      success: (data, msg, xhr) => {
+        $('#content').val('')
+        let html = ''
+        for(let each of data){
+          html += `<div class="media">
+                      <div class="media-body">
+                          <h5>${each}</h5>
+                      </div>
+                      <div class="media-right">
+                          <img src="src/robot.png" class="media-object" style="width:90px"/>
+                      </div>
+                  </div>
+                  `
+        }
+        $('#contentList').append(html)
+      },
+      error: (xhr, err) => {
+        console.log(xhr)
+        console.log(err)
+      }
+    })
+  })
+</script>
+</body>
+</html>
