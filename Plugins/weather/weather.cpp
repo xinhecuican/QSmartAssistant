@@ -10,7 +10,7 @@ Weather::Weather() {
 QString Weather::getName() { return "Weather"; }
 
 bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
-                     bool &isImmersive) {
+                     int id, bool &isImmersive) {
     Q_UNUSED(text)
     Q_UNUSED(isImmersive)
     if (parsedIntent.hasIntent("Weather")) {
@@ -44,9 +44,9 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                         deltaEnd = deltaEnd < 0    ? 0
                                    : deltaEnd > 24 ? 24
                                                    : deltaEnd;
-                        searchHour(lat, lon, deltaBegin, deltaEnd);
+                        searchHour(lat, lon, deltaBegin, deltaEnd, id);
                     } else {
-                        helper->say("当前仅能播报24小时内的天气预报");
+                        helper->say("当前仅能播报24小时内的天气预报", id);
                     }
                 } else {
                     QDateTime beginDate =
@@ -62,9 +62,9 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                         deltaEnd = deltaEnd < 0   ? 0
                                    : deltaEnd > 7 ? 7
                                                   : deltaEnd;
-                        searchDay(lat, lon, deltaBegin, deltaEnd);
+                        searchDay(lat, lon, deltaBegin, deltaEnd, id);
                     } else {
-                        helper->say("当前仅能播报7天内的天气预报");
+                        helper->say("当前仅能播报7天内的天气预报", id);
                     }
                 }
             } else {
@@ -78,9 +78,9 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                         deltaBegin = deltaBegin < 0    ? 0
                                      : deltaBegin > 24 ? 24
                                                        : deltaBegin;
-                        searchHour(lat, lon, deltaBegin, deltaBegin);
+                        searchHour(lat, lon, deltaBegin, deltaBegin, id);
                     } else {
-                        helper->say("当前仅能播报24小时内的天气预报");
+                        helper->say("当前仅能播报24小时内的天气预报", id);
                     }
                 } else {
                     QDateTime beginDate =
@@ -90,14 +90,14 @@ bool Weather::handle(const QString &text, const ParsedIntent &parsedIntent,
                         deltaBegin = deltaBegin < 0   ? 0
                                      : deltaBegin > 7 ? 7
                                                       : deltaBegin;
-                        searchDay(lat, lon, deltaBegin, deltaBegin);
+                        searchDay(lat, lon, deltaBegin, deltaBegin, id);
                     } else {
-                        helper->say("当前仅能播报7天内的天气预报");
+                        helper->say("当前仅能播报7天内的天气预报", id);
                     }
                 }
             }
         } else {
-            searchCurrentPos(lat, lon);
+            searchCurrentPos(lat, lon, id);
         }
         return true;
     }
@@ -138,7 +138,7 @@ void Weather::searchLocation(const QString &location, QString &lat,
     reply->deleteLater();
 }
 
-void Weather::searchCurrentPos(const QString &lat, const QString &lon) {
+void Weather::searchCurrentPos(const QString &lat, const QString &lon, int id) {
     request.setUrl(QUrl("https://devapi.qweather.com/v7/weather/now?location=" +
                         lon + "," + lat + "&key=" + key));
     QNetworkReply *reply = manager.get(request);
@@ -152,7 +152,8 @@ void Weather::searchCurrentPos(const QString &lat, const QString &lon) {
         if (obj["code"].toString() == "200") {
             QJsonObject now = obj["now"].toObject();
             helper->say("当前天气" + now["text"].toString() + "。体感温度" +
-                        now["feelsLike"].toString());
+                            now["feelsLike"].toString(),
+                        id);
         } else {
             qWarning() << "search weather error";
         }
@@ -163,7 +164,7 @@ void Weather::searchCurrentPos(const QString &lat, const QString &lon) {
 }
 
 void Weather::searchDay(const QString &lat, const QString &lon, int begin,
-                        int end) {
+                        int end, int id) {
     request.setUrl(QUrl("https://devapi.qweather.com/v7/weather/7d?location=" +
                         lon + "," + lat + "&key=" + key));
     QNetworkReply *reply = manager.get(request);
@@ -181,18 +182,24 @@ void Weather::searchDay(const QString &lat, const QString &lon, int begin,
                 QJsonObject day = iter->toObject();
                 if (currentDay >= begin && currentDay <= end) {
                     if (currentDay == 0) {
-                        helper->say("今天天气" + day["textDay"].toString() +
-                                    "。最低温度" + day["tempMin"].toString() +
-                                    "。最高温度" + day["tempMax"].toString());
+                        helper->say(
+                            "今天天气" + day["textDay"].toString() +
+                                "。最低温度" + day["tempMin"].toString() +
+                                "。最高温度" + day["tempMax"].toString(),
+                            id);
                     } else if (currentDay == 1) {
-                        helper->say("明天天气" + day["textDay"].toString() +
-                                    "。最低温度" + day["tempMin"].toString() +
-                                    "。最高温度" + day["tempMax"].toString());
+                        helper->say(
+                            "明天天气" + day["textDay"].toString() +
+                                "。最低温度" + day["tempMin"].toString() +
+                                "。最高温度" + day["tempMax"].toString(),
+                            id);
                     } else {
-                        helper->say(QString::number(currentDay) + "天后天气" +
-                                    day["textDay"].toString() + "。最低温度" +
-                                    day["tempMin"].toString() + "。最高温度" +
-                                    day["tempMax"].toString());
+                        helper->say(
+                            QString::number(currentDay) + "天后天气" +
+                                day["textDay"].toString() + "。最低温度" +
+                                day["tempMin"].toString() + "。最高温度" +
+                                day["tempMax"].toString(),
+                            id);
                     }
                 }
                 currentDay++;
@@ -210,7 +217,7 @@ void Weather::searchDay(const QString &lat, const QString &lon, int begin,
 }
 
 void Weather::searchHour(const QString &lat, const QString &lon, int begin,
-                         int end) {
+                         int end, int id) {
     request.setUrl(QUrl("https://devapi.qweather.com/v7/weather/24h?location=" +
                         lon + "," + lat + "&key=" + key));
     QNetworkReply *reply = manager.get(request);
@@ -229,11 +236,13 @@ void Weather::searchHour(const QString &lat, const QString &lon, int begin,
                 if (currentHour >= begin && currentHour <= end) {
                     if (currentHour == 0) {
                         helper->say("当前天气" + hour["text"].toString() +
-                                    "。温度为" + hour["temp"].toString());
+                                        "。温度为" + hour["temp"].toString(),
+                                    id);
                     } else {
                         helper->say(QString::number(currentHour) +
-                                    "小时后天气" + hour["text"].toString() +
-                                    "。温度为" + hour["temp"].toString());
+                                        "小时后天气" + hour["text"].toString() +
+                                        "。温度为" + hour["temp"].toString(),
+                                    id);
                     }
                 }
                 currentHour++;

@@ -14,7 +14,7 @@ void SystemInfo::recvMessage(const QString &text,
                              const ParsedIntent &parsedIntent,
                              const PluginMessage &message) {}
 
-bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent,
+bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                         bool &isImmersive) {
     Q_UNUSED(isImmersive)
     if (text == "重新加载设置") {
@@ -47,13 +47,13 @@ bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent,
                     break;
                 }
             }
-            helper->say("内核温度为" + QString::number(temp));
+            helper->say("内核温度为" + QString::number(temp), id);
             if ((mem / 1024) == 0) {
-                helper->say("剩余内存为" + QString::number(mem) + "兆");
+                helper->say("剩余内存为" + QString::number(mem) + "兆", id);
             } else {
                 QString memG = QString::number(mem / 1024);
                 QString memM = QString::number(mem % 1024);
-                helper->say("剩余内存为" + memG + "吉" + memM + "兆");
+                helper->say("剩余内存为" + memG + "吉" + memM + "兆", id);
             }
             return true;
         }

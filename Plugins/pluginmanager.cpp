@@ -5,7 +5,8 @@
 #include <QPluginLoader>
 
 PluginManager::PluginManager(IPluginHelper *helper, QObject *parent)
-    : QObject(parent), helper(helper), immersive(false), immersivePlugin(nullptr) {}
+    : QObject(parent), helper(helper), immersive(false),
+      immersivePlugin(nullptr) {}
 
 void PluginManager::loadPlugin() {
     qRegisterMetaType<IPluginHelper *>("IPluginHelper*");
@@ -43,18 +44,18 @@ void PluginManager::loadPlugin() {
 }
 
 void PluginManager::handlePlugin(const QString &text,
-                                 const ParsedIntent &parsedIntent) {
+                                 const ParsedIntent &parsedIntent, int id) {
     this->text = text;
     this->parsedIntent = parsedIntent;
     if (immersive) {
-        bool hit = immersivePlugin->handle(text, parsedIntent, immersive);
+        bool hit = immersivePlugin->handle(text, parsedIntent, id, immersive);
         if (hit)
             qInfo() << "hit plugin immersive" << immersivePlugin->getName();
         else {
             bool end = false;
             bool immersiveTmp = false;
             for (auto &plugin : plugins) {
-                end = plugin->handle(text, parsedIntent, immersiveTmp);
+                end = plugin->handle(text, parsedIntent, id, immersiveTmp);
                 if (end) {
                     qInfo() << "hit plugin" << plugin->getName();
                     break;
@@ -67,7 +68,7 @@ void PluginManager::handlePlugin(const QString &text,
     } else {
         bool end = false;
         for (auto &plugin : plugins) {
-            end = plugin->handle(text, parsedIntent, immersive);
+            end = plugin->handle(text, parsedIntent, id, immersive);
             if (end) {
                 qInfo() << "hit plugin" << plugin->getName();
                 if (immersive)
@@ -79,7 +80,8 @@ void PluginManager::handlePlugin(const QString &text,
 }
 
 void PluginManager::quitImmerSive(const QString &name) {
-    if (immersive && immersivePlugin != nullptr && immersivePlugin->getName() == name) {
+    if (immersive && immersivePlugin != nullptr &&
+        immersivePlugin->getName() == name) {
         immersive = false;
         immersivePlugin = nullptr;
     }
@@ -89,7 +91,7 @@ void PluginManager::handleMessage(PluginMessage message) {
     if (pluginMap.contains(message.dst)) {
         bool immersive = false;
         if (message.message == "handle")
-            pluginMap[message.dst]->handle(text, parsedIntent, immersive);
+            pluginMap[message.dst]->handle(text, parsedIntent, message.id, immersive);
         else
             pluginMap[message.dst]->recvMessage(text, parsedIntent, message);
     }

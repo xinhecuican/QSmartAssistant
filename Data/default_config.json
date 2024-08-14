@@ -161,5 +161,8 @@
 	"azure": {
 		"model": "你好小智.table",
 		"chunkSize": 640
+	},
+	"server": {
+		"port": 20214
 	}
 }

@@ -6,7 +6,7 @@
 class TestPluginHelper : public IPluginHelper {
 public:
     TestPluginHelper() { player = new Player(nullptr); }
-    void say(const QString &text, bool block = false,
+    void say(const QString &text, int id = 0, bool block = false,
              const QString &type = "") override {
         qDebug() << text << block << type;
     }

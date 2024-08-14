@@ -9,7 +9,7 @@ public:
     SherpaASR(QObject* parent=nullptr);
     ~SherpaASR();
     bool isStream() override;
-    void detect(const QByteArray& data, bool isLast=false) override;
+    void detect(const QByteArray& data, bool isLast=false, int id=0) override;
     void stop() override;
     void clear() override;
 private:

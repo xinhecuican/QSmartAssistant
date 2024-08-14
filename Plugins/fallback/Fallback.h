@@ -9,7 +9,7 @@ class Fallback : public QObject, Plugin {
 public:
     Fallback();
     QString getName() override;
-    bool handle(const QString &text, const ParsedIntent &parsedIntent,
+    bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                 bool &isImmersive) override;
     void setPluginHelper(IPluginHelper *helper) override;
     void recvMessage(const QString &text, const ParsedIntent &parsedIntent,

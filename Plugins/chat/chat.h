@@ -15,7 +15,7 @@ class Chat : public QObject, Plugin {
 public:
     Chat();
     QString getName() override;
-    bool handle(const QString &text, const ParsedIntent &parsedIntent,
+    bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                 bool &isImmersive) override;
     void setPluginHelper(IPluginHelper *helper) override;
     void recvMessage(const QString &text, const ParsedIntent &parsedIntent,
@@ -24,7 +24,7 @@ signals:
     void sendMessage(PluginMessage message) override;
 
 private:
-    void handleInner(const QString &text, const ParsedIntent &parsedIntent,
+    void handleInner(const QString &text, const ParsedIntent &parsedIntent, int id,
                      const QString &master);
 
 private:

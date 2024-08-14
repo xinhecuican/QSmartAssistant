@@ -5,6 +5,7 @@
 #include <QObject>
 
 struct PluginMessage {
+    int id;
     QString src;
     QString dst;
     QString message;
@@ -37,12 +38,13 @@ public:
      *
      * @param text original text from asr
      * @param parsedIntent parsed intent from nlu
+     * @param id conversation id, used by tts
      * @param isImmersive in/out try to set immersive mode
      * @return true successfully handle, stop pass to another plugin
      * @return false don't handle the intent
      */
     virtual bool handle(const QString &text, const ParsedIntent &parsedIntent,
-                        bool &isImmersive) = 0;
+                        int id, bool &isImmersive) = 0;
 
     /**
      * @brief receive message from another plugin

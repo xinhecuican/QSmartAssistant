@@ -9,16 +9,16 @@ class QuitRobot : public QObject, Plugin {
 public:
     QuitRobot();
     QString getName() override;
-    bool handle(const QString& text,
-                const ParsedIntent& parsedIntent,
-                bool& isImmersive) override;
-    void setPluginHelper(IPluginHelper* helper) override;
+    bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
+                bool &isImmersive) override;
+    void setPluginHelper(IPluginHelper *helper) override;
     void recvMessage(const QString &text, const ParsedIntent &parsedIntent,
                      const PluginMessage &message) override;
 signals:
     void sendMessage(PluginMessage message) override;
+
 private:
-    IPluginHelper* helper;
+    IPluginHelper *helper;
 };
 
 #endif // QUITROBOT_H

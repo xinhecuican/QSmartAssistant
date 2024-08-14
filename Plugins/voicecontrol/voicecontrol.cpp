@@ -14,7 +14,7 @@ void VoiceControl::recvMessage(const QString &text,
                                const ParsedIntent &parsedIntent,
                                const PluginMessage &message) {}
 
-bool VoiceControl::handle(const QString &text, const ParsedIntent &parsedIntent,
+bool VoiceControl::handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                           bool &isImmersive) {
     Q_UNUSED(isImmersive)
     int volumeStep = 10;
@@ -52,12 +52,12 @@ bool VoiceControl::handle(const QString &text, const ParsedIntent &parsedIntent,
                                                                  : -volumeStep);
             } else if (text.contains("当前音量")) {
                 helper->say("当前音量为" +
-                            QString::number(helper->getPlayer()->getVolume()));
+                            QString::number(helper->getPlayer()->getVolume()), id);
                 return true;
             }
         }
         helper->say("音量为" +
-                    QString::number(helper->getPlayer()->getVolume()));
+                    QString::number(helper->getPlayer()->getVolume()), id);
         return true;
     }
     return false;

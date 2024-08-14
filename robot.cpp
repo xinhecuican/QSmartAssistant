@@ -8,6 +8,9 @@ Robot::Robot(QObject* parent) : QObject(parent)
     Config::instance()->loadConfig();
     wakeup = new Wakeup(player, this);
     conversation = new Conversation(player, this);
+#ifdef SERVER
+    server = new Server(conversation, this);
+#endif
     connect(wakeup, &Wakeup::dataArrive, this, [=](QByteArray data){
         conversation->receiveData(data);
     });

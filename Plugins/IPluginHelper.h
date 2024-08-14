@@ -2,13 +2,14 @@
 #define IPLUGINHELPER_H
 #include "../Recorder/player.h"
 #include "../Utils/LPcommonGlobal.h"
+#include "../Utils/ParsedIntent.h"
 #include "../Utils/config.h"
 #include <QString>
 
 class LPCOMMON_EXPORT IPluginHelper {
 public:
     virtual ~IPluginHelper() {}
-    virtual void say(const QString &text, bool block = false,
+    virtual void say(const QString &text, int id = 0, bool block = false,
                      const QString &type = "") = 0;
     virtual void
     stopSay(const QString &type = "",
@@ -24,13 +25,13 @@ public:
     virtual void exit() = 0;
     virtual Player *getPlayer() = 0;
     virtual Config *getConfig() = 0;
-    
+
     /**
      * @brief 使用NLU解析text
-     * 
+     *
      * @param text 等待解析的文本
      * @return 解析的结果
-    */
+     */
     virtual ParsedIntent parse(const QString &text) = 0;
 };
 

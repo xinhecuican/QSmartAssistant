@@ -20,7 +20,7 @@ public:
     NeteaseMusic();
     ~NeteaseMusic();
     QString getName() override;
-    bool handle(const QString &text, const ParsedIntent &parsedIntent,
+    bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                 bool &isImmersive) override;
     void setPluginHelper(IPluginHelper *helper) override;
     void recvMessage(const QString &text, const ParsedIntent &parsedIntent,
@@ -40,9 +40,9 @@ private:
     QMap<qint64, MusicInfo> playingMap;
 
 private:
-    bool doHandle(const QString &text, const ParsedIntent &parsedIntent,
+    bool doHandle(const QString &text, const ParsedIntent &parsedIntent, int id,
                   bool &isImmersive);
-    void getCurrentTrack();
+    void getCurrentTrack(int uid);
     void searchAlbum(const ParsedIntent &parsedIntent);
     void setPlaylist(const QList<QString> &singer, const QList<QString> &song);
     QVariantMap invokeMethod(QString name, QVariantMap &args);
