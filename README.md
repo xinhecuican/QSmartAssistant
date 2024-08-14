@@ -48,6 +48,6 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -
 
 # 安装和配置
 
-见[安装教程](doc/%E5%AE%89%E8%A3%85)和[配置教程](doc/%E9%85%8D%E7%BD%AE)
+见[安装教程](doc/安装.md)和[配置教程](doc/配置.md)
 
-[插件配置详见](doc/%E6%8F%92%E4%BB%B6)
+[插件配置详见](doc/插件.md)
