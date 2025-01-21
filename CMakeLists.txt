@@ -9,7 +9,10 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
+find_package(QT NAMES Qt6 COMPONENTS Widgets)
+if (NOT Qt6_FOUND)
+    find_package(QT NAMES Qt5 REQUIRED COMPONENTS Core)
+endif()
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia Network Test)
 
 file(GLOB COMMON_SOURCES Utils/*.cpp Recorder/*.cpp)
@@ -20,6 +23,7 @@ option(TEST "启用测试" OFF)
 option(DEBUG_PROCESS "测试音频前处理" OFF)
 option(DEBUG_BREAKPAD "开启breakpad捕获dump" OFF)
 option(SERVER "server" OFF)
+option(MQTT "mqtt" OFF)
 set(CONFIG_PATH "$ENV{HOME}/.config/QSmartAssistant")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
@@ -110,12 +114,20 @@ add_subdirectory(Wakeup)
 add_subdirectory(Plugins)
 
 if(SERVER)
-    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS HttpServer Concurrent)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS HttpServer Concurrent WebSockets)
     target_link_libraries(QSmartAssistant PRIVATE
         Qt${QT_VERSION_MAJOR}::HttpServer
         Qt${QT_VERSION_MAJOR}::Concurrent
+        Qt${QT_VERSION_MAJOR}::WebSockets
     )
     add_subdirectory(Server)
+endif()
+
+if(MQTT)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Mqtt)
+    target_link_libraries(QSmartAssistant PRIVATE Qt${QT_VERSION_MAJOR}::Mqtt)
+    target_compile_definitions(QSmartAssistant PUBLIC -DMQTT)
+    target_sources(QSmartAssistant PUBLIC mqtt.h mqtt.cpp)
 endif()
 
 if(TEST)
