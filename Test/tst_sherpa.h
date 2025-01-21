@@ -54,7 +54,7 @@ private slots:
                 cache->append(buf, size);
             }
         } while (size);
-        connect(sherpa, &SherpaASR::recognized, this, [=](QString result) {
+        connect(sherpa, &SherpaASR::recognized, this, [=](QString result, int id) {
             qDebug() << result;
             QCOMPARE(result, "深入的分析这一次全球金融动荡背后的根源");
         });
@@ -79,14 +79,14 @@ private slots:
                 [=](QByteArray data, int sampleRate, const QString &type) {
                     mplayer->playRaw(data, sampleRate, AudioPlaylist::NOTIFY);
                 });
-        tts->detect("这是一个短的测试", "");
+        tts->detect("这是一个短的测试", "", 0);
         tts->detect("本系列主要目标初步完成一款智能音箱的基础功能，包括语音唤醒"
                     "、语音识别(语音转文字)"
                     "、处理用户请求（比如查天气等，主要通过rasa自己定义意图实现"
                     "）、语音合成(文字转语音)功能。"
                     "语音识别、语音合成采用离线方式实现。"
                     "语音识别使用sherpa-onnx，可以实现离线中英文语音识别。",
-                    "");
+                    "", 0);
         QTest::qWait(20000);
     }
     // void duilite_gram(){
@@ -139,7 +139,7 @@ private slots:
                 intent.name = "SYS_INFO";
                 parsedIntent.append(intent);
                 bool immersive = false;
-                info->handle("系统信息", parsedIntent, immersive);
+                info->handle("系统信息", parsedIntent, 0, immersive);
             } else {
                 qInfo() << "load Plugin" << pluginName << "cast fail";
             }
@@ -234,7 +234,7 @@ private slots:
                 intent.appendSlot(IntentSlot("number", "20", 0));
                 parsedIntent.append(intent);
                 bool immersive = false;
-                info->handle("热水器开20分钟", parsedIntent, immersive);
+                info->handle("热水器开20分钟", parsedIntent, 0, immersive);
             } else {
                 qInfo() << "load Plugin" << pluginName << "cast fail";
             }

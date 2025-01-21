@@ -21,6 +21,7 @@ intents:
 - SYS_INFO
 - Weather
 - CHAT
+- FALLBACK
 entities:
 - human:
     roles:

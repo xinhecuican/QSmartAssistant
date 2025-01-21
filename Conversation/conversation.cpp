@@ -132,6 +132,7 @@ void Conversation::say(const QString &text, int id, bool block,
         return;
     }
     qInfo() << "say" << text;
+    emit sayText(text, id);
     if (id == 0) {
         QStringList list = text.split(QRegularExpression("[\t.。!\?？！；\n]"),
                                       Qt::SkipEmptyParts);

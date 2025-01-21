@@ -4,8 +4,10 @@
 RasaNLU::RasaNLU(QObject *parent) : NLUModel(parent) {
     QJsonObject rasaConfig = Config::instance()->getConfig("rasa");
     recordSamples = rasaConfig.value("record_samples").toBool();
+	conf = rasaConfig.value("conf").toDouble(0.8);
+    QString url = rasaConfig.value("url").toString();
     QString pythonDir = rasaConfig.value("python_venv").toString();
-    request.setUrl(QUrl("http://127.0.0.1:5005/status"));
+    request.setUrl(QUrl(url + "status"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QNetworkReply *reply = manager.get(request);
 
@@ -40,7 +42,7 @@ RasaNLU::RasaNLU(QObject *parent) : NLUModel(parent) {
             [=](QProcess::ProcessError error) {
                 qCritical() << "rasa start error" << error;
             });
-    request.setUrl(QUrl("http://127.0.0.1:5005/model/parse"));
+    request.setUrl(QUrl(url + "model/parse"));
 }
 
 ParsedIntent RasaNLU::parseIntent(const QString &text) {
@@ -117,7 +119,7 @@ ParsedIntent RasaNLU::parseIntent(const QString &text) {
             file.close();
         }
         Intent slotIntent = entity2Slot(intent);
-        if (slotIntent.conf > 0.3) {
+        if (slotIntent.conf > conf) {
             parsedIntent.append(slotIntent);
         }
         if (recordSamples) {

@@ -42,6 +42,7 @@ signals:
     void exitSig();
     void feedASR(const QByteArray &data, bool isLast = false, int id = 0);
     void feedTTS(const QString &text, const QString &type, int id = 0);
+    void sayText(const QString& text, int id);
 
 // for server
     void asrRecognize(QString result, int id);
