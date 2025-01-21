@@ -8,6 +8,16 @@ Robot::Robot(QObject* parent) : QObject(parent)
     Config::instance()->loadConfig();
     wakeup = new Wakeup(player, this);
     conversation = new Conversation(player, this);
+#ifdef SERVER
+    server = new Server(conversation, this);
+#endif
+#ifdef MQTT
+    mqtt = new MQTTHandler(this);
+    connect(wakeup, &Wakeup::wakeup, mqtt, &MQTTHandler::onWakeup);
+    connect(wakeup, &Wakeup::detectEnd, mqtt, &MQTTHandler::onDetect);
+    connect(conversation, &Conversation::asrRecognize, mqtt, &MQTTHandler::onASR);
+    connect(conversation, &Conversation::sayText, mqtt, &MQTTHandler::onSay);
+#endif
     connect(wakeup, &Wakeup::dataArrive, this, [=](QByteArray data){
         conversation->receiveData(data);
     });

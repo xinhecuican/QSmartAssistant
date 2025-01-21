@@ -64,16 +64,6 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: "latest"
-    - uses: actions/cache@v3
-      env:
-        cache-name: cache-dependency
-      with:
-        path: lib/
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/libsherpa-onnx-c-api.so') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
     - name: install dependency
       run: |
         cd scripts

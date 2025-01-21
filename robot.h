@@ -4,7 +4,12 @@
 #include "Wakeup/wakeup.h"
 #include "Conversation/conversation.h"
 #include "Recorder/player.h"
-
+#ifdef SERVER
+#include "Server/server.h"
+#endif
+#ifdef MQTT
+#include "mqtt.h"
+#endif
 class Robot : public QObject
 {
 public:
@@ -16,6 +21,12 @@ private:
     Wakeup* wakeup;
     Conversation* conversation;
     Player* player;
+#ifdef SERVER
+    Server* server;
+#endif
+#ifdef MQTT
+    MQTTHandler* mqtt;
+#endif
 };
 
 #endif // ROBOT_H

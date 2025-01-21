@@ -11,7 +11,7 @@ class PluginManager : public QObject
 public:
     PluginManager(IPluginHelper* helper, QObject* parent=nullptr);
     void loadPlugin();
-    void handlePlugin(const QString& text, const ParsedIntent& parsedIntent);
+    void handlePlugin(const QString& text, const ParsedIntent& parsedIntent, int id);
     void quitImmerSive(const QString& name);
 public slots:
     void handleMessage(PluginMessage message);

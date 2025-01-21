@@ -17,6 +17,7 @@ private:
     QNetworkRequest request;
     QProcess process;
     bool recordSamples;
+	float conf;
 };
 
 #endif // RASANLU_H

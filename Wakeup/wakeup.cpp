@@ -111,6 +111,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
 
     enablePreVad = wakeupConfig.value("enable_prevad").toBool();
+    enableNotify = wakeupConfig.value("enable_notify").toBool();
     prevadTimer = new QTimer(this);
     prevadTimer->setInterval(wakeupConfig.value("prevad_interval").toInt(2000));
     connect(prevadTimer, &QTimer::timeout, this, [=]() {
@@ -218,10 +219,13 @@ Wakeup::Wakeup(Player *player, QObject *parent)
                     prevadTimer->stop();
                 }
                 detectState = IDLE;
-                isPlaying = player->isPlaying();
-                recorder->pause();
-                player->playSoundEffect(Config::getDataPath("start.wav"), true, false);
-                recorder->resume();
+                if (enableNotify) {
+                    isPlaying = player->isPlaying();
+                    recorder->pause();
+                    player->playSoundEffect(Config::getDataPath("start.wav"), true, false);
+                    recorder->resume();
+                }
+                emit wakeup();
                 vadModel->startDetect();
                 detectState = VAD;
             }
@@ -237,6 +241,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         }
         if (detectState == VAD) {
             if (stop) {
+                emit detectEnd();
                 if (enablePreVad)
                     detectState = PREVAD;
                 else

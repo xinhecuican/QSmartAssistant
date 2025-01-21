@@ -10,10 +10,10 @@ public:
     virtual bool isStream(){return false;}
     virtual void stop(){}
 public slots:
-    virtual void detect(const QByteArray& data, bool isLast=false)=0;
+    virtual void detect(const QByteArray& data, bool isLast=false, int id=0)=0;
     virtual void clear(){};
 signals:
-    void recognized(QString result);
+    void recognized(QString result, int id);
 
 protected:
     bool valid;

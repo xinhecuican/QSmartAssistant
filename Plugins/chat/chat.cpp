@@ -53,7 +53,7 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
     }
 }
 
-bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
+bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                   bool &isImmersive) {
     if (isImmersive) {
         reply->abort();
@@ -71,10 +71,10 @@ bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
             QString ans = helper->question("来对话吧！您有什么问题呢？");
             chatMode = true;
             if (ans != "") {
-                handleInner(ans, parsedIntent, "Chat");
+                handleInner(ans, parsedIntent, id, "Chat");
             }
         } else {
-            handleInner(text, parsedIntent, "Chat");
+            handleInner(text, parsedIntent, id, "Chat");
         }
         return true;
     }
@@ -84,7 +84,7 @@ bool Chat::handle(const QString &text, const ParsedIntent &parsedIntent,
 void Chat::recvMessage(const QString &text, const ParsedIntent &intent,
                        const PluginMessage &message) {
     if (message.message == "chat") {
-        handleInner(text, intent, message.src);
+        handleInner(text, intent, message.id, message.src);
     } else if (message.message == "quit") {
         reply->abort();
         result = "";
@@ -92,7 +92,7 @@ void Chat::recvMessage(const QString &text, const ParsedIntent &intent,
     }
 }
 
-void Chat::handleInner(const QString &text, const ParsedIntent &intent,
+void Chat::handleInner(const QString &text, const ParsedIntent &intent, int id,
                        const QString &master) {
     if (botName == "chatgpt") {
         conversation.append(QJsonObject{{"role", "user"}, {"content", text}});
@@ -135,9 +135,11 @@ void Chat::handleInner(const QString &text, const ParsedIntent &intent,
                     if (stream) {
                         for (int i = 0; i < content.size(); i++) {
                             if (content[i] == '\t' || content[i] == '.' ||
-                                content[i] == QChar(0x3002) || content[i] == QChar(0xff01) ||
+                                content[i] == QChar(0x3002) ||
+                                content[i] == QChar(0xff01) ||
                                 content[i] == '!' || content[i] == '?' ||
-                                content[i] == QChar(0xff1f) || content[i] == QChar(0xff1b) ||
+                                content[i] == QChar(0xff1f) ||
+                                content[i] == QChar(0xff1b) ||
                                 content[i] == '\n') {
                                 split = true;
                                 list.append(content.mid(begin, i - begin));
@@ -146,13 +148,13 @@ void Chat::handleInner(const QString &text, const ParsedIntent &intent,
                         }
                         if (split) {
                             if (list.size() > 1) {
-                                helper->say(output + list.at(0), false, master);
+                                helper->say(output + list.at(0), id, false, master);
                                 for (int i = 1; i < list.size() - 1; i++) {
-                                    helper->say(list.at(i), false, master);
+                                    helper->say(list.at(i), id, false, master);
                                 }
                                 output = list.last();
                             } else {
-                                helper->say(output + list.at(0), false, master);
+                                helper->say(output + list.at(0), id, false, master);
                                 output = "";
                             }
                         } else {
@@ -167,7 +169,7 @@ void Chat::handleInner(const QString &text, const ParsedIntent &intent,
         QObject::connect(reply, &QNetworkReply::finished, this, [=]() {
             if (reply->error() == QNetworkReply::NoError) {
                 if (output != "") {
-                    helper->say(output, false, master);
+                    helper->say(output, id, false, master);
                     output.clear();
                 }
                 QJsonObject response;

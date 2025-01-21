@@ -6,6 +6,7 @@
 		"minChunk": 3,
 		"responseSlient": 30000,
 		"enable_prevad": false,
+		"enable_notify": true,
 		"prevad_interval": 2000,
 		"start_voice": "start.wav",
 		"end_voice": "end.wav"
@@ -92,9 +93,11 @@
 		"vadRes": "vad_aicar_v0.16.bin"
 	},
 	"rasa": {
+        "url": "http://127.0.0.1:5005/",
 		"model": "Data/rasa/models/default.tar.gz",
 		"python_venv": "absolute path to activate",
-		"record_samples": true
+		"record_samples": true,
+		"conf": 0.5
 	},
 	"hass":{
 		"url": "http://127.0.0.1:8123",
@@ -161,5 +164,15 @@
 	"azure": {
 		"model": "你好小智.table",
 		"chunkSize": 640
+	},
+	"server": {
+		"port": 20214
+	},
+	"mqtt": {
+		"topic": "QSmartAssistant/",
+		"host": "127.0.0.1",
+		"port": 1883,
+		"user": "abc",
+		"password": "123"
 	}
 }

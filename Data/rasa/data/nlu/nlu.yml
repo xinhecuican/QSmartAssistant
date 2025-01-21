@@ -25,6 +25,7 @@ nlu:
 - intent: MUSICINFO
   examples: |
     - 播放音乐
+    - 放首歌
     - 播放[孤勇者](song)
     - 播放[海阔天空](song)
     - 播放[想你](song)
@@ -148,6 +149,8 @@ nlu:
     - 进入闲聊模式
     - 我们来聊聊天吧
     - 我想问一个问题
+    - 来交谈吧
+    - 来聊天吧
 - synonym: 灯
   examples: |
     - 灯

@@ -20,7 +20,9 @@ from recognizers_text import Culture, ModelResult
 from datetime import datetime
 # recognizer = DateTimeRecognizer(Culture.Chinese)
 # model  = recognizer.get_datetime_model()
-# result = model.parse("今天晚上天气")
+# result = model.parse("一个半小时")
+from recognizers_date_time import Culture, recognize_datetime
+result = recognize_datetime("一个半小时", Culture.Chinese)
 @DefaultV1Recipe.register(
     DefaultV1Recipe.ComponentType.ENTITY_EXTRACTOR,
     is_trainable=False

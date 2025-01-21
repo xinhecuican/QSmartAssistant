@@ -35,7 +35,7 @@ SherpaTTS::~SherpaTTS(){
 }
 
 
-void SherpaTTS::detect(const QString& text, const QString& type){
+void SherpaTTS::detect(const QString& text, const QString& type, int id){
     std::string textS = text.toStdString();
     const SherpaOnnxGeneratedAudio* audio =
         SherpaOnnxOfflineTtsGenerate(tts, textS.c_str(), speakerid, 1);
@@ -47,7 +47,7 @@ void SherpaTTS::detect(const QString& text, const QString& type){
         data[(i<<1)+1] = (sample >> 8);
     }
     AudioWriter::changeVol(data, extraVol);
-    emit dataArrive(data, audio->sample_rate, type);
+    emit dataArrive(data, audio->sample_rate, type, id);
 }
 
 void SherpaTTS::stop(){

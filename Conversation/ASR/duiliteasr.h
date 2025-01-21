@@ -11,7 +11,7 @@ public:
     DuiliteASR(QObject* parent=nullptr);
     ~DuiliteASR();
     bool isStream() override;
-    void detect(const QByteArray& data, bool isLast=false) override;
+    void detect(const QByteArray& data, bool isLast=false, int id=0) override;
     void stop() override;
     QString result;
 private:

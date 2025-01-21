@@ -60,7 +60,7 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
                 int len = readyMusic.size() >= 3 ? 3 : readyMusic.size();
                 int current = 0;
                 auto iter = readyMusic.begin();
-                while(iter != readyMusic.end() && current < len) {
+                while (iter != readyMusic.end() && current < len) {
                     MusicInfo info = *iter;
                     bool success = parseUrl(info);
                     if (success) {
@@ -182,7 +182,7 @@ void NeteaseMusic::recvMessage(const QString &text,
                                const PluginMessage &message) {}
 
 bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
-                          bool &isImmersive) {
+                          int id, bool &isImmersive) {
     if (!isLogin) {
         login();
         if (!isLogin)
@@ -209,17 +209,17 @@ bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
     if (needHandle || isImmersive) {
         if (needHandle && !isImmersive)
             isImmersive = true;
-        bool success = doHandle(text, parsedIntent, isImmersive);
+        bool success = doHandle(text, parsedIntent, id, isImmersive);
         result = result & success;
     }
     return result;
 }
 
 bool NeteaseMusic::doHandle(const QString &text,
-                            const ParsedIntent &parsedIntent,
+                            const ParsedIntent &parsedIntent, int id,
                             bool &isImmersive) {
     if (text.contains("这首歌")) {
-        getCurrentTrack();
+        getCurrentTrack(id);
     }
     if (parsedIntent.hasIntent("CLOSE") || text.contains("退出")) {
         isImmersive = false;
@@ -230,6 +230,7 @@ bool NeteaseMusic::doHandle(const QString &text,
         helper->getPlayer()->resume();
     } else if (parsedIntent.hasIntent("CHANGE_VOL")) {
         PluginMessage message;
+        message.id = id;
         message.dst = "VoiceControl";
         message.message = "handle";
         emit sendMessage(message);
@@ -250,12 +251,13 @@ bool NeteaseMusic::doHandle(const QString &text,
     return true;
 }
 
-void NeteaseMusic::getCurrentTrack() {
+void NeteaseMusic::getCurrentTrack(int uid) {
     QVariantMap meta = helper->getPlayer()->getCurrentMeta().toMap();
     if (meta.contains("type") && meta["type"] == "song") {
         qint64 id = meta["id"].toLongLong();
         MusicInfo musicInfo = playingMap[id];
-        helper->say("这首歌叫" + musicInfo.name + ".歌手是" + musicInfo.artist);
+        helper->say("这首歌叫" + musicInfo.name + ".歌手是" + musicInfo.artist,
+                    uid);
     }
 }
 
@@ -343,7 +345,7 @@ QList<QString> NeteaseMusic::getAudio(QList<qint64> ids) {
             urls.append(idUrlMap[id]);
         }
     } else {
-        helper->say("网络连接出错了");
+        qInfo() << "网络连接出错了";
     }
     return urls;
 }
@@ -491,7 +493,7 @@ void NeteaseMusic::searchDefault() {
                 audioResult["body"].toMap()["songs"].toList();
             parseSongs(songs);
         } else {
-            helper->say("网络连接出错了");
+            qInfo() << "网络连接出错了";
         }
     } else if (possibility > 0.7) { // 每日新歌
         params["limit"] = 20;
@@ -544,7 +546,7 @@ void NeteaseMusic::searchDefault() {
                         audioResult["body"].toMap()["songs"].toList();
                     parseSongs(songs);
                 } else {
-                    helper->say("网络连接出错了");
+                    qInfo() << "网络连接出错了";
                 }
             }
         }

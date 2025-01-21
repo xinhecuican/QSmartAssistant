@@ -5,7 +5,7 @@ Hass::Hass() {}
 
 QString Hass::getName() { return "Hass"; }
 
-bool Hass::handle(const QString &text, const ParsedIntent &parsedIntent,
+bool Hass::handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                   bool &isImmersive) {
     Q_UNUSED(isImmersive)
     for (const Intent &intent : parsedIntent.intents) {
@@ -14,7 +14,7 @@ bool Hass::handle(const QString &text, const ParsedIntent &parsedIntent,
             if (service.pattern != "") {
                 if (text.contains(QRegularExpression(service.pattern))) {
                     QJsonObject params = parseParams(intent, service);
-                    executeService(service.path, params, service.notify);
+                    executeService(service.path, params, service.notify, id);
                     return true;
                 }
             } else {
@@ -30,7 +30,7 @@ bool Hass::handle(const QString &text, const ParsedIntent &parsedIntent,
                 }
                 if (needExecute) {
                     QJsonObject params = parseParams(intent, service);
-                    executeService(service.path, params, service.notify);
+                    executeService(service.path, params, service.notify, id);
                     return true;
                 }
             }
@@ -136,7 +136,7 @@ QString Hass::parseValue(const Intent &intent, const QJsonValue &v) {
 }
 
 void Hass::executeService(const QString &path, const QJsonObject &params,
-                          bool notify) {
+                          bool notify, int id) {
     request.setUrl(QUrl(urlPrefix + path));
     QJsonDocument doc(params);
     QNetworkReply *reply = manager.post(request, doc.toJson());
@@ -144,7 +144,7 @@ void Hass::executeService(const QString &path, const QJsonObject &params,
         if (reply->error() != QNetworkReply::NoError) {
             qWarning() << "requst fail" << reply->error();
         } else if (notify) {
-            helper->say("执行成功");
+            helper->say("执行成功", id);
         }
         reply->deleteLater();
     });

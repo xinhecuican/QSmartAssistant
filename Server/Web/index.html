@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QSmartAssistant</title>
+  <link href="src/bootstrap.css" rel="stylesheet">
+  <link href="src/scaffolding.css" rel="stylesheet">
+  <style>
+    .mbg {
+      margin: 40px 0;
+      padding: 20px 0;
+      background: rgba(0, 0, 0, 0.3);
+      color: #222222;
+    }
+
+    .media {
+      background-color: rgba(240, 240, 240, 1);
+      border-radius: 10px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="row">
+    <div class="col-md-9">
+      <div class="panel panel-default">
+        <!-- <div class="panel-heading">
+          <h3 class="panel-title">QSmartAssistant</h3>
+        </div> -->
+        <div class="panel-body">
+          <div class="well" id="contentList">
+
+          </div>
+          <form class="form-inline">
+            <textarea class="form-control" id="content" style="width: 90%;"></textarea>
+            <button class="btn btn-primary form-control" type="button" id="btSend" style="width: auto;">发送</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script src="src/jquery.min.js"></script>
+<script src="src/bootstrap.js"></script>
+<script src="src/base.js"></script>
+</body>
+</html>

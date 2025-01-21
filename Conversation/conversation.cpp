@@ -23,6 +23,7 @@ Conversation::Conversation(Player *player, QObject *parent)
     : QObject(parent), player(player) {
     index = 0;
     endIndex = 0;
+    asrProcessing = false;
     asr = nullptr;
     tts = nullptr;
     nlu = nullptr;
@@ -52,21 +53,29 @@ Conversation::Conversation(Player *player, QObject *parent)
         asr->moveToThread(&asrThread);
         connect(this, &Conversation::feedASR, asr, &ASRModel::detect);
         connect(this, &Conversation::clearASR, asr, &ASRModel::clear);
-        connect(asr, &ASRModel::recognized, this, [=](QString result) {
+        connect(asr, &ASRModel::recognized, this, [=](QString result, int id) {
             qInfo() << "asr parse" << result;
-            if (!isResponse) {
-                if (result != "") {
-                    ParsedIntent parsedIntent = nlu->parseIntent(result);
-                    parsedIntent.toString();
-                    pluginManager->handlePlugin(result, parsedIntent);
+            if (id == 0) {
+                if (!isResponse) {
+                    if (result != "") {
+                        ParsedIntent parsedIntent = nlu->parseIntent(result);
+                        parsedIntent.toString();
+                        pluginManager->handlePlugin(result, parsedIntent, id);
+                    }
+                    asrEventLoop.quit();
+                    emit finish();
+                } else {
+                    resultCache = result;
+                    eventLoop.quit();
                 }
-                asrEventLoop.quit();
-                emit finish();
+                cache.clear();
             } else {
-                resultCache = result;
-                eventLoop.quit();
+                emit asrRecognize(result, id);
             }
-            cache.clear();
+            asrMutex.lock();
+            asrProcessing = false;
+            asrCond.wakeAll();
+            asrMutex.unlock();
         });
         asrThread.start();
     }
@@ -90,7 +99,10 @@ Conversation::Conversation(Player *player, QObject *parent)
 
 void Conversation::receiveData(const QByteArray &data) {
     if (asr->isStream()) {
+        asrMutex.lock();
+        asrProcessing = true;
         emit feedASR(data);
+        asrMutex.unlock();
     } else {
         cache.append(data);
     }
@@ -99,11 +111,14 @@ void Conversation::receiveData(const QByteArray &data) {
 void Conversation::dialog(bool stop) {
     if (!stop) {
         isResponse = false;
+        asrMutex.lock();
+        asrProcessing = true;
         if (!asr->isStream()) {
             emit feedASR(cache, true);
-        }
-        else
+        } else {
             emit feedASR(QByteArray(), true);
+        }
+        asrMutex.unlock();
         //        asrEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
     } else {
         emit clearASR();
@@ -111,28 +126,41 @@ void Conversation::dialog(bool stop) {
     cache.clear();
 }
 
-void Conversation::say(const QString &text, bool block, const QString &type) {
+void Conversation::say(const QString &text, int id, bool block,
+                       const QString &type) {
     if (text == "") {
         return;
     }
     qInfo() << "say" << text;
-    QStringList list =
-        text.split(QRegularExpression("[\t.。!\?？！；\n]"), Qt::SkipEmptyParts);
-    endIndex = index + list.size() - 1;
-    for (QString &line : list) {
-        if (line != "")
-            emit feedTTS(line, type);
-    }
-    if (block) {
-        ttsEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+    emit sayText(text, id);
+    if (id == 0) {
+        QStringList list = text.split(QRegularExpression("[\t.。!\?？！；\n]"),
+                                      Qt::SkipEmptyParts);
+        endIndex = index + list.size() - 1;
+        for (QString &line : list) {
+            if (line != "")
+                emit feedTTS(line, type);
+        }
+        if (block) {
+            ttsEventLoop.exec(QEventLoop::ExcludeUserInputEvents);
+        }
+    } else {
+        if (ttsTexts.contains(id)) {
+            ttsTexts[id].append(text);
+        } else {
+            QList<QString> texts = {text};
+            ttsTexts.insert(id, texts);
+        }
     }
 }
 
 void Conversation::sayRawData(QByteArray data, int sampleRate,
-                              const QString &type) {
-    QVariantMap meta = {{"type", "tts"}, {"id", type}, {"index", index}};
-    player->playRaw(data, sampleRate, AudioPlaylist::NOTIFY, meta);
-    index++;
+                              const QString &type, int id) {
+    if (id == 0) {
+        QVariantMap meta = {{"type", "tts"}, {"id", type}, {"index", index}};
+        player->playRaw(data, sampleRate, AudioPlaylist::NOTIFY, meta);
+        index++;
+    }
 }
 
 void Conversation::stop() {
@@ -150,7 +178,7 @@ void Conversation::quitImmersive(const QString &name) {
 }
 
 QString Conversation::question(const QString &question) {
-    say(question, true);
+    say(question, 0, true);
     emit requestResponse();
     eventLoop.exec(QEventLoop::ExcludeUserInputEvents);
     QString result = resultCache;
@@ -161,10 +189,14 @@ QString Conversation::question(const QString &question) {
 
 void Conversation::onResponse() {
     isResponse = true;
+    asrMutex.lock();
+    asrProcessing = true;
     if (!asr->isStream())
         emit feedASR(cache, true);
-    else
+    else {
         emit feedASR(QByteArray(), true);
+    }
+    asrMutex.unlock();
 }
 
 void Conversation::exit() { emit exitSig(); }
@@ -180,4 +212,26 @@ void Conversation::stopSay(const QString &type,
 
 ParsedIntent Conversation::parse(const QString &text) {
     return nlu->parseIntent(text);
+}
+
+void Conversation::onASRRequest(const QByteArray &data, int id) {
+    asrMutex.lock();
+    if (asrProcessing) {
+        asrCond.wait(&asrMutex);
+    }
+    asrProcessing = true;
+    emit feedASR(data, true, id);
+    asrMutex.unlock();
+}
+
+QList<QString> Conversation::intentRequest(const QString &text, int id) {
+    if (text != "") {
+        ParsedIntent parsedIntent = nlu->parseIntent(text);
+        parsedIntent.toString();
+        pluginManager->handlePlugin(text, parsedIntent, id);
+        QList<QString> texts = ttsTexts[id];
+        ttsTexts.remove(id);
+        return texts;
+    }
+    return QList<QString>();
 }

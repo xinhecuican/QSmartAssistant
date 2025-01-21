@@ -29,7 +29,8 @@ signals:
     void dataArrive(QByteArray data);
     void detected(bool stop);
     void finishResponse();
-
+    void wakeup();
+    void detectEnd();
 private:
     void preProcess();
 
@@ -53,6 +54,7 @@ private:
     bool isResponse;
     bool isPlaying;
     bool enablePreVad;
+    bool enableNotify;
     QTimer* prevadTimer;
 };
 
