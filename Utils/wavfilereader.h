@@ -1,5 +1,6 @@
 #pragma once
 #include<string>
+#include <cstdint>
 /************************************************************************
 * @Project:  	AC.WavFileWriter
 * @Decription:  wav文件读取工具

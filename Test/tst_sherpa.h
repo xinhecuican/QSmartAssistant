@@ -1,13 +1,22 @@
 #ifndef TST_SHERPA_H
 #define TST_SHERPA_H
+#if defined(ASR_SHERPA)
 #include "../Conversation/ASR/sherpaasr.h"
+#endif
+#if defined(TTS_SHERPA)
 #include "../Conversation/TTS/sherpatts.h"
+#endif
+#if defined(ASR_FUN)
+#include "../Conversation/ASR/funasr.h"
+#endif
 #include "../Plugins/systeminfo/systeminfo.h"
 #include "../Recorder/player.h"
 #include "../Recorder/recorder.h"
 #include "../Utils/config.h"
 #include "../Utils/wavfilereader.h"
+#if defined(VAD_SILERO)
 #include "../Wakeup/Vad/silerovad.h"
+#endif
 #include "TestPluginHelper.h"
 #include <QLibrary>
 #include <QtTest/QtTest>
@@ -23,6 +32,7 @@ private slots:
         Config::instance()->loadConfig();
         mplayer = new Player(this);
     }
+#if defined(VAD_SILERO)
     void vad() {
         SileroVad *vad = new SileroVad(this);
         QFile file(Config::getDataPath("short_test.wav"));
@@ -41,6 +51,30 @@ private slots:
         }
         QCOMPARE(detected, true);
     }
+#endif
+#if defined(ASR_FUN)
+    void asrFun() {
+        WavFileReader reader;
+        reader.OpenWavFile(Config::getDataPath("test2.wav").toStdString());
+        Funasr *funasr = new Funasr(this);
+        QByteArray *cache = new QByteArray;
+        int size = 0;
+        do {
+            char buf[1024];
+            size = reader.ReadData(buf, 640);
+            if (size > 0) {
+                cache->append(buf, size);
+            }
+        } while (size);
+        connect(funasr, &Funasr::recognized, this, [=](QString result, int id) {
+            qDebug() << result;
+            QCOMPARE(result, "深入的分析这一次全球金融动荡背后的根源");
+        });
+        funasr->detect(*cache);
+        QTest::qWait(4000);
+    }
+#endif
+#if defined(ASR_SHERPA)
     void asrSherpa() {
         WavFileReader reader;
         reader.OpenWavFile(Config::getDataPath("test2.wav").toStdString());
@@ -61,6 +95,7 @@ private slots:
         sherpa->detect(*cache);
         QTest::qWait(4000);
     }
+#endif
     void testPlayer() {
         QFile file(Config::getDataPath("short_test.wav"));
         file.open(QIODevice::ReadOnly);
@@ -73,6 +108,7 @@ private slots:
         mplayer->playSoundEffect(Config::getDataPath("start.wav"), false);
         QTest::qWait(4000);
     }
+#if defined(TTS_SHERPA)
     void ttsSherpa() {
         SherpaTTS *tts = new SherpaTTS();
         connect(tts, &SherpaTTS::dataArrive, this,
@@ -89,6 +125,7 @@ private slots:
                     "", 0);
         QTest::qWait(20000);
     }
+#endif
     // void duilite_gram(){
     //     QLibrary lib("libduilite.so");
     //     QJsonObject duiliteConfig = Config::instance()->getConfig("duilite");
