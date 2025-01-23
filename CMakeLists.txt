@@ -114,6 +114,7 @@ add_subdirectory(Wakeup)
 add_subdirectory(Plugins)
 
 if(SERVER)
+    message(STATUS "enable server")
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS HttpServer Concurrent WebSockets)
     target_link_libraries(QSmartAssistant PRIVATE
         Qt${QT_VERSION_MAJOR}::HttpServer
@@ -124,6 +125,7 @@ if(SERVER)
 endif()
 
 if(MQTT)
+    message(STATUS "enable mqtt")
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Mqtt)
     target_link_libraries(QSmartAssistant PRIVATE Qt${QT_VERSION_MAJOR}::Mqtt)
     target_compile_definitions(QSmartAssistant PUBLIC -DMQTT)

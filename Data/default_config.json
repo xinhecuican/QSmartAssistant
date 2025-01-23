@@ -174,5 +174,13 @@
 		"port": 1883,
 		"user": "abc",
 		"password": "123"
+	},
+	"funasr": {
+		"model": "paraformer-seaco/model.int8.onnx",
+		"cmvn": "paraformer-seaco/am.mvn",
+		"token": "paraformer-seaco/tokens.json",
+		"segdict": "paraformer-seaco/seg_dict",
+		"hw_model": "paraformer-seaco/model_eb.int8.onnx",
+		"hotword": "paraformer-seaco/hotword.txt"
 	}
 }

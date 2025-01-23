@@ -4,6 +4,7 @@ set(CMAKE_AUTOMOC ON)
 # asr
 option(ASR_SHERPA "sherpa asr" ON)
 option(ASR_DUILITE "duilite asr" OFF)
+option(ASR_FUN "fun asr" OFF)
 
 # tts
 option(TTS_SHERPA "sherpa tts" ON)
@@ -30,12 +31,36 @@ if(ASR_SHERPA)
 
 endif()
 
-if( ASR_DUILITE)
+if(ASR_DUILITE)
     message(STATUS "asr duilite")
     target_compile_definitions(QSmartAssistant  PUBLIC -DASR_DUILITE)
     target_sources(QSmartAssistant PUBLIC
-        Conversation/ASR/duiliteasr.cpp Conversation/ASR/duiliteasr.h
+        ASR/duiliteasr.cpp ASR/duiliteasr.h
     )
+endif()
+
+if(ASR_FUN)
+    message(STATUS "asr fun")
+    target_compile_definitions(QSmartAssistant PUBLIC -DASR_FUN)
+    target_sources(QSmartAssistant PUBLIC
+        ASR/funasr.cpp ASR/funasr.h
+    )
+    # include_directories(ASR/third_party/glog/src)
+    # set(BUILD_TESTING OFF)
+    # add_subdirectory(ASR/third_party/glog)
+    # include_directories(${glog_BINARY_DIR})
+    # include_directories(ASR/third_party/gflags)
+    # add_subdirectory(ASR/third_party/gflags)
+    # include_directories(${gflags_BINARY_DIR}/include)
+    # add_subdirectory(ASR/third_party/openfst)
+    # include_directories(${openfst_SOURCE_DIR}/src/include)
+    target_include_directories(QSmartAssistant PRIVATE ASR/third_party/kaldi-native-fbank)
+    include_directories(ASR/third_party/kaldi-native-fbank)
+    # include_directories(ASR/third_party/kaldi)
+    add_subdirectory(ASR/third_party/kaldi-native-fbank/kaldi-native-fbank/csrc)
+    # add_subdirectory(ASR/third_party/kaldi)
+    target_link_libraries(QSmartAssistant PUBLIC csrc)
+    add_custom_lib(onnxruntime)
 endif()
 
 if(TTS_SHERPA)

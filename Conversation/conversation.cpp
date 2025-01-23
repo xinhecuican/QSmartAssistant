@@ -9,6 +9,9 @@
 #if defined(ASR_DUILITE)
 #include "ASR/duiliteasr.h"
 #endif
+#if defined(ASR_FUN)
+#include "ASR/funasr.h"
+#endif
 #if defined(NLU_BAIDU)
 #include "NLU/baidunlu.h"
 #endif
@@ -32,6 +35,9 @@ Conversation::Conversation(Player *player, QObject *parent)
 #endif
 #if defined(ASR_DUILITE)
     asr = new DuiliteASR();
+#endif
+#if defined(ASR_FUN)
+    asr = new Funasr();
 #endif
 #if defined(NLU_BAIDU)
     nlu = new BaiduNLU(this);
