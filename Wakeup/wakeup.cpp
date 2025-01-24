@@ -241,7 +241,6 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         }
         if (detectState == VAD) {
             if (stop) {
-                emit detectEnd();
                 if (enablePreVad)
                     detectState = PREVAD;
                 else

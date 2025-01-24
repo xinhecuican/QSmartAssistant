@@ -17,7 +17,7 @@ void MQTTHandler::onWakeup() {
     client->publish(topic + "wakeup");
 }
 
-void MQTTHandler::onDetect() {
+void MQTTHandler::onDetect(bool stop) {
     client->publish(topic + "detect");
 }
 

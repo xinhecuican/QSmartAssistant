@@ -28,7 +28,7 @@ jobs:
             modules: "qtwebengine qtnetworkauth"
           - qt_version: 6.8.1
             qt_arch: gcc_64
-            modules: "qtnetworkauth qtmultimedia qtwebsockets qthttpserver"
+            modules: "qtwebengine qtnetworkauth qtmultimedia"
 
     env:
       BUILD_TYPE: Release

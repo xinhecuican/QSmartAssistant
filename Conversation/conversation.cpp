@@ -62,6 +62,7 @@ Conversation::Conversation(Player *player, QObject *parent)
         connect(asr, &ASRModel::recognized, this, [=](QString result, int id) {
             qInfo() << "asr parse" << result;
             if (id == 0) {
+                emit asrRecognize(result, id);
                 if (!isResponse) {
                     if (result != "") {
                         ParsedIntent parsedIntent = nlu->parseIntent(result);
@@ -75,8 +76,6 @@ Conversation::Conversation(Player *player, QObject *parent)
                     eventLoop.quit();
                 }
                 cache.clear();
-            } else {
-                emit asrRecognize(result, id);
             }
             asrMutex.lock();
             asrProcessing = false;

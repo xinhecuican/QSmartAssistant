@@ -30,7 +30,6 @@ signals:
     void detected(bool stop);
     void finishResponse();
     void wakeup();
-    void detectEnd();
 private:
     void preProcess();
 

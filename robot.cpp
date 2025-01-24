@@ -14,7 +14,7 @@ Robot::Robot(QObject* parent) : QObject(parent)
 #ifdef MQTT
     mqtt = new MQTTHandler(this);
     connect(wakeup, &Wakeup::wakeup, mqtt, &MQTTHandler::onWakeup);
-    connect(wakeup, &Wakeup::detectEnd, mqtt, &MQTTHandler::onDetect);
+    connect(wakeup, &Wakeup::detected, mqtt, &MQTTHandler::onDetect);
     connect(conversation, &Conversation::asrRecognize, mqtt, &MQTTHandler::onASR);
     connect(conversation, &Conversation::sayText, mqtt, &MQTTHandler::onSay);
 #endif

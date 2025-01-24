@@ -9,7 +9,7 @@ public:
     MQTTHandler(QObject* parent=nullptr);
 public slots:
     void onWakeup();
-    void onDetect();
+    void onDetect(bool stop);
     void onASR(const QString& text, int id);
     void onSay(const QString& text, int id);
 
