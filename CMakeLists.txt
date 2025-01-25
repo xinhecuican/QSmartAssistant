@@ -9,11 +9,13 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-find_package(QT NAMES Qt6 COMPONENTS Widgets)
-if (NOT Qt6_FOUND)
-    find_package(QT NAMES Qt5 REQUIRED COMPONENTS Core)
+find_package(Qt NAMES Qt6 COMPONENTS Core)
+
+if(NOT Qt6_FOUND)
+    find_package(Qt NAMES Qt5 REQUIRED COMPONENTS Core)
 endif()
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia Network Test)
+
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia Network)
 
 file(GLOB COMMON_SOURCES Utils/*.cpp Recorder/*.cpp)
 file(GLOB COMMON_HEADERS Utils/*.h Recorder/*.h)
@@ -104,7 +106,6 @@ target_link_libraries(QSmartAssistant PRIVATE
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Multimedia
     Qt${QT_VERSION_MAJOR}::Network
-    Qt${QT_VERSION_MAJOR}::Test
     ${openssl_LIBRARIES}
     lpcommon
 )
@@ -133,6 +134,8 @@ if(MQTT)
 endif()
 
 if(TEST)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Test)
+    target_link_libraries(QSmartAssistant PRIVATE Qt${QT_VERSION_MAJOR}::Test)
     target_sources(QSmartAssistant PUBLIC
         Test/tst_sherpa.h Test/TestPluginHelper.h
     )
