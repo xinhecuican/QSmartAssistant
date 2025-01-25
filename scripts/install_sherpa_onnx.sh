@@ -5,6 +5,7 @@ lib_path=${parent_path}/lib/sherpa_onnx
 
 git clone https://github.com/k2-fsa/sherpa-onnx.git
 pushd sherpa-onnx
+git checkout 030aaa7bb9be64cc3511478cae358a828b43a74e
 mkdir build-shared
 cd build-shared
 

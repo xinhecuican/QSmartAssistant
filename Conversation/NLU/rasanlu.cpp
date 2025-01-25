@@ -142,8 +142,10 @@ ParsedIntent RasaNLU::parseIntent(const QString &text) {
                 qaFile.close();
             }
         }
+        start = true;
     } else {
         qWarning() << "rasa request error";
+        start = false;
     }
     reply->deleteLater();
     return parsedIntent;

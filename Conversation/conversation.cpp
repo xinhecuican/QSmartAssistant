@@ -216,7 +216,11 @@ void Conversation::stopSay(const QString &type,
 }
 
 ParsedIntent Conversation::parse(const QString &text) {
-    return nlu->parseIntent(text);
+    ParsedIntent intent = nlu->parseIntent(text);
+    if (!nlu->isStart()) {
+        say("正在启动");
+    }
+    return intent;
 }
 
 void Conversation::onASRRequest(const QByteArray &data, int id) {

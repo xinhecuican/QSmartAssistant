@@ -27,7 +27,7 @@ public slots:
 
 signals:
     void dataArrive(QByteArray data);
-    void detected(bool stop);
+    void detected(bool stop, bool command, QString commandStr);
     void finishResponse();
     void wakeup();
 private:

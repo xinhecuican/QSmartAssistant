@@ -52,8 +52,12 @@ void DuiliteWakeup::detect(const QByteArray& data){
     // for(int i=0; i<chunkSize; i++){
     //     buf[i] = data[i];
     // }
-    if((ret = feedFunc(wakeup, (char*)data.data(), chunkSize)) != 0){
-        qWarning() << "duilite wakeup feed error" << ret;
+    try {
+        if((ret = feedFunc(wakeup, (char*)data.data(), chunkSize)) != 0){
+            qWarning() << "duilite wakeup feed error" << ret;
+        }
+    } catch (std::exception const &e) {
+        qCritical() << "duilite wakeup exception" << e.what(); 
     }
 }
 

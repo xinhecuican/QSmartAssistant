@@ -42,10 +42,14 @@
 		"lexicon": "vits-zh-aishell3/lexicon.txt",
 		"tokens": "vits-zh-aishell3/tokens.txt",
 		"rules": "vits-zh-aishell3/rule.fst",
+		"data_dir": "",
+		"vocoder": "hifigan_v2.onnx",
+		"dict": "matcha-icefall-zh-baker/dict",
 		"noise": 0.3,
 		"noise-w": 0.2,
 		"length": 1,
 		"speakerid": 66,
+		"speed": 1.0,
 		"extra_volume": 0
 	},
     "sherpa_wakeup": {

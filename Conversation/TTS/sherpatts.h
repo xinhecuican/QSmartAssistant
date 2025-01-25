@@ -11,9 +11,10 @@ public:
     void detect(const QString& text, const QString& type, int id) override;
     void stop() override;
 private:
-    SherpaOnnxOfflineTts* tts;
+    const SherpaOnnxOfflineTts* tts;
     int speakerid;
     int extraVol;
+    float speed;
 };
 
 #endif // SHERPATTS_H
