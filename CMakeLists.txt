@@ -9,10 +9,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-find_package(Qt NAMES Qt6 COMPONENTS Core)
-
+find_package(QT NAMES Qt6 COMPONENTS Core)
 if(NOT Qt6_FOUND)
-    find_package(Qt NAMES Qt5 REQUIRED COMPONENTS Core)
+    find_package(QT NAMES Qt5 REQUIRED COMPONENTS Core)
 endif()
 
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia Network)
