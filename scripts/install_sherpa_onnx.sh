@@ -21,6 +21,8 @@ make install
 
 mkdir -p ${lib_path}
 
+chmod +x /tmp/sherpa-onnx/shared/lib/libonnxruntime.so
+chmod +x /tmp/sherpa-onnx/shared/lib/libsherpa-onnx-c-api.so
 mv -f /tmp/sherpa-onnx/shared/include ${lib_path}
 mv -f /tmp/sherpa-onnx/shared/lib ${lib_path}
 popd

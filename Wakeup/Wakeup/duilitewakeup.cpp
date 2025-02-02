@@ -1,14 +1,27 @@
 #include "duilitewakeup.h"
 #include "../../Utils/config.h"
 #include <QFile>
+#include <QJsonDocument>
 
 int wakeupCallback(void *userdata, int type, char *msg, int len){
-    Q_UNUSED(msg)
-    Q_UNUSED(len)
-    Q_UNUSED(type)
-    qDebug() << type  << msg;
+    QByteArray msgData(msg, len-1);
+    qDebug() << msgData;
+    QJsonDocument doc = QJsonDocument::fromJson(msgData);
+
     DuiliteWakeup* duilite = (DuiliteWakeup*)userdata;
-    emit duilite->detected(false);
+    int index  = 0;
+    if (doc.isObject()) {
+        QJsonObject obj = doc.object();
+        QString wakeupWord = obj["wakeupWord"].toString("DEFAULT");
+        QList<QString> wakewords = duilite->getWakewords();
+        for (int i = 0; i < wakewords.size(); i++) {
+            if (wakeupWord == wakewords[i]) {
+                index = i;
+                break;
+            }
+        }
+    }
+    emit duilite->detected(false, index);
     return 0;
 }
 
@@ -35,6 +48,8 @@ DuiliteWakeup::DuiliteWakeup(QObject* parent)
     std::string resS = cfg.toStdString();
     char* resData = (char*)resS.c_str();
     wakeup = ((struct duilite_wakeup*(*)(char*, duilite_callback, void*))lib.resolve("duilite_wakeup_new"))(resData, wakeupCallback, this);
+    QString wakeword = duiliteConfig.value("wakeword").toString();
+    wakewords = wakeword.split(',');
     QString params = "{\"env\": \"words=%1;thresh=%2;subword_wakeup=%3\"}";
     std::string paramS = params.arg(duiliteConfig.value("wakeword").toString())
                              .arg(duiliteConfig.value("thresh").toString())
@@ -72,4 +87,8 @@ void DuiliteWakeup::stop(){
 
 int DuiliteWakeup::getChunkSize(){
     return chunkSize;
+}
+
+QList<QString> DuiliteWakeup::getWakewords() {
+    return wakewords;
 }

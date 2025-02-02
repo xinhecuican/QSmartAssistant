@@ -13,10 +13,10 @@ public:
     void stop() override;
     void clear() override;
 private:
-    SherpaOnnxOfflineRecognizer* recognizer;
-    SherpaOnnxOfflineStream *stream;
-    SherpaOnnxOnlineRecognizer* onlineRecognizer;
-    SherpaOnnxOnlineStream* onlineStream;
+    const SherpaOnnxOfflineRecognizer* recognizer;
+    const SherpaOnnxOfflineStream *stream;
+    const SherpaOnnxOnlineRecognizer* onlineRecognizer;
+    const SherpaOnnxOnlineStream* onlineStream;
     float samples[16000];
     bool _isStream;
     QString result;

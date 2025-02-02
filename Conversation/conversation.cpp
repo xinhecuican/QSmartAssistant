@@ -244,3 +244,9 @@ QList<QString> Conversation::intentRequest(const QString &text, int id) {
     }
     return QList<QString>();
 }
+
+void Conversation::handlePlugin(const QString& text, const ParsedIntent& intent, int id) {
+    qInfo() << "handle plugin";
+    intent.toString();
+    pluginManager->handlePlugin(text, intent, id);
+}

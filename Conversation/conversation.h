@@ -36,6 +36,7 @@ public:
     Config *getConfig() override;
     ParsedIntent parse(const QString &text) override;
     QList<QString> intentRequest(const QString& text, int id);
+    void handlePlugin(const QString& text, const ParsedIntent& intent, int id);
 signals:
     void finish();
     void requestResponse();

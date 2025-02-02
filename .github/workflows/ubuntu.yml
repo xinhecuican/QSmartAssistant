@@ -22,10 +22,6 @@ jobs:
       # 矩阵配置
       matrix:
         include:
-          # 5.15.2
-          - qt_version: 5.15.2
-            qt_arch: gcc_64
-            modules: "qtwebengine qtnetworkauth"
           - qt_version: 6.2.4
             qt_arch: gcc_64
             modules: "qtwebengine qtnetworkauth qtmultimedia"

@@ -12,6 +12,7 @@ public:
     void detect(const QByteArray& data) override;
     void stop() override;
     int getChunkSize() override;
+    QList<QString> getWakewords();
 
 private:
     duilite_wakeup* wakeup;
@@ -19,6 +20,7 @@ private:
     QLibrary lib;
     int(*feedFunc)(struct duilite_wakeup*,char*,int);
     char buf[3200];
+    QList<QString> wakewords;
 };
 
 #endif // DUILITEWAKEUP_H

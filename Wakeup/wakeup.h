@@ -6,6 +6,7 @@
 #include "../Recorder/recorder.h"
 #include "Process/audioprocess.h"
 #include "../Recorder/player.h"
+#include "../Utils/ParsedIntent.h"
 /**
  * Wakeup robot, contains preProcess, wakeup, vad
  * if you use preprocess, config must fit frame size of preprocess
@@ -27,11 +28,13 @@ public slots:
 
 signals:
     void dataArrive(QByteArray data);
-    void detected(bool stop, bool command, QString commandStr);
+    void detected(bool stop);
+    void detectedIntent(const QString& text, const ParsedIntent& intent);
     void finishResponse();
     void wakeup();
 private:
     void preProcess();
+    void parseIntentConfig(const QJsonObject& obj);
 
 private:
     enum DetectState{IDLE, PREVAD, WAKEUP, VAD};
@@ -55,6 +58,11 @@ private:
     bool enablePreVad;
     bool enableNotify;
     QTimer* prevadTimer;
+    struct ParsedInfo {
+        QString text;
+        ParsedIntent intent;
+    };
+    QMap<int, ParsedInfo> intentMap;
 };
 
 #endif // WAKEUP_H

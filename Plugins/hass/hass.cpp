@@ -8,6 +8,7 @@ QString Hass::getName() { return "Hass"; }
 bool Hass::handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                   bool &isImmersive) {
     Q_UNUSED(isImmersive)
+    qDebug() << text;
     for (const Intent &intent : parsedIntent.intents) {
         QList<HassService> hassServices = services[intent.name];
         for (auto &service : hassServices) {
@@ -143,6 +144,7 @@ void Hass::executeService(const QString &path, const QJsonObject &params,
     connect(reply, &QNetworkReply::finished, this, [=]() {
         if (reply->error() != QNetworkReply::NoError) {
             qWarning() << "requst fail" << reply->error();
+            helper->say("执行失败", id);
         } else if (notify) {
             helper->say("执行成功", id);
         }

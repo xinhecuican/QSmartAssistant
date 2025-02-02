@@ -5,6 +5,7 @@
 #include "../Utils/wavfilereader.h"
 #include <QDebug>
 #include <QTimer>
+#include <QJsonArray>
 #if defined(WAKEUP_PORCUPINE)
 #include "Wakeup/porcupinewakeup.h"
 #endif
@@ -49,6 +50,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
     : QObject(parent), player(player), detectState(IDLE), isResponse(false) {
     QJsonObject wakeupConfig = Config::instance()->getConfig("wakeup");
     int chunkSize = wakeupConfig.find("chunkSize")->toInt();
+    parseIntentConfig(wakeupConfig);
     recorder = new Recorder(chunkSize, this);
     wakeupModel = nullptr;
     vadModel = nullptr;
@@ -206,13 +208,19 @@ Wakeup::Wakeup(Player *player, QObject *parent)
         debugData.append(data);
 #endif
     });
-    connect(wakeupModel, &WakeupModel::detected, this, [=](bool stop) {
+    connect(wakeupModel, &WakeupModel::detected, this, [=](bool stop, int index) {
         if (detectState == WAKEUP) {
+            bool parsed = intentMap.contains(index);
             if (stop) {
                 if (enablePreVad)
                     detectState = PREVAD;
                 else
                     detectState = WAKEUP;
+            } else if (parsed) {
+                detectState = WAKEUP;
+                player->playSoundEffect(Config::getDataPath("end.wav"), true, isPlaying);
+                ParsedInfo intent = intentMap[index];
+                emit detectedIntent(intent.text, intent.intent);
             } else {
                 qInfo() << "wakeup";
                 if (enablePreVad) {
@@ -306,6 +314,38 @@ void Wakeup::preProcess() {
             audioProcess->preProcess(data);
             cacheData.append(data);
             rawData.remove(0, audioProcess->getChunkSize());
+        }
+    }
+}
+
+void Wakeup::parseIntentConfig(const QJsonObject& obj) {
+    if (obj.contains("intentMap")) {
+        QJsonArray intentsArr = obj["intentMap"].toArray();
+        for (int i = 0; i < intentsArr.size(); i++) {
+            ParsedInfo info;
+            ParsedIntent parsedIntent;
+            QJsonObject mapObj = intentsArr.at(i).toObject();
+            int index = mapObj.value("index").toInt();
+            info.text = mapObj.value("text").toString();
+            QJsonArray intentArr = mapObj.value("intents").toArray();
+            for (int j = 0; j < intentArr.size(); j++) {
+                QJsonObject intentObj = intentArr.at(i).toObject();
+                Intent intent;
+                intent.name = intentObj.value("name").toString();
+                intent.conf = 1;
+                QJsonArray slotsArr = intentObj.value("slots").toArray();
+                for (int k = 0; k < slotsArr.size(); k++) {
+                    QJsonObject slotObj = slotsArr.at(i).toObject();
+                    IntentSlot slot;
+                    slot.name = slotObj.value("name").toString();
+                    slot.value = slotObj.value("value").toString();
+                    slot.conf = 1;
+                    intent.appendSlot(slot);
+                }
+                parsedIntent.append(intent);
+            }
+            info.intent = parsedIntent;
+            intentMap.insert(index, info);
         }
     }
 }

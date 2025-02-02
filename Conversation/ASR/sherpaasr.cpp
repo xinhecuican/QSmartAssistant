@@ -4,9 +4,7 @@
 SherpaASR::SherpaASR(QObject *parent) : ASRModel(parent) {
 
     QJsonObject sherpaConfig = Config::instance()->getConfig("sherpa");
-    std::string tokens =
-        Config::getDataPath(sherpaConfig.find("tokens")->toString())
-            .toStdString();
+    std::string tokens = Config::getDataPath(sherpaConfig.find("tokens")->toString()).toStdString();
     QString model = Config::getDataPath(sherpaConfig.find("model")->toString());
     std::string modelS = model.toStdString();
     QString model1(model);
@@ -72,10 +70,11 @@ SherpaASR::SherpaASR(QObject *parent) : ASRModel(parent) {
         }
     }
     if (_isStream) {
-        onlineRecognizer = SherpaOnnxCreateOnlineRecognizer(&onlineConfig);
+        onlineRecognizer = SherpaOnnxCreateOnlineRecognizer(
+            const_cast<SherpaOnnxOnlineRecognizerConfig *>(&onlineConfig));
         onlineStream = SherpaOnnxCreateOnlineStream(onlineRecognizer);
     } else {
-        recognizer = SherpaOnnxCreateOfflineRecognizer(&config);
+        recognizer = SherpaOnnxCreateOfflineRecognizer(const_cast<SherpaOnnxOfflineRecognizerConfig *>(&config));
         stream = SherpaOnnxCreateOfflineStream(recognizer);
     }
 }
@@ -91,19 +90,15 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
     if (!_isStream) {
         int currentPos = 0;
         while (currentPos < dataLength) {
-            int currentLength = currentPos + 16000 < dataLength
-                                    ? 16000
-                                    : dataLength - currentPos;
+            int currentLength = currentPos + 16000 < dataLength ? 16000 : dataLength - currentPos;
             for (int i = 0; i < currentLength; i++) {
                 samples[i] = intData[i + currentPos] / 32768.;
             }
-            SherpaOnnxAcceptWaveformOffline(stream, 16000, samples,
-                                            currentLength);
+            SherpaOnnxAcceptWaveformOffline(stream, 16000, samples, currentLength);
             currentPos += 16000;
         }
         SherpaOnnxDecodeOfflineStream(recognizer, stream);
-        const SherpaOnnxOfflineRecognizerResult *r =
-            SherpaOnnxGetOfflineStreamResult(stream);
+        const SherpaOnnxOfflineRecognizerResult *r = SherpaOnnxGetOfflineStreamResult(stream);
         SherpaOnnxDestroyOfflineStream(stream);
         stream = SherpaOnnxCreateOfflineStream(recognizer);
         QString result = "";
@@ -115,14 +110,11 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
     } else {
         int currentPos = 0;
         while (currentPos < dataLength) {
-            int currentLength = currentPos + 16000 < dataLength
-                                    ? 16000
-                                    : dataLength - currentPos;
+            int currentLength = currentPos + 16000 < dataLength ? 16000 : dataLength - currentPos;
             for (int i = 0; i < currentLength; i++) {
                 samples[i] = intData[i + currentPos] / 32768.;
             }
-            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples,
-                                                 currentLength);
+            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples, currentLength);
             currentPos += 16000;
         }
         // add padding
@@ -130,8 +122,7 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
             for (int i = 0; i < 4800; i++) {
                 samples[i] = 0;
             }
-            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples,
-                                                 4800);
+            SherpaOnnxOnlineStreamAcceptWaveform(onlineStream, 16000, samples, 4800);
             SherpaOnnxOnlineStreamInputFinished(onlineStream);
         }
         while (SherpaOnnxIsOnlineStreamReady(onlineRecognizer, onlineStream))
@@ -139,8 +130,7 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
         const SherpaOnnxOnlineRecognizerResult *r =
             SherpaOnnxGetOnlineStreamResult(onlineRecognizer, onlineStream);
         QString result = "";
-        if (SherpaOnnxOnlineStreamIsEndpoint(onlineRecognizer, onlineStream) ||
-            isLast) {
+        if (SherpaOnnxOnlineStreamIsEndpoint(onlineRecognizer, onlineStream) || isLast) {
             if (strlen(r->text)) {
                 result = r->text;
             }

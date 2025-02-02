@@ -10,10 +10,6 @@ set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core)
-if(NOT Qt6_FOUND)
-    find_package(QT NAMES Qt5 REQUIRED COMPONENTS Core)
-endif()
-
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia Network)
 
 file(GLOB COMMON_SOURCES Utils/*.cpp Recorder/*.cpp)

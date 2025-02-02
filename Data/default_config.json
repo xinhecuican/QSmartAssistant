@@ -9,7 +9,24 @@
 		"enable_notify": true,
 		"prevad_interval": 2000,
 		"start_voice": "start.wav",
-		"end_voice": "end.wav"
+		"end_voice": "end.wav",
+        "intentMap": [
+            {
+                "index": 10086,
+				"text": "开灯",
+                "intents": [
+                    {
+                        "name": "OPEN_FURNITURE",
+                        "slots": [
+                            {
+                                "name": "furniture",
+                                "value": "灯"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
 	},
 	"plugin":{
 		"orderFile": "plugin_order.txt"

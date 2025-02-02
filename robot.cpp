@@ -24,6 +24,9 @@ Robot::Robot(QObject* parent) : QObject(parent)
     connect(wakeup, &Wakeup::detected, this, [=](bool stop){
         conversation->dialog(stop);
     });
+    connect(wakeup, &Wakeup::detectedIntent, this, [=](const QString& text, const ParsedIntent& intent){
+        conversation->handlePlugin(text, intent, 0);
+    });
     connect(wakeup, &Wakeup::finishResponse, conversation, &Conversation::onResponse);
     connect(conversation, &Conversation::finish, this, [=](){
         wakeup->resume();

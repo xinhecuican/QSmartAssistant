@@ -29,7 +29,7 @@ public:
     virtual int getChunkSize()=0;
 
 signals:
-    void detected(bool stop);
+    void detected(bool stop, int index=0);
 protected:
 	bool valid;
 };
