@@ -60,6 +60,8 @@
 		"tokens": "vits-zh-aishell3/tokens.txt",
 		"rules": "vits-zh-aishell3/rule.fst",
 		"vocoder": "hifigan_v3.onnx",
+		"dict": "matcha-icefall-zh-baker/dict",
+		"data_dir": "",
 		"noise": 0.2,
 		"noise-w": 0.3,
 		"length": 1,

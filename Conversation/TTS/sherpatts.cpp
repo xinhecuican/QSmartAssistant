@@ -31,13 +31,15 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     config.model.num_threads = 2;
     config.model.provider = "cpu";
     if (model.contains("vits")) {
+        if(!QFile::exists(model)) {
+            qCritical() << "vits tts model does not exist";
+        }
         config.model.vits.model = modelS.c_str();
         config.model.vits.length_scale = ttsConfig.value("length").toDouble();
         config.model.vits.noise_scale = ttsConfig.value("noise").toDouble();
         config.model.vits.noise_scale_w = ttsConfig.value("noise-w").toDouble();
         if(lexicon != dataPath) config.model.vits.lexicon = lexicon.c_str();
         if(dataDir != dataPath) config.model.vits.data_dir = dataDir.c_str();
-        if(dict != dataPath) config.model.vits.dict_dir = dict.c_str();
         config.model.vits.tokens = tokens.c_str();
     } else if (model.contains("matcha")) {
         config.model.matcha.acoustic_model = modelS.c_str();
