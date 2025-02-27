@@ -27,3 +27,15 @@ mv -f /tmp/sherpa-onnx/shared/include ${lib_path}
 mv -f /tmp/sherpa-onnx/shared/lib ${lib_path}
 popd
 rm -rf sherpa-onnx
+
+pushd ../Data
+
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2
+tar xvf sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2
+rm sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2
+
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-zh-baker.tar.bz2
+tar xvf matcha-icefall-zh-baker.tar.bz2
+rm matcha-icefall-zh-baker.tar.bz2
+
+popd

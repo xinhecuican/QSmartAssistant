@@ -11,9 +11,9 @@ pushd swig-3.0.10
         --without-clisp                    \
         --without-maximum-compile-warnings &&
 make -j `nproc`
-make install &&
-install -v -m755 -d /usr/share/doc/swig-3.0.10 &&
-cp -v -R Doc/* /usr/share/doc/swig-3.0.10
+sudo make install &&
+sudo install -v -m755 -d /usr/share/doc/swig-3.0.10 &&
+sudo cp -v -R Doc/* /usr/share/doc/swig-3.0.10
 popd
 rm -rf swig-3.0.10 swig-3.0.10.tar.gz
 sudo apt-get install libatlas-base-dev
@@ -25,6 +25,7 @@ mkdir -p ${lib_path}/lib
 pushd snowboy
 mv include/snowboy-detect.h ${lib_path}/include
 mv resources/common.res ${parent_path}/Data
+mv resources/models/snowboy.umdl ${parent_path}/Data
 libname=libsnowboy-detect.a
 get_arch=`arch`
 
