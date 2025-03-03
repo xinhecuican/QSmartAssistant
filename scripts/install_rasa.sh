@@ -8,8 +8,8 @@ sudo apt install python3-virtualenv
 virtualenv ${lib_path} -p python3.10
 echo ${lib_path}/bin/activate
 source ${lib_path}/bin/activate
-pip install -U setuptools
-pip install rasa
+pip install -U 'setuptools<70.4.0,>=70.3.0'
+pip install rasa==3.6.19
 pip install jieba
 pip install torch
 pip install transformers

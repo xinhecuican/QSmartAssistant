@@ -115,7 +115,7 @@
 	},
 	"rasa": {
         "url": "http://127.0.0.1:5005/",
-		"model": "Data/rasa/models/default.tar.gz",
+		"model": "rasa/models/default.tar.gz",
 		"python_venv": "absolute path to activate",
 		"record_samples": true,
 		"conf": 0.5

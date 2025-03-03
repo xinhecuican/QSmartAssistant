@@ -51,7 +51,7 @@ Conversation::Conversation(Player *player, QObject *parent)
     if (asr == nullptr)
         qCritical() << "undefine asr model";
     if (tts == nullptr)
-        qCritical() << "undefine tts mxodel";
+        qCritical() << "undefine tts model";
     if (nlu == nullptr)
         qCritical() << "undefine nlu model";
 
