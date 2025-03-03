@@ -1,3 +1,3 @@
 #!/bin/bash
-cd Data/rasa
-cast rasa.pid | xargs kill
+cd ~/.config/QSmartAssistant/Data/rasa
+cat rasa.pid | xargs kill
