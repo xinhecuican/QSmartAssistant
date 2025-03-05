@@ -26,10 +26,12 @@ signals:
 private:
     void handleInner(const QString &text, const ParsedIntent &parsedIntent, int id,
                      const QString &master);
+    void handleResponse(const QString &response, int id, const QString &master);
 
 private:
     IPluginHelper *helper;
     QString botName;
+    QString type;
 
     // chatgpt
     QNetworkAccessManager manager;
