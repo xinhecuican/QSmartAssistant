@@ -9,7 +9,8 @@ void Chat::setPluginHelper(IPluginHelper *helper) {
     this->helper = helper;
     QJsonObject chatConfig = helper->getConfig()->getConfig("chat");
     botName = chatConfig.value("botName").toString();
-    if (botName == "chatgpt") {
+    type = chatConfig.value("type").toString();
+    if (type == "openai") {
         QString modelName = chatConfig.value("modelName").toString();
         QString key = chatConfig.value("key").toString();
         double temperature = chatConfig.value("temperature").toDouble(1);
@@ -92,9 +93,66 @@ void Chat::recvMessage(const QString &text, const ParsedIntent &intent,
     }
 }
 
+void Chat::handleResponse(const QString &response, int id, const QString &master) {
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(response.toUtf8());
+    QJsonObject jsonObj = jsonDoc.object();
+    if (jsonObj.contains("choices")) {
+        QJsonArray choicesArray = jsonObj["choices"].toArray();
+        QString content;
+        if (!choicesArray.isEmpty()) {
+            if (!stream) {
+                QJsonObject messageObj =
+                    choicesArray.at(0).toObject()["message"].toObject();
+                content = messageObj["content"].toString();
+            } else {
+                QJsonObject message = choicesArray.at(0).toObject();
+                QJsonObject messageObj = message["delta"].toObject();
+                if (messageObj.contains("content")) {
+                    content = messageObj["content"].toString();
+                }
+            }
+            result += content;
+            bool split = false;
+            QStringList list;
+            int begin = -1;
+            if (stream) {
+                for (int i = 0; i < content.size(); i++) {
+                    if (content[i] == '\t' || content[i] == '.' ||
+                        content[i] == QChar(0x3002) ||
+                        content[i] == QChar(0xff01) ||
+                        content[i] == '!' || content[i] == '?' ||
+                        content[i] == QChar(0xff1f) ||
+                        content[i] == QChar(0xff1b) ||
+                        content[i] == '\n') {
+                        split = true;
+                        list.append(content.mid(begin, i - begin));
+                        begin = i;
+                    }
+                }
+                if (split) {
+                    if (list.size() > 1) {
+                        helper->say(output + list.at(0), id, false, master);
+                        for (int i = 1; i < list.size() - 1; i++) {
+                            helper->say(list.at(i), id, false, master);
+                        }
+                        output = list.last();
+                    } else {
+                        helper->say(output + list.at(0), id, false, master);
+                        output = "";
+                    }
+                } else {
+                    output += content;
+                }
+            } else {
+                output += content;
+            }
+        }
+    }
+}
+
 void Chat::handleInner(const QString &text, const ParsedIntent &intent, int id,
                        const QString &master) {
-    if (botName == "chatgpt") {
+    if (type == "openai") {
         conversation.append(QJsonObject{{"role", "user"}, {"content", text}});
         requestData["messages"] = conversation;
         currentToken += text.size();
@@ -104,66 +162,19 @@ void Chat::handleInner(const QString &text, const ParsedIntent &intent, int id,
         qDebug() << requestData;
         reply = manager.post(request, QJsonDocument(requestData).toJson());
         connect(reply, &QNetworkReply::readyRead, this, [=]() {
-            QString response = QString::fromUtf8(reply->readAll());
-            for (int i = 0; i < response.size(); i++) {
-                if (response[i] == '{') {
-                    response.remove(0, i);
-                    break;
-                }
+            QString responses = QString::fromUtf8(reply->readAll());
+            QStringList list = responses.split("\n\n");
+            if (list.last() == "") {
+                list.removeLast();
             }
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(response.toUtf8());
-            QJsonObject jsonObj = jsonDoc.object();
-            if (jsonObj.contains("choices")) {
-                QJsonArray choicesArray = jsonObj["choices"].toArray();
-                QString content;
-                if (!choicesArray.isEmpty()) {
-                    if (!stream) {
-                        QJsonObject messageObj =
-                            choicesArray.at(0).toObject()["message"].toObject();
-                        content = messageObj["content"].toString();
-                    } else {
-                        QJsonObject message = choicesArray.at(0).toObject();
-                        QJsonObject messageObj = message["delta"].toObject();
-                        if (messageObj.contains("content")) {
-                            content = messageObj["content"].toString();
-                        }
-                    }
-                    result += content;
-                    bool split = false;
-                    QStringList list;
-                    int begin = -1;
-                    if (stream) {
-                        for (int i = 0; i < content.size(); i++) {
-                            if (content[i] == '\t' || content[i] == '.' ||
-                                content[i] == QChar(0x3002) ||
-                                content[i] == QChar(0xff01) ||
-                                content[i] == '!' || content[i] == '?' ||
-                                content[i] == QChar(0xff1f) ||
-                                content[i] == QChar(0xff1b) ||
-                                content[i] == '\n') {
-                                split = true;
-                                list.append(content.mid(begin, i - begin));
-                                begin = i;
-                            }
-                        }
-                        if (split) {
-                            if (list.size() > 1) {
-                                helper->say(output + list.at(0), id, false, master);
-                                for (int i = 1; i < list.size() - 1; i++) {
-                                    helper->say(list.at(i), id, false, master);
-                                }
-                                output = list.last();
-                            } else {
-                                helper->say(output + list.at(0), id, false, master);
-                                output = "";
-                            }
-                        } else {
-                            output += content;
-                        }
-                    } else {
-                        output += content;
+            for (QString &response : list) {
+                for (int i = 0; i < response.size(); i++) {
+                    if (response[i] == '{') {
+                        response.remove(0, i);
+                        break;
                     }
                 }
+                handleResponse(response, id, master);
             }
         });
         QObject::connect(reply, &QNetworkReply::finished, this, [=]() {
