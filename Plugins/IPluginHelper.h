@@ -5,6 +5,7 @@
 #include "../Utils/ParsedIntent.h"
 #include "../Utils/config.h"
 #include <QString>
+#include "../Utils/LLMManager.h"
 
 class LPCOMMON_EXPORT IPluginHelper {
 public:
@@ -25,6 +26,7 @@ public:
     virtual void exit() = 0;
     virtual Player *getPlayer() = 0;
     virtual Config *getConfig() = 0;
+    virtual LLMManager *getLLMManager() = 0;
 
     /**
      * @brief 使用NLU解析text

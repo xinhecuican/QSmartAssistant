@@ -14,6 +14,7 @@ class Chat : public QObject, Plugin {
     Q_PLUGIN_METADATA(IID QSmartAssistant_PLUGIN_ID)
 public:
     Chat();
+    ~Chat();
     QString getName() override;
     bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                 bool &isImmersive) override;
@@ -30,17 +31,15 @@ private:
 
 private:
     IPluginHelper *helper;
+    LLMManager* llmManager;
     QString botName;
-    QString type;
-
-    // chatgpt
-    QNetworkAccessManager manager;
-    QNetworkRequest request;
+    LLMConversation* conversation;
     QJsonObject requestData;
-    QJsonArray conversation;
-    QNetworkProxy proxy;
-    QNetworkReply *reply;
+    QJsonObject payload;
     QString output;
+    QString modelName;
+    QString master;
+    int currentId;
     int currentToken;
     int maxTokens;
     int limitToken;

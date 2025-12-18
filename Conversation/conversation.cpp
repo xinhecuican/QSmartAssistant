@@ -250,3 +250,5 @@ void Conversation::handlePlugin(const QString& text, const ParsedIntent& intent,
     intent.toString();
     pluginManager->handlePlugin(text, intent, id);
 }
+
+LLMManager *Conversation::getLLMManager() { return LLMManager::instance(); }

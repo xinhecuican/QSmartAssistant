@@ -8,6 +8,7 @@ class Fallback : public QObject, Plugin {
     Q_PLUGIN_METADATA(IID QSmartAssistant_PLUGIN_ID)
 public:
     Fallback();
+    ~Fallback();
     QString getName() override;
     bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
                 bool &isImmersive) override;
@@ -19,5 +20,9 @@ signals:
 
 private:
     IPluginHelper *helper;
+    LLMManager* llmManager;
+    LLMConversation* conversation;
+    QString text;
+    int currentId;
 };
 #endif
