@@ -6,6 +6,7 @@
 #include <QThread>
 #include <stdlib.h>
 #include <time.h>
+#include <QThread>
 
 NeteaseMusic::NeteaseMusic()
     : isLogin(false), lastRecommandTime(0), styleTime(0), styleCursor(0) {
@@ -38,7 +39,7 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
             });
     connect(&process, &QProcess::readyReadStandardOutput, this, [=]() {
         QString output = process.readAllStandardOutput();
-        qDebug() << output;
+        // qDebug() << output;
         if (!isLogin && output.contains("Server started successfully")) {
             login();
         }
@@ -101,20 +102,19 @@ void NeteaseMusic::login() {
     }
     volumeStep = neteaseConfig.value("volumeStep").toInt();
     QVariantMap result;
+    QThread::sleep(3);
     result = invokeMethod("login_status", params);
     bool loginanoni = true;
-    bool statusError = false;
-    if (result.contains("body")) {
+    if (result.contains("data")) {
+        loginanoni = result["data"].toMap()["account"].toMap()["anonimousUser"].toBool();
+    } else if (result.contains("body")) {
         loginanoni = result["body"]
                             .toMap()["data"]
                             .toMap()["account"]
                             .toMap()["anonimousUser"]
                             .toBool();
-        statusError = result["body"].toMap()["code"].toInt() != 200;
-    } else {
-        statusError = true;
     }
-    if (cookie == "" || loginanoni || statusError) {
+    if (cookie == "" || loginanoni || result["status"] != 200) {
         params["phone"] = neteaseConfig.value("phone").toString();
         params["password"] = neteaseConfig.value("password").toString();
         bool success = false;
@@ -457,8 +457,14 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
     QString query;
     if (args.size() != 0) {
         for (auto iter = args.begin(); iter != args.end(); iter++) {
-            query += iter.key() + "=" +
-                     QUrl::toPercentEncoding(iter.value().toString()) + "&";
+            QString key = iter.key();
+            QString value = iter.value().toString();
+            // cookie本身已经是编码过的，不需要再次编码
+            if (key == "cookie") {
+                query += key + "=" + value + "&";
+            } else {
+                query += key + "=" + QUrl::toPercentEncoding(value) + "&";
+            }
         }
         query.remove(query.size() - 1, 1);
     }
@@ -474,7 +480,7 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
     QStringList curlArgs;
     curlArgs << "http://127.0.0.1:" + port + "/" + name +
                     (args.size() != 0 ? "?" + query : "");
-    curlArgs << "-H" << "charset: utf-8";
+    curlArgs << "-H" << "charset: utf-8"; 
     curlProcess.start("curl", curlArgs);
     curlProcess.waitForFinished();
     QString body = curlProcess.readAllStandardOutput();
@@ -490,6 +496,8 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
     //            ret["cookie"] = cookie.toRawForm();
     //        }
     //    }
+    qDebug() << "invokeMethod" << name;
+    qDebug() << bodyMap;
     if (bodyMap.contains("status")) {
         ret["status"] = bodyMap["status"];
         ret["body"] = bodyMap["body"];

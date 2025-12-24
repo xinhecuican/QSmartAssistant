@@ -51,7 +51,6 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
         config.model.matcha.tokens = tokens.c_str();
         config.model.matcha.dict_dir = dict.c_str();
     } else if (model.contains("zipvoice")) {
-        qDebug() << modelS2 << modelS1 << vocoder << dataDir;
         config.model.zipvoice.tokens = tokens.c_str();
         config.model.zipvoice.encoder = modelS2.c_str();
         config.model.zipvoice.decoder = modelS1.c_str();
