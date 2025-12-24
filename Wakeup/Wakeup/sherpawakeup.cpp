@@ -34,8 +34,8 @@ SherpaWakeup::SherpaWakeup(QObject* parent) : WakeupModel(parent){
     onlineConfig.keywords_score = score;
     onlineConfig.keywords_file = hotwords.c_str();
 
-    spotter = CreateKeywordSpotter(&onlineConfig);
-    stream = CreateKeywordStream(spotter);
+    spotter = SherpaOnnxCreateKeywordSpotter(&onlineConfig);
+    stream = SherpaOnnxCreateKeywordStream(spotter);
 }
 
 SherpaWakeup::~SherpaWakeup(){
@@ -52,24 +52,24 @@ void SherpaWakeup::detect(const QByteArray& data){
         for(int i=0; i<currentLength; i++){
             samples[i] = intData[i+currentPos]/32768.;
         }
-        AcceptWaveform(stream, 16000, samples, currentLength);
+        SherpaOnnxOnlineStreamAcceptWaveform(stream, 16000, samples, currentLength);
         currentPos += 8000;
     }
-    while(IsKeywordStreamReady(spotter, stream)){
-        DecodeKeywordStream(spotter, stream);
+    while(SherpaOnnxIsKeywordStreamReady(spotter, stream)){
+        SherpaOnnxDecodeKeywordStream(spotter, stream);
     }
     const SherpaOnnxKeywordResult* r =
-        GetKeywordResult(spotter, stream);
+        SherpaOnnxGetKeywordResult(spotter, stream);
     if(strlen(r->keyword)){
         emit detected(false);
     }
-    DestroyKeywordResult(r);
+    SherpaOnnxDestroyKeywordResult(r);
 }
 
 void SherpaWakeup::stop(){
     if(valid){
-        DestroyOnlineStream(stream);
-        DestroyKeywordSpotter(spotter);
+        SherpaOnnxDestroyOnlineStream(stream);
+        SherpaOnnxDestroyKeywordSpotter(spotter);
         valid = false;
     }
 }

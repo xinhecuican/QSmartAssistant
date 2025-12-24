@@ -12,6 +12,9 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     QString rules = ttsConfig.value("rules").toString();
     QString model = Config::getDataPath(ttsConfig.value("model").toString());
     std::string modelS = model.toStdString();
+    std::string modelS1 = model.replace("%1", "decoder").toStdString();
+    QString model2 = Config::getDataPath(ttsConfig.value("model").toString()); // Reuse original model path
+    std::string modelS2 = model2.replace("%1", "encoder").toStdString();
     std::string lexicon = Config::getDataPath(ttsConfig.value("lexicon").toString()).toStdString();
     std::string tokens = Config::getDataPath(ttsConfig.value("tokens").toString()).toStdString();
     std::string dataDir = Config::getDataPath(ttsConfig.value("data_dir").toString()).toStdString();
@@ -47,6 +50,18 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
         config.model.matcha.lexicon = lexicon.c_str();
         config.model.matcha.tokens = tokens.c_str();
         config.model.matcha.dict_dir = dict.c_str();
+    } else if (model.contains("zipvoice")) {
+        qDebug() << modelS2 << modelS1 << vocoder << dataDir;
+        config.model.zipvoice.tokens = tokens.c_str();
+        config.model.zipvoice.encoder = modelS2.c_str();
+        config.model.zipvoice.decoder = modelS1.c_str();
+        config.model.zipvoice.vocoder = vocoder.c_str();
+        if (dataDir != dataPath) config.model.zipvoice.data_dir = dataDir.c_str();
+        config.model.zipvoice.lexicon = lexicon.c_str();
+        config.model.zipvoice.feat_scale = 0.1;
+        config.model.zipvoice.t_shift = 0.5;
+        config.model.zipvoice.target_rms = 0.1;
+        config.model.zipvoice.guidance_scale = 1.0;
     }
     tts = SherpaOnnxCreateOfflineTts(&config);
 }

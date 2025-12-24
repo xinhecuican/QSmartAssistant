@@ -36,6 +36,7 @@ bool SileroVad::detectVoice(const QByteArray &data) {
 }
 
 void SileroVad::stop() {
+    VadModel::stop();
     if (valid) {
         delete vad;
         vad = nullptr;

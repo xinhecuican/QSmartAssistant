@@ -16,6 +16,7 @@ option(VAD_COBRA "cobra vad" OFF)
 option(VAD_F "f vad" OFF)
 option(VAD_SILERO "silero vad" OFF)
 option(VAD_DUILITE "duilit vad" ON)
+option(VAD_SHERPA "sherpa vad" OFF)
 
 # audio process
 option(PROCESS_KOALA "koala process" OFF)
@@ -125,6 +126,14 @@ if(VAD_SILERO)
         Vad/silerovad.cpp Vad/silerovad.h
     )
     add_custom_lib(onnxruntime)
+endif()
+
+if(VAD_SHERPA)
+    message(STATUS "vad sherpa")
+    target_compile_definitions(QSmartAssistant  PUBLIC -DVAD_SHERPA)
+    target_sources(QSmartAssistant PUBLIC
+        Vad/sherpavad.cpp Vad/sherpavad.h
+    )
 endif()
 
 if(PROCESS_KOALA)

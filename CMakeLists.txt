@@ -11,6 +11,7 @@ include(GNUInstallDirs)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia Network)
+message(STATUS "Qt${QT_VERSION_MAJOR} found")
 
 file(GLOB COMMON_SOURCES Utils/*.cpp Recorder/*.cpp)
 file(GLOB COMMON_HEADERS Utils/*.h Recorder/*.h)

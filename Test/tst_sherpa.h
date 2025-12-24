@@ -17,6 +17,9 @@
 #if defined(VAD_SILERO)
 #include "../Wakeup/Vad/silerovad.h"
 #endif
+#if defined(VAD_SHERPA)
+#include "../Wakeup/Vad/sherpavad.h"
+#endif
 #include "TestPluginHelper.h"
 #include <QLibrary>
 #include <QtTest/QtTest>
@@ -32,9 +35,15 @@ private slots:
         Config::instance()->loadConfig();
         mplayer = new Player(this);
     }
-#if defined(VAD_SILERO)
+#if defined(VAD_SILERO) || defined(VAD_SHERPA)
     void vad() {
+#if defined(VAD_SILERO)
         SileroVad *vad = new SileroVad(this);
+#endif
+#if defined(VAD_SHERPA)
+        SherpaVad *vad = new SherpaVad(this);
+#endif
+
         QFile file(Config::getDataPath("short_test.wav"));
         file.open(QIODevice::ReadOnly);
         QByteArray data = file.readAll();
@@ -47,8 +56,12 @@ private slots:
             bool detect = vad->detectVoice(testData);
             if (detect) {
                 detected = true;
+                printf("-");
+            } else {
+                printf("_");
             }
         }
+        printf("\n");
         QCOMPARE(detected, true);
     }
 #endif

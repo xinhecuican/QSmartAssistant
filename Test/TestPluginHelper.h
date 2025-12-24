@@ -23,6 +23,7 @@ public:
     void exit() override {}
     Config *getConfig() override { return Config::instance(); }
     Player *getPlayer() override { return player; }
+    LLMManager *getLLMManager() override { return nullptr; }
     ParsedIntent parse(const QString &text) {return ParsedIntent();}
 
 private:

@@ -12,8 +12,8 @@ public:
     void stop() override;
     int getChunkSize() override;
 private:
-    SherpaOnnxKeywordSpotter* spotter;
-    SherpaOnnxOnlineStream* stream;
+    const SherpaOnnxKeywordSpotter* spotter;
+    const SherpaOnnxOnlineStream* stream;
     int chunkSize;
     float samples[8000];
 };

@@ -94,6 +94,14 @@
         "thresh": 0.1,
 		"abandonNum": 5
 	},
+	"sherpa_vad":{
+		"model": "silero_vad.onnx",
+		"chunkSize": 1024,
+		"threshold": 0.1,
+		"min_silence_duration": 0.5,
+		"min_speech_duration": 0.5,
+		"max_speech_duration": 100
+	},
 	"netease_cloud":{
 		"phone": "xxx",
 		"password": "xxx",

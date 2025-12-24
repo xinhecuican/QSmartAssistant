@@ -39,6 +39,9 @@
 #if defined(VAD_DUILITE)
 #include "Vad/duilitevad.h"
 #endif
+#if defined(VAD_SHERPA)
+#include "Vad/sherpavad.h"
+#endif
 #if defined(PROCESS_KOALA)
 #include "Process/koalaaudioprocess.h"
 #endif
@@ -88,6 +91,9 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
 #if defined(VAD_DUILITE)
     vadModel = new DuiliteVad(this);
+#endif
+#if defined(VAD_SHERPA)
+    vadModel = new SherpaVad(this);
 #endif
 
 #if defined(PROCESS_KOALA)

@@ -68,7 +68,7 @@ public:
         return findVoice;
     }
 
-    virtual void stop() {}
+    virtual void stop() {undetectTimer->stop();}
 
     virtual int getChunkSize() = 0;
 

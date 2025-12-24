@@ -37,8 +37,11 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
                 qWarning() << "netease node api error" << error;
             });
     connect(&process, &QProcess::readyReadStandardOutput, this, [=]() {
-        login();
-        qDebug() << process.readAllStandardOutput();
+        QString output = process.readAllStandardOutput();
+        qDebug() << output;
+        if (!isLogin && output.contains("Server started successfully")) {
+            login();
+        }
     });
     process.setWorkingDirectory(homeDir);
     process.start("node", {homeDir + "/app.js"});
@@ -99,20 +102,24 @@ void NeteaseMusic::login() {
     volumeStep = neteaseConfig.value("volumeStep").toInt();
     QVariantMap result;
     result = invokeMethod("login_status", params);
-    bool loginanoni = result["body"]
-                          .toMap()["data"]
-                          .toMap()["account"]
-                          .toMap()["anonimousUser"]
-                          .toBool();
-    if (result["status"] != 200) {
-        result = invokeMethod("login_status", params);
+    bool loginanoni = true;
+    bool statusError = false;
+    if (result.contains("body")) {
+        loginanoni = result["body"]
+                            .toMap()["data"]
+                            .toMap()["account"]
+                            .toMap()["anonimousUser"]
+                            .toBool();
+        statusError = result["body"].toMap()["code"].toInt() != 200;
+    } else {
+        statusError = true;
     }
-    if (cookie == "" || (result["status"] != 200) || loginanoni) {
+    if (cookie == "" || loginanoni || statusError) {
         params["phone"] = neteaseConfig.value("phone").toString();
         params["password"] = neteaseConfig.value("password").toString();
         bool success = false;
-        for (int i = 0; i < 5; i++) {
-            result = invokeMethod("login_cellphone", params);
+        for (int i = 0; i < 1; i++) {
+            result = invokeMethod("login_cellphone", params, false);
             if (result["status"] == 200) {
                 QString importCookie = QUrl::toPercentEncoding(
                     result["cookie"].toString().toLocal8Bit());
@@ -136,9 +143,82 @@ void NeteaseMusic::login() {
                 QThread::msleep(1000);
             }
         }
-        if (!success && cookie == "") {
+        if (!success || cookie == "") {
+            qInfo() << "netease login fail, try to login by captcha.";
+            qInfo() << "please put captcha at" << Config::getDataPath("Tmp/netease_captcha.txt");
             params.clear();
-            result = invokeMethod("register_anonimous", params);
+            params["phone"] = neteaseConfig.value("phone").toString();
+            result = invokeMethod("captcha_sent", params, false);
+            if (result["status"] != 200) {
+                qWarning() << result["body"].toMap()["message"].toString();
+            } else {
+                // 检测Config::getDataPath("Tmp/netease_captcha.txt")在5分钟内是否存在或者更新，如果是则读取文件
+                QString captchaFilepath = Config::getDataPath("Tmp/netease_captcha.txt");
+                QFile captchaFile(captchaFilepath);
+                QFileInfo captchaFileInfo(captchaFilepath);
+                
+                // 等待最多5分钟，检查文件是否存在或更新
+                qint64 startTime = QDateTime::currentMSecsSinceEpoch();
+                bool captchaValid = false;
+                QString captchaCode;
+                
+                while (QDateTime::currentMSecsSinceEpoch() - startTime < 5 * 60 * 1000) {
+                    if (captchaFileInfo.exists()) {
+                        QDateTime lastModified = captchaFileInfo.lastModified();
+                        qint64 elapsed = lastModified.toMSecsSinceEpoch() - startTime;
+                        
+                        if (elapsed > 0) {
+                            if (captchaFile.open(QIODevice::ReadOnly)) {
+                                captchaCode = captchaFile.readAll().trimmed();
+                                captchaFile.close();
+                                if (!captchaCode.isEmpty()) {
+                                    captchaValid = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 每秒检查一次
+                    QThread::msleep(1000);
+                    // 更新文件信息
+                    captchaFileInfo.refresh();
+                }
+                
+                if (captchaValid) {
+                    // 使用验证码登录
+                    params.clear();
+                    params["phone"] = neteaseConfig.value("phone").toString();
+                    params["captcha"] = captchaCode;
+                    qInfo() << "login cellphone by captcha" << captchaCode;
+                    result = invokeMethod("login_cellphone", params, false);
+                    
+                    if (result["status"] == 200) {
+                        QString importCookie = QUrl::toPercentEncoding(
+                            result["cookie"].toString().toLocal8Bit());
+                        if (importCookie != "") {
+                            cookie = importCookie;
+                            if (!cookieFile.open(QIODevice::WriteOnly |
+                                                QIODevice::Truncate)) {
+                                qWarning() << "netease cookie write error";
+                            } else {
+                                cookieFile.write(cookie.toLocal8Bit());
+                                cookieFile.close();
+                            }
+                        }
+                        success = true;
+                        isLogin = true;
+                    } else {
+                        qInfo() << "captcha login fail";
+                        qWarning() << result["body"].toMap()["message"].toString();
+                    }
+                }
+            }
+        }
+        if (!success || cookie == "") {
+            qInfo() << "login anonimous.";
+            params.clear();
+            result = invokeMethod("register_anonimous", params, false);
             if (result["status"] == 200) {
                 QString importCookie = QUrl::toPercentEncoding(
                     result["cookie"].toString().toLocal8Bit());
@@ -360,9 +440,9 @@ QString NeteaseMusic::getArtist(const QVariantMap &song) {
     return result;
 }
 
-QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args) {
+QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool withCookie) {
     QVariantMap ret;
-    if (cookie.size() != 0) {
+    if (withCookie && cookie.size() != 0) {
         args["cookie"] = cookie;
     }
 #ifndef NETEASE_USE_JS
@@ -371,6 +451,7 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args) {
     //                           Q_RETURN_ARG(QVariantMap, ret),
     //                           Q_ARG(QVariantMap, args));
 #else
+    args["randomCNIP"] = true;
     name.replace('_', '/');
     QUrl url("http://127.0.0.1:" + port + "/" + name);
     QString query;

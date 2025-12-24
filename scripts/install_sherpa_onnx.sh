@@ -2,13 +2,22 @@
 current_path=$(cd $(dirname $0); pwd)
 parent_path=$(dirname ${current_path})
 lib_path=${parent_path}/lib/sherpa_onnx
+onnx_path=${parent_path}/lib/onnxruntime
+
+# Check if onnxruntime library exists, if not, install it
+if [ ! -f "${onnx_path}/lib/libonnxruntime.so" ]; then
+    echo "${onnx_path}/lib/libonnxruntime.so not found, install it first"
+    ./install_onnxruntime.sh
+fi
 
 git clone https://github.com/k2-fsa/sherpa-onnx.git
 pushd sherpa-onnx
-git checkout 030aaa7bb9be64cc3511478cae358a828b43a74e
+git checkout 94a040e396d5b612de1b54f173434e3489c357b4
 mkdir build-shared
 cd build-shared
 
+SHERPA_ONNXRUNTIME_INCLUDE_DIR=${onnx_path}/include \
+SHERPA_ONNXRUNTIME_LIB_DIR=${onnx_path}/lib \
 cmake \
   -DSHERPA_ONNX_ENABLE_C_API=ON \
   -DCMAKE_BUILD_TYPE=Release \

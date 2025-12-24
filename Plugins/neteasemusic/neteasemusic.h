@@ -45,7 +45,7 @@ private:
     void getCurrentTrack(int uid);
     void searchAlbum(const ParsedIntent &parsedIntent);
     void setPlaylist(const QList<QString> &singer, const QList<QString> &song);
-    QVariantMap invokeMethod(QString name, QVariantMap &args);
+    QVariantMap invokeMethod(QString name, QVariantMap &args, bool withCookie=true);
     void parseSongs(const QList<QVariant> &songs);
     bool parseUrl(MusicInfo& info);
     void searchDefault();
