@@ -4,6 +4,7 @@
 #include <QDataStream>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QMediaMetaData>
 
 AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
     this->player = player;
@@ -18,8 +19,10 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
                                 isSound = false;
                                 if (isBlock)
                                     eventLoop.quit();
-                                if (isPlaying)
+                                if (isPlaying) {
+                                    isPlaying = false;
                                     playNext();
+                                }
                                 return;
                             }
                             emit playEnd(getCurrentMeta());
@@ -62,11 +65,11 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
 #else
     QMediaPlayer::State state = player->state();
 #endif
-    if (abandonCurrent && state == QMediaPlayer::PlayingState) {
+    Playlist &current = audiolist[currentPriority];
+    if (abandonCurrent && (state == QMediaPlayer::PlayingState || isPlaying)) {
         emit playEnd(getCurrentMeta());
     }
     if (state != QMediaPlayer::PlayingState || abandonCurrent) {
-        Playlist &current = audiolist[currentPriority];
         if (current.block) {
             current.block = false;
             if (current.index >= 0 && current.index <= current.list.size()) {
@@ -120,15 +123,18 @@ void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
 #else
     QMediaPlayer::State state = player->state();
 #endif
+    QMediaPlayer::MediaStatus status = player->mediaStatus();
     QUrl url = getUrl(fileName);
     audiolist[priority].append(url, meta);
     if (state != QMediaPlayer::PausedState) {
         if (priority > currentPriority) {
             pause();
             currentPriority = priority;
+            playNext();
+        } else if (status == QMediaPlayer::NoMedia || status == QMediaPlayer::EndOfMedia) {
+            playNext();
         }
-
-        playNext();
+        
     }
 }
 
@@ -139,6 +145,7 @@ void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
 #else
     QMediaPlayer::State state = player->state();
 #endif
+    QMediaPlayer::MediaStatus status = player->mediaStatus();
     QString fileName = FileCache::instance()->writeWav(data, sampleRate);
     QUrl url = getUrl(fileName);
     audiolist[priority].append(url, meta);
@@ -146,9 +153,10 @@ void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
         if (priority > currentPriority) {
             pause();
             currentPriority = priority;
+            playNext();
+        } else if (status == QMediaPlayer::NoMedia || status == QMediaPlayer::EndOfMedia) {
+            playNext();
         }
-
-        playNext();
     }
 }
 

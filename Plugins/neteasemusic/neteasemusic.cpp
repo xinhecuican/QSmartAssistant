@@ -67,9 +67,6 @@ void NeteaseMusic::setPluginHelper(IPluginHelper *helper) {
                 while (iter != readyMusic.end() && current < len) {
                     MusicInfo info = *iter;
                     bool success = parseUrl(info);
-                    if (success) {
-                        playingMap.insert(info.id, info);
-                    }
                     iter = readyMusic.erase(iter);
                     current++;
                 }
@@ -316,7 +313,7 @@ bool NeteaseMusic::doHandle(const QString &text,
         emit sendMessage(message);
     } else if (parsedIntent.hasIntent("CHANGE_TO_NEXT")) {
         helper->getPlayer()->next();
-    } else if (parsedIntent.hasIntent("CHNAGE_TO_LAST")) {
+    } else if (parsedIntent.hasIntent("CHANGE_TO_LAST")) {
         helper->getPlayer()->previous();
     } else if (parsedIntent.hasIntent("LIKE")) {
         likeCurrent(true);
@@ -496,8 +493,6 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
     //            ret["cookie"] = cookie.toRawForm();
     //        }
     //    }
-    qDebug() << "invokeMethod" << name;
-    qDebug() << bodyMap;
     if (bodyMap.contains("status")) {
         ret["status"] = bodyMap["status"];
         ret["body"] = bodyMap["body"];
@@ -537,7 +532,6 @@ void NeteaseMusic::parseSongs(const QList<QVariant> &songs) {
                 bool success = parseUrl(musicInfo);
                 if (success) {
                     parseSuccess = true;
-                    playingMap.insert(ids[i], musicInfo);
                 }
             } else {
                 readyMusic.append(musicInfo);
@@ -556,6 +550,7 @@ bool NeteaseMusic::parseUrl(MusicInfo &info) {
         info.send = true;
         info.url = urls[0];
         QVariantMap meta = {{"type", "song"}, {"id", info.id}};
+        playingMap.insert(info.id, info);
         helper->getPlayer()->play(info.url, AudioPlaylist::NORMAL, meta);
         return true;
     }
