@@ -7,7 +7,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network Multimedia)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network Multimedia WebSockets)
 
 PLUGIN_COMMON()
 target_link_libraries(
@@ -15,5 +15,6 @@ target_link_libraries(
     Qt${QT_VERSION_MAJOR}::Core 
     Qt${QT_VERSION_MAJOR}::Network 
     Qt${QT_VERSION_MAJOR}::Multimedia 
+    Qt${QT_VERSION_MAJOR}::WebSockets
     lpcommon)
 

@@ -14,7 +14,8 @@ void Fallback::setPluginHelper(IPluginHelper *helper) {
     QJsonObject payload;
     payload.insert("role", "system");
     payload.insert("content", "你是一名语言专家，用户的输入为语音识别后的句子。它可能是有意义的命令但是存在一些识别错误，也可能 \
-                    是误触接收到的毫无意义的句子，你需要判断该句是否有意义，如果是则输出1，如果不是则输出0。");
+                    是误触接收到的毫无意义的句子，也可能是用户提出的问题。你需要判断该句是否有意义，或者是否为一个问题，\
+                    如果是一个问题输出2,如果该句有意义则输出1，如果是无意义的句子则输出0。");
     conversation->conversation.append(payload);
 
     conversation->stream = false;
@@ -32,7 +33,13 @@ void Fallback::setPluginHelper(IPluginHelper *helper) {
                 content = messageObj["content"].toString();
             }
         }
-        if (content == "1") {
+        if (content == "2") {
+            PluginMessage message;
+            message.id = this->currentId;
+            message.dst = "Chat";
+            message.message = "chat";
+            emit sendMessage(message);
+        } else if (content == "1") {
             helper->say("您说的是" + this->text, this->currentId);
         }
     };
