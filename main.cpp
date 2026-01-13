@@ -20,7 +20,6 @@ static bool dumpCallback(const google_breakpad::MinidumpDescriptor &descriptor,
 
 int main(int argc, char *argv[]) {
     QCoreApplication a(argc, argv);
-    qputenv("QT_MEDIA_BACKEND", "gstreamer"); 
     // 设置PWD
     QString applicationDirPathStr = QCoreApplication::applicationDirPath();
     QDir::setCurrent(applicationDirPathStr);

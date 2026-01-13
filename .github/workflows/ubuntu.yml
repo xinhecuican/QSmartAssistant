@@ -24,7 +24,7 @@ jobs:
         include:
           - qt_version: 6.2.4
             qt_arch: gcc_64
-            modules: "qtwebengine qtnetworkauth qtmultimedia"
+            modules: "qtwebengine qtnetworkauth qtmultimedia qtwebsockets"
 
     env:
       BUILD_TYPE: Release
