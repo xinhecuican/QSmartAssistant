@@ -131,15 +131,31 @@
 	"hass":{
 		"url": "http://127.0.0.1:8123",
 		"key": "Bearer xxx",
+        "subscribeEvents": ["state_changed"],
 		"services": [
-			{
-				"intent": "OPEN_FURNITURE",
-				"pattern": ".*热水器.*",
-				"path": "/api/services/switch/turn_on",
-				"params": {
-					"entity_id": "switch.cuco_cp2d_46fc_switch"
-				}
-			},
+            {
+                "intent": "OPEN_FURNITURE",
+                "notify": false,
+                "useAssistant": true,
+                "params": {
+                    "entity_id": "script.unknown_3",
+                    "variables": {
+                        "duration": "{time|--}"
+                    }
+                },
+                "path": "/api/services/script/turn_on",
+                "pattern": ".*热水器.*",
+                "response": {
+                    "valid": false,
+                    "matchId": false,
+                    "event": "event/state_changed",
+                    "matchPath": "event/data/entity_id",
+                    "matchValue": "switch.cuco_v3_57c4_switch",
+                    "successPath": "event/data/new_state/state",
+                    "successValue": "on",
+                    "responseText": "设备执行成功"
+                }
+            },
 			{
 				"intent": "CLOSE_FURNITURE",
 				"slots": [
