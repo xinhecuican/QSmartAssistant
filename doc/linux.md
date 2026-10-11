@@ -75,7 +75,10 @@ cmake --preset linux-gcc && cmake --build --preset linux-gcc -j8
 `build_linux.sh` 做的事（对应 `build_windows.ps1`）：
 
 1. 探测架构与 Qt6；
-2. 缺 `lib/onnxruntime` 或 `lib/sherpa_onnx` 时调用对应安装脚本；
+2. 缺 `lib/yaml-cpp` / `lib/onnxruntime` / `lib/sherpa_onnx` 时调用对应安装脚本；
+   > `lib/` 整个目录都在 `.gitignore` 里，**新 clone 必须跑一次安装脚本**。
+   > 其中 yaml-cpp 是 configure 阶段的硬依赖（`find_package(yaml_cpp REQUIRED)`），
+   > 缺它会在 cmake 阶段直接失败：`Could NOT find yaml_cpp (missing: yaml_cpp_LIBRARY)`。
 3. 生成 `Data/config.yaml`（**不覆盖已有**，模板为 `Data/default_config.yaml`）与 `Data/plugin_order.txt`；
    > 配置自 2026-10 起为 YAML，模板内嵌逐项注释；若目录里只有老 `config.json`，
    > 程序启动时会**自动生成 `config.yaml`** 并使用它（老 json 保留不删）。
@@ -92,6 +95,7 @@ cmake --preset linux-gcc && cmake --build --preset linux-gcc -j8
 | VAD | `VAD_SILERO=ON` | 纯 onnxruntime，跨平台 |
 | ASR / TTS | `ASR_SHERPA=ON` / `TTS_SHERPA=ON` | sherpa-onnx，跨平台 |
 | NLU | `NLU_ONNX=ON` | 进程内 onnxruntime 跑自训练双头模型，无 Python/HTTP |
+| 网易云插件 | `NETEASE_USE_JS=ON` | 走 node 版 API。**Linux 上该选项的 CMake 默认值是 OFF**，而 OFF 会在 configure 阶段 FetchContent 拉 `QCloudMusicApi` 源码（含 submodule）并编进工程；`build_linux.sh` 与 `CMakePresets.json` 都显式设成 ON，与 Windows 一致，也是 `doc/plugin.md` 推荐的用法。node 服务本身是**运行期**依赖：`bash scripts/install_neteasejs.sh` |
 
 CMake 默认值本身就是这套，且**全平台统一**（`Wakeup/CMakeLists.txt`）。
 `NLU_RASA` 默认关闭，已退居**兜底后端**；需要时用 `-DNLU_RASA=ON` 并把
@@ -201,7 +205,10 @@ curl -s http://127.0.0.1:5005/model/parse \
 python3 scripts/fetch_models.py
 ```
 
-`install_sherpa_onnx.sh` 顺带下载 ASR（paraformer-zh）与 TTS（matcha-icefall-zh-baker）。
+`install_sherpa_onnx.sh` 顺带下载 ASR（`sherpa-onnx-paraformer-zh-small-2024-03-09`）
+与 TTS（`vits-zh-aishell3`）—— 这两个目录名与 `Data/default_config.yaml` 里的引用
+**逐字一致**；早期下的是非 small 的 paraformer（近 1GB）和 matcha 包，装完其实
+和配置对不上，已改掉。
 `install_rasa.sh` 下载 `Data/rasa/data/chinese_rbtl3/`（config.yml 引用的中文 BERT）。
 
 NLU 模型本身在仓库里：`Data/rasa/models/default.tar.gz`。
@@ -306,6 +313,7 @@ bash scripts/setup_rocm_linux.sh --gfx gfx1100   # 换卡要改 gfx target
 | 功能 | Linux | Windows |
 | --- | --- | --- |
 | 一键构建 | `build_linux.sh` | `build_windows.ps1` |
+| yaml-cpp（编译期依赖，必须） | `install_yaml_cpp.sh` | `install_yaml_cpp.ps1` |
 | onnxruntime | `install_onnxruntime.sh` | `install_onnxruntime.ps1` |
 | sherpa-onnx | `install_sherpa_onnx.sh` | `install_sherpa_onnx.ps1` |
 | ONNX NLU（默认，随仓库提供） | `setup.py --only onnx-nlu` | 同左 |

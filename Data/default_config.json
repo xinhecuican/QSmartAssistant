@@ -50,15 +50,15 @@
 		"model": "nihao_wenwen.tflite"
 	},
 	"sherpa":{
-		"model": "sherpa-onnx-paraformer-zh-2024-03-09/model.int8.onnx",
-		"tokens": "sherpa-onnx-paraformer-zh-2024-03-09/tokens.txt",
+		"model": "sherpa-onnx-paraformer-zh-small-2024-03-09/model.int8.onnx",
+		"tokens": "sherpa-onnx-paraformer-zh-small-2024-03-09/tokens.txt",
 		"stream": false
 	},
 	"sherpa_tts": {
 		"model": "vits-zh-aishell3/vits-aishell3.int8.onnx",
 		"lexicon": "vits-zh-aishell3/lexicon.txt",
 		"tokens": "vits-zh-aishell3/tokens.txt",
-		"rules": "vits-zh-aishell3/rule.fst",
+		"rules": "vits-zh-aishell3/date.fst,vits-zh-aishell3/number.fst,vits-zh-aishell3/phone.fst,vits-zh-aishell3/new_heteronym.fst",
 		"vocoder": "hifigan_v3.onnx",
 		"dict": "matcha-icefall-zh-baker/dict",
 		"data_dir": "",

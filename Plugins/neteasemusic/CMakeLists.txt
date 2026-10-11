@@ -49,15 +49,17 @@ if(NETEASE_USE_JS)
         HINTS NeteaseCloudMusicApi/
     )
     if(NOT NeteaseAPP)
-        if(WIN32)
-            # app.js 是**运行期**依赖(由配置项 netease_cloud.homeDir 指定)，
-            # 不参与编译。这里只提示如何安装，不阻断构建。
-            message(STATUS "netease: app.js not found. Run "
-                           "scripts/install_netease_js.ps1 to install the node API "
-                           "server, then set netease_cloud.homeDir in config.json")
-        else()
-            execute_process(COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/install_neteasejs.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts)
-        endif()
+        # app.js 是**运行期**依赖（由配置项 netease_cloud.homeDir 指定），
+        # 不参与编译，所以两个平台都只提示、不阻断、也不去替用户装。
+        #
+        # 早期 Linux 分支在这里 execute_process 跑 install_neteasejs.sh —— 那会在
+        # configure 阶段 sudo apt install nodejs/pnpm、git clone 整个 node 服务，
+        # 既有副作用又依赖网络，还让"配置"这一步变得不可预期（CI 上尤其致命）。
+        # 需要 node 服务请显式跑一次（或 python3 scripts/setup.py --only netease-js）：
+        #   bash scripts/install_neteasejs.sh
+        message(STATUS "netease: app.js not found. Run "
+                       "scripts/install_neteasejs.sh to install the node API "
+                       "server, then set netease_cloud.homeDir in config.yaml")
     endif()
 else()
     include(FetchContent)

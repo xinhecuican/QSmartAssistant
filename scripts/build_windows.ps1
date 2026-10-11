@@ -52,12 +52,20 @@ if (Test-Path $qmake) {
 $env:PATH = (Join-Path $QtDir "bin") + ";" + $env:PATH
 
 # ---------------------------------------------------------------------------
-# 2. Fetch third-party dependencies (onnxruntime / sherpa-onnx)
+# 2. Fetch third-party dependencies (yaml-cpp / onnxruntime / sherpa-onnx)
+#    lib/ is git-ignored, so a fresh clone has none of them. yaml-cpp is a
+#    hard configure-time requirement (find_package(yaml_cpp REQUIRED)).
 # ---------------------------------------------------------------------------
+$needYaml   = -not ((Test-Path (Join-Path $root "lib\yaml-cpp\lib\yaml-cpp.lib")) -or
+                    (Test-Path (Join-Path $root "lib\yaml-cpp\lib\libyaml-cpp.a")))
 $needOrt    = -not (Test-Path (Join-Path $root "lib\onnxruntime\include"))
 $needSherpa = -not (Test-Path (Join-Path $root "lib\sherpa_onnx\include"))
 
 if (-not $SkipDeps) {
+    if ($needYaml) {
+        Write-Host "==> Installing yaml-cpp"
+        & (Join-Path $PSScriptRoot "install_yaml_cpp.ps1")
+    }
     if ($needOrt) {
         Write-Host "==> Installing onnxruntime"
         & (Join-Path $PSScriptRoot "install_onnxruntime.ps1")

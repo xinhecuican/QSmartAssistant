@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 project(QSmartAssistant VERSION 1.0 LANGUAGES C CXX)
-set(CMAKE_CXX_STANDARD 14)
+# Qt 6.4 起，Qt 头文件里写着硬性检查：
+#   qcompilerdetection.h:  #error "Qt requires a C++17 compiler"
+# 所以这里必须是 17。原来写 14 之所以"看起来没问题"，只是因为 MSVC 默认
+# 语言模式已经比 14 新、CMake 又不会为 MSVC 的 "14" 追加 /std 开关 —— 属于
+# 撞运气；**GCC/Clang 上 CMake 会显式传 -std=gnu++14**，第一个 Qt 头文件就会
+# 编译失败（CI 的 gcc 13 + Qt 6.12、以及 Ubuntu 22.04 部署都必然踩到）。
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 

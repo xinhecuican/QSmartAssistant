@@ -130,8 +130,19 @@ echo "==> Qt: ${QT_DIR} (version ${QT_VER})"
 # ---------------------------------------------------------------------------
 need_ort()    { [ ! -f "${ROOT}/lib/onnxruntime/lib/libonnxruntime.so" ]; }
 need_sherpa() { [ ! -d "${ROOT}/lib/sherpa_onnx/include" ]; }
+# yaml-cpp 是**configure 阶段**的硬依赖（find_package(yaml_cpp REQUIRED)）：
+# 缺了它连 cmake 都跑不完，报 "Could NOT find yaml_cpp"。lib/ 不入库，
+# 所以新 clone 的仓库必须装一次。
+need_yaml()   { [ ! -f "${ROOT}/lib/yaml-cpp/lib/libyaml-cpp.a" ] \
+                && [ ! -f "${ROOT}/lib/yaml-cpp/lib/yaml-cpp.lib" ]; }
 
 if [ "${SKIP_DEPS}" -eq 0 ]; then
+    if need_yaml; then
+        echo "==> Installing yaml-cpp (config.yaml 的 YAML 读写依赖)"
+        bash "${SCRIPT_DIR}/install_yaml_cpp.sh"
+    else
+        echo "==> yaml-cpp present, skip"
+    fi
     if need_ort; then
         echo "==> Installing onnxruntime (${ORT_ARCH})"
         bash "${SCRIPT_DIR}/install_onnxruntime.sh"
@@ -201,6 +212,12 @@ else
         -DASR_SHERPA=ON     -DTTS_SHERPA=ON
         -DNLU_ONNX=ON       -DNLU_RASA=OFF      -DNLU_BAIDU=OFF
         -DUSE_OPENSSL=OFF
+        # 网易云插件走 node 版 API（与 Windows 默认一致）。
+        # Linux 上该选项的默认值是 OFF，那会走 FetchContent —— 在 **configure
+        # 阶段** git clone 第三方仓库（含 submodule）并把它编进来，既是隐式的
+        # 网络依赖，又会在源码树里写 lib/QCloudMusicApi。node 模式构建期零依赖，
+        # 且 doc/plugin.md 里本来就写着"推荐使用 js 的 api"。
+        -DNETEASE_USE_JS=ON
     )
 fi
 

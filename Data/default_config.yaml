@@ -89,8 +89,12 @@ duilite:
 
 # sherpa-onnx ASR（Paraformer / SenseVoice 等）
 sherpa:
-  model: sherpa-onnx-paraformer-zh-2024-03-09/model.int8.onnx # 模型路径
-  tokens: sherpa-onnx-paraformer-zh-2024-03-09/tokens.txt     # 词表
+  # ⚠ 这里必须与下载脚本产出的目录名一致，否则装完模型仍然"找不到模型"：
+  #   scripts/fetch_models.py / scripts/setup.py(--profile minimal) /
+  #   scripts/install_sherpa_onnx.sh 装的都是 paraformer-zh-**small**（~80MB）；
+  #   非 small 的 sherpa-onnx-paraformer-zh-2024-03-09 整包近 1GB，已不再下载。
+  model: sherpa-onnx-paraformer-zh-small-2024-03-09/model.int8.onnx # 模型路径
+  tokens: sherpa-onnx-paraformer-zh-small-2024-03-09/tokens.txt     # 词表
   stream: false               # 是否流式识别
 
 # FunASR / paraformer-seaco（热词增强版）

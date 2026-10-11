@@ -6,79 +6,150 @@ on:
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
-    inputs:
-      logLevel:
-        description: 'Log level'
-        required: true
-        default: 'warning'
-      tags:
-        description: 'Test scenario tags'
+
+# 同一分支推两次时取消旧的一次，省 runner
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-
+    name: build & test (Qt ${{ matrix.qt_version }} / ${{ matrix.qt_arch }})
     runs-on: ubuntu-latest
+    # sherpa-onnx 是源码构建（冷启动 20-40 分钟），给足余量；
+    # 真卡住了让它超时失败，比无限挂着好定位。
+    timeout-minutes: 120
+
     strategy:
-      # 矩阵配置
+      fail-fast: false
       matrix:
         include:
-          - qt_version: 6.2.4
-            qt_arch: gcc_64
-            modules: "qtwebengine qtnetworkauth qtmultimedia qtwebsockets"
+          # ⚠ 版本/arch 别随手改：
+          #   * Qt 6.7 起 Linux 桌面包的 arch 代号从 gcc_64 变成 linux_gcc_64
+          #     （下载源里模块名就是 ...addons.qtmultimedia.linux_gcc_64），
+          #     写成 gcc_64 会变成"模块一个都匹配不上"。
+          #   * 6.8.4 **在开源在线源里不存在**（6.8 系列只到 6.8.3），
+          #     而项目里 "Qt >= 6.8.4" 那条限制只对 Windows 生效
+          #     （见 CMakeLists.txt 的 if(WIN32) 分支）。
+          #   * 这里取 6.12.0 = 开发机实际用的版本（D:/libs/qt/6.12/6.12.0），
+          #     保证 CI 编的就是能编过的那套 Qt。
+          - qt_version: 6.12.0
+            qt_arch: linux_gcc_64
+            # 只装真正用到的模块：
+            #   qtmultimedia —— ASR/TTS/播放器
+            #   qtwebsockets —— Hass 插件（插件是运行期 dlopen 的，
+            #                   windeployqt 扫不到，必须显式装）
+            # 不需要 qtwebengine（没有 QWebEngineView）与 qtnetworkauth。
+            qt_modules: "qtmultimedia qtwebsockets"
 
     env:
       BUILD_TYPE: Release
       BUILD_PATH: build
-      assume: --release
-      qt_target: 'desktop'
-      qt_host: 'linux'
-      archiveName: 'QSmartAssistant-${{ matrix.qt_version }}-${{ matrix.qt_arch }}'
-      
-    steps:
-    - name: Install Qt
-      if: 'true'
-      # 使用外部action。这个action专门用来安装Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: ${{ matrix.qt_version }}
-        host: ${{ env.qt_host }}
-        target: ${{ env.qt_target }}
-        arch: ${{ matrix.qt_arch }}
-        install-deps: 'true'
-        cache: 'true'
-        aqtversion: '==3.1.*'
-        modules: ${{ matrix.modules }}
-        # tools: ${{ matrix.tools }}
+      TEST_BUILD_PATH: build-test
 
-    - uses: actions/setup-python@v5.1.0
-      with:
-        python-version: 3.10.11
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-        submodules: true
-    - uses: actions/setup-node@v4
-      with:
-        node-version: "latest"
-    - name: install dependency
-      run: |
-        cd scripts
-        ./install_snowboy.sh
-        ./install_openssl.sh
-        ./install_sherpa_onnx.sh
-        ./install_onnxruntime.sh
-        ./install_rasa.sh
-        ./install_neteasejs.sh
-        cd ../Data
-        cp default_config.json config.json
-        cp plugin_order_default.txt plugin_order.txt
-        cd ..
-    - name: build
-      run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -B ${{ env.BUILD_PATH }}
-    - name: test
-      run: |
-        mkdir build_test && cd build_test
-        cmake -DCMAKE_BUILD_TYPE=Debug -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -DTEST=ON ..
-        make -j8
-        cd Debug/bin
-        ./QSmartAssistant asrSherpa hassRegex
+      # 模块组合：与 scripts/build_linux.sh 的默认值、CMakePresets.json 的
+      # linux-gcc preset 保持一致（见 doc/linux.md §二）——livekit 唤醒 +
+      # silero VAD + sherpa ASR/TTS + 进程内 ONNX NLU，无厂商私有 .so、无 Python。
+      #
+      # NETEASE_USE_JS=ON 必须显式给：Linux 上该选项默认 OFF，会走 FetchContent
+      # 拉 QCloudMusicApi C++ 源码参与构建（慢且依赖网络）。
+      CMAKE_MODULES: >-
+        -DWAKEUP_LIVEKIT=ON -DWAKEUP_SHERPA=OFF -DWAKEUP_DUILITE=OFF
+        -DVAD_SILERO=ON -DVAD_DUILITE=OFF
+        -DASR_SHERPA=ON -DTTS_SHERPA=ON
+        -DNLU_ONNX=ON -DNLU_RASA=OFF -DNLU_BAIDU=OFF
+        -DNETEASE_USE_JS=ON
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Qt ${{ matrix.qt_version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          host: linux
+          target: desktop
+          arch: ${{ matrix.qt_arch }}
+          modules: ${{ matrix.qt_modules }}
+          cache: true
+          install-deps: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # ---------------------------------------------------------------------
+      # 缓存第三方编译产物。onnxruntime / sherpa-onnx / yaml-cpp 都装在 lib/
+      # 下，而 lib/ 在 .gitignore 里 —— runner 每次都是空白的，必须重装。
+      # 缓存 key 带上安装脚本的 hash：脚本改了（换版本/换地址）就自动失效。
+      # ---------------------------------------------------------------------
+      - name: Cache onnxruntime
+        uses: actions/cache@v4
+        with:
+          path: lib/onnxruntime
+          key: ${{ runner.os }}-onnxruntime-${{ hashFiles('scripts/install_onnxruntime.sh') }}
+
+      - name: Cache sherpa-onnx
+        uses: actions/cache@v4
+        with:
+          path: lib/sherpa_onnx
+          key: ${{ runner.os }}-sherpa-onnx-${{ hashFiles('scripts/install_sherpa_onnx.sh') }}
+
+      # ---------------------------------------------------------------------
+      # 构建：直接用文档里的"一键构建"入口（doc/linux.md §二），而不是在这里
+      # 重复一遍 cmake 参数 —— 这样 CI 顺带验证了这条路径本身：
+      #   1. 缺依赖时装 lib/yaml-cpp（找不到会让 configure 直接失败）、
+      #      lib/onnxruntime、lib/sherpa_onnx；
+      #   2. 生成 Data/config.yaml（不覆盖已有）与 plugin_order.txt；
+      #   3. cmake configure + build，并把可执行文件路径打出来。
+      # --no-plugin-deploy: 跳过 linuxdeployqt（runner 上没装，也不需要打 AppImage）
+      # ---------------------------------------------------------------------
+      - name: Build (scripts/build_linux.sh)
+        run: |
+          bash scripts/build_linux.sh \
+            --qt-dir "$QT_ROOT_DIR" \
+            --config "$BUILD_TYPE" \
+            --build-dir "$BUILD_PATH" \
+            --no-plugin-deploy
+
+      - name: Verify binary
+        run: |
+          test -x "$BUILD_PATH/$BUILD_TYPE/bin/QSmartAssistant" || {
+            echo "QSmartAssistant not built under $BUILD_PATH/$BUILD_TYPE/bin"; ls -R "$BUILD_PATH" | head -50; exit 1; }
+          file "$BUILD_PATH/$BUILD_TYPE/bin/QSmartAssistant"
+
+      # ---------------------------------------------------------------------
+      # 单测单独一个 build 目录：TEST=ON 会把 QTest 与 netease official client
+      # 一起编进可执行文件，不该混进发布产物。
+      # ---------------------------------------------------------------------
+      - name: Configure & build tests
+        run: |
+          cmake -S . -B "$TEST_BUILD_PATH" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DTEST=ON \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
+            $CMAKE_MODULES
+          cmake --build "$TEST_BUILD_PATH" -j"$(nproc)"
+
+      # hassRegex / mcpClient 是纯逻辑单测，不依赖 ASR/TTS/NLU 模型文件，适合
+      # 放 CI。asrSherpa / ttsSherpa / vad 需要先下载模型到运行期 Data 目录
+      # （python3 scripts/fetch_models.py），在 runner 上属于环境依赖而非代码问题，
+      # 所以只在本机跑。
+      - name: Test
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          cd "$TEST_BUILD_PATH/Debug/bin"
+          ./QSmartAssistant hassRegex mcpClient
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QSmartAssistant-${{ matrix.qt_version }}-${{ matrix.qt_arch }}
+          path: ${{ env.BUILD_PATH }}/${{ env.BUILD_TYPE }}/bin/
+          # 产物为空说明"构建成功了但其实什么都没产出"，必须当失败处理
+          if-no-files-found: error

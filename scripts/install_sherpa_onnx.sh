@@ -104,10 +104,16 @@ else
         tar xvf "${fname}"
         rm -f "${fname}"
     }
-    fetch_model "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2" \
-                "sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2" || true
-    fetch_model "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-zh-baker.tar.bz2" \
-                "matcha-icefall-zh-baker.tar.bz2" || true
+    # ⚠ 这里下载的模型必须与 Data/default_config.yaml 引用的路径**逐字一致**，
+    #   否则"模型装好了但程序说找不到"。另外刻意选 small 版：非 small 的
+    #   sherpa-onnx-paraformer-zh-2024-03-09 整包近 1GB，而 small 版只有 ~80MB，
+    #   识别效果对本项目足够（scripts/fetch_models.py 与 scripts/setup.py 用的也是它）。
+    fetch_model "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2" \
+                "sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2" || true
+    # TTS 同理：配置里 sherpa_tts.model 指的是 vits-zh-aishell3（不是 matcha），
+    # 早期这里下的是 matcha 包，装完等于白下。
+    fetch_model "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-zh-aishell3.tar.bz2" \
+                "vits-zh-aishell3.tar.bz2" || true
 fi
 
 echo ""

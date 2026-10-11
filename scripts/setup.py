@@ -27,6 +27,9 @@ r"""setup.py —— QSmartAssistant 统一安装入口（跨平台，单文件�
                             57MB int8 权重从 GitHub Release 下载）
     onnxruntime      依赖   livekit / silero VAD / onnx-nlu 都要（编译产物）
     sherpa-onnx      依赖   ASR/TTS 的 C API 共享库（编译产物）
+    yaml-cpp         依赖   config.yaml 的读写（编译产物；lib/ 不入库，
+                            **新 clone 必须装**，否则 cmake configure
+                            直接报 Could NOT find yaml_cpp）
 
     rasa-nlu 现在是**兜底后端**，不在任何默认 profile 里；只有把
     config.json 改成 "nlu": {"backend": "rasa"} 时才需要 --only rasa-nlu。
@@ -419,7 +422,35 @@ def openssl_installed() -> bool:
     return True              # Linux 上缺失也只是降级，不阻断
 
 
+def yaml_cpp_installed() -> bool:
+    """config.yaml 的读写依赖（lib/yaml-cpp/{include,lib}）是否就位。
+
+    `lib/` 整个目录都在 .gitignore 里，所以**新 clone 必然没有**；而它是
+    **configure 阶段**的硬依赖（顶层 CMakeLists.txt 的
+    `find_package(yaml_cpp REQUIRED)`），缺了就只会在 cmake 阶段报
+    "Could NOT find yaml_cpp (missing: yaml_cpp_LIBRARY)"。放进这里是为了
+    让"装依赖"和"能不能 configure"这两件事在同一个入口对齐。
+    """
+    base = ROOT / "lib" / "yaml-cpp"
+    has_header = (base / "include" / "yaml-cpp" / "yaml.h").exists()
+    has_library = ((base / "lib" / "yaml-cpp.lib").exists()
+                   or (base / "lib" / "libyaml-cpp.a").exists())
+    return has_header and has_library
+
+
 # ---- 组件实现 ------------------------------------------------------------
+def _build_yaml_cpp() -> Component:
+    c = Component("yaml-cpp", "yaml-cpp 静态库（config.yaml 读写，编译期依赖）",
+                  size="<1MB", minutes="<1",
+                  platforms="all",
+                  probe=yaml_cpp_installed)
+    c.action = lambda ctx: call_script("yaml_cpp", [], ctx.dry)
+    c.verify = lambda: ([] if yaml_cpp_installed() else
+                        ["lib/yaml-cpp 缺失 —— cmake configure 会直接失败"
+                         "（Could NOT find yaml_cpp）"])
+    return c
+
+
 def _build_onnxruntime() -> Component:
     c = Component("onnxruntime", "ONNX Runtime（推理引擎）",
                   size="~15MB", minutes="1-3",
@@ -815,17 +846,17 @@ PROFILES: Dict[str, Dict[str, object]] = {
     # 最小全流程：唤醒 → ASR → NLU → TTS。这是语音助手的完整链路。
     # NLU 用进程内 ONNX（无 Python/TF/torch/2GB 常驻），产物随仓库提供。
     "minimal": {
-        "components": ["onnxruntime", "sherpa-onnx", "livekit-wakeup",
+        "components": ["yaml-cpp", "onnxruntime", "sherpa-onnx", "livekit-wakeup",
                       "sherpa-asr", "sherpa-tts", "onnx-nlu"],
         "desc": "最小全流程：livekit 唤醒 + silero VAD + sherpa ASR + onnx NLU + sherpa TTS",
     },
     "standard": {
-        "components": ["onnxruntime", "sherpa-onnx", "livekit-wakeup",
+        "components": ["yaml-cpp", "onnxruntime", "sherpa-onnx", "livekit-wakeup",
                       "sherpa-asr", "sherpa-tts", "onnx-nlu", "llama"],
         "desc": "standard：minimal + llama.cpp 本地大模型（chat / llm_nlu）",
     },
     "full": {
-        "components": ["onnxruntime", "sherpa-onnx", "livekit-wakeup",
+        "components": ["yaml-cpp", "onnxruntime", "sherpa-onnx", "livekit-wakeup",
                       "sherpa-asr", "sherpa-tts", "onnx-nlu", "llama", "netease-js"],
         "desc": "full：standard + 网易云音乐 node 服务",
     },
@@ -1065,9 +1096,9 @@ def run_verify(comps: List[Component]) -> int:
 
 
 if __name__ == "__main__":
-    for _builder in (_build_onnxruntime, _build_sherpa_onnx, _build_livekit,
-                     _build_asr, _build_tts, _build_onnx_nlu, _build_rasa,
-                     _build_llama, _build_netease):
+    for _builder in (_build_yaml_cpp, _build_onnxruntime, _build_sherpa_onnx,
+                     _build_livekit, _build_asr, _build_tts, _build_onnx_nlu,
+                     _build_rasa, _build_llama, _build_netease):
         register(_builder())
     try:
         raise SystemExit(main())

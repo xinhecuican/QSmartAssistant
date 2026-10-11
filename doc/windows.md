@@ -41,7 +41,8 @@ cd QSmartAssistant
 
 脚本会自动完成：
 
-1. 下载并解压 **ONNX Runtime**（`lib/onnxruntime`）与 **sherpa-onnx**（`lib/sherpa_onnx`）；
+1. 下载并解压 **yaml-cpp**（`lib/yaml-cpp`，`lib/` 不入库所以新 clone 必须装）、
+   **ONNX Runtime**（`lib/onnxruntime`）与 **sherpa-onnx**（`lib/sherpa_onnx`）；
 2. 生成 `Data/config.yaml`、`Data/plugin_order.txt`；
 3. CMake 配置 + 编译；
 4. 用 `windeployqt` 部署 Qt 运行库，并把第三方 DLL 拷到输出目录。
@@ -51,6 +52,7 @@ cd QSmartAssistant
 ### 手动构建（等价命令）
 
 ```powershell
+.\scripts\install_yaml_cpp.ps1
 .\scripts\install_onnxruntime.ps1
 .\scripts\install_sherpa_onnx.ps1
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="C:\Qt\6.8.4\msvc2022_64"

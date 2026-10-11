@@ -25,7 +25,8 @@
         "NLU_ONNX": "ON",
         "NLU_RASA": "OFF",
         "NLU_BAIDU": "OFF",
-        "USE_OPENSSL": "OFF"
+        "USE_OPENSSL": "OFF",
+        "NETEASE_USE_JS": "ON"
       }
     },
     {
@@ -47,7 +48,8 @@
         "NLU_ONNX": "ON",
         "NLU_RASA": "OFF",
         "NLU_BAIDU": "OFF",
-        "USE_OPENSSL": "OFF"
+        "USE_OPENSSL": "OFF",
+        "NETEASE_USE_JS": "ON"
       }
     },
     {
@@ -69,7 +71,8 @@
         "NLU_ONNX": "ON",
         "NLU_RASA": "OFF",
         "NLU_BAIDU": "OFF",
-        "USE_OPENSSL": "OFF"
+        "USE_OPENSSL": "OFF",
+        "NETEASE_USE_JS": "ON"
       }
     },
     {
@@ -91,7 +94,8 @@
         "NLU_ONNX": "ON",
         "NLU_RASA": "OFF",
         "NLU_BAIDU": "OFF",
-        "USE_OPENSSL": "OFF"
+        "USE_OPENSSL": "OFF",
+        "NETEASE_USE_JS": "ON"
       }
     },
     {
@@ -113,7 +117,8 @@
         "NLU_ONNX": "ON",
         "NLU_RASA": "OFF",
         "NLU_BAIDU": "OFF",
-        "USE_OPENSSL": "OFF"
+        "USE_OPENSSL": "OFF",
+        "NETEASE_USE_JS": "ON"
       }
     }
   ],
