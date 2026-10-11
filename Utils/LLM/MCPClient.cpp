@@ -343,6 +343,17 @@ bool MCPClient::request(const QString &method, const QJsonObject &params,
     process.write(payload);
 
     // 等待：stdout 到达 或 超时
+    //
+    // ⚠⚠ 下面这几个 connect 的 context 是一个**栈上的 QObject**，而不是 this。
+    //   连接的生命周期跟着 context 走（context 析构 ⇒ 连接自动断开），而 context
+    //   与 done / loop / timer 这些被引用捕获的局部变量同生共死。
+    //   早期版本把 context 写成 this（= MCPClient），于是连接在 request() 返回后
+    //   **依然活着**，而 lambda 里按引用捕获的 timer / loop / done / id 早已析构；
+    //   子进程之后再吐一次 stdout（例如下一个请求的回包）就会重入这些"尸体
+    //   lambda"，在已析构的对象上调 timer.stop() / loop.quit() —— 指针为 0，
+    //   表现为 SIGSEGV（accessing address 0x0）。
+    //   这个用例在受限环境里一直被 QSKIP，所以直到接进 CI 才暴露出来。
+    QObject context;
     QEventLoop loop;
     QTimer timer;
     timer.setSingleShot(true);
@@ -355,8 +366,8 @@ bool MCPClient::request(const QString &method, const QJsonObject &params,
             loop.quit();
         }
     };
-    connect(&process, &QProcess::readyReadStandardOutput, this, tryFinish);
-    connect(&process, &QProcess::readyReadStandardError, this, [this]() {
+    connect(&process, &QProcess::readyReadStandardOutput, &context, tryFinish);
+    connect(&process, &QProcess::readyReadStandardError, &context, [this]() {
         const QString err = QString::fromUtf8(process.readAllStandardError());
         if (!err.trimmed().isEmpty()) {
             // server 的日志走 stderr，保留到 debug 级别避免刷屏
@@ -364,7 +375,7 @@ bool MCPClient::request(const QString &method, const QJsonObject &params,
         }
     });
     connect(&process, QOverload<QProcess::ProcessError>::of(&QProcess::errorOccurred),
-            this, [&](QProcess::ProcessError) {
+            &context, [&](QProcess::ProcessError) {
                 if (!done) {
                     done = true;
                     timer.stop();
@@ -372,14 +383,14 @@ bool MCPClient::request(const QString &method, const QJsonObject &params,
                 }
             });
     connect(&process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [&](int, QProcess::ExitStatus) {
+            &context, [&](int, QProcess::ExitStatus) {
                 if (!done) {
                     done = true;
                     timer.stop();
                     loop.quit();
                 }
             });
-    connect(&timer, &QTimer::timeout, this, [&]() {
+    connect(&timer, &QTimer::timeout, &context, [&]() {
         if (!done) {
             done = true;
             loop.quit();

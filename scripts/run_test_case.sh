@@ -55,14 +55,22 @@ rc=$?
 cat "${LOG}"
 
 if [ "${rc}" -ne 0 ]; then
-    # 挑出真正有信息量的行；一条都没有（例如刚启动就崩）时退回日志尾部。
+    # 1) 断言类失败：挑出真正有信息量的行
     detail="$(grep -aE 'FAIL!|QFATAL|QCOMPARE|QVERIFY|Actual|Expected|Received|Aborted|Segmentation fault|error while loading|cannot open shared' "${LOG}" | head -20 || true)"
-    if [ -z "${detail}" ]; then
-        detail="$(tail -15 "${LOG}" || true)"
+    # 2) 崩溃/早退时上面可能一条都匹配不到，而**日志尾部**（含 qInfo/qDebug 的进度
+    #    标记，例如 "[mcp: mock] ready, protocol 2024-11-05"）才是唯一线索 —— 一并
+    #    带上，否则一个 SIGSEGV 只能看到"崩了"，看不出崩在哪一步。
+    tail_part="$(tail -40 "${LOG}" || true)"
+    if [ -n "${detail}" ]; then
+        body="${detail}
+--- log tail (last 40 lines) ---
+${tail_part}"
+    else
+        body="${tail_part}"
     fi
     # GitHub workflow command 的转义规则：% -> %25，换行 -> %0A，回车 -> %0D
-    detail="$(printf '%s' "${detail}" | sed -e 's/%/%25/g' -e 's/$/%0A/')"
-    echo "::error title=单测 ${CASE} 失败 (exit ${rc})::${detail}"
+    body="$(printf '%s' "${body}" | sed -e 's/%/%25/g' -e 's/$/%0A/')"
+    echo "::error title=单测 ${CASE} 失败 (exit ${rc})::${body}"
 fi
 
 exit "${rc}"
