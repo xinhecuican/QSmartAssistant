@@ -149,14 +149,24 @@ jobs:
       # 放 CI。asrSherpa / ttsSherpa / vad 需要先下载模型到运行期 Data 目录
       # （python3 scripts/fetch_models.py），在 runner 上属于环境依赖而非代码问题，
       # 所以只在本机跑。
-      - name: Test
+      #
+      # ⚠ 一个用例一个 step，而不是"一条命令跑两个用例"：step 名与失败 annotation
+      #   都能用 REST API 匿名读到，而日志不能（下载日志要 admin 权限）。拆开之后
+      #   "哪个用例挂了 / 挂在哪条断言"不拿日志也能知道。封装见
+      #   scripts/run_test_case.sh。
+      - name: "Test: hassRegex"
         env:
           QSA_SOURCE_DIR: ${{ github.workspace }}
           QSA_PYTHON: python3
           QT_QPA_PLATFORM: offscreen
-        run: |
-          cd "$TEST_BUILD_PATH/Debug/bin"
-          ./QSmartAssistant hassRegex mcpClient
+        run: bash scripts/run_test_case.sh hassRegex "$TEST_BUILD_PATH"
+
+      - name: "Test: mcpClient"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh mcpClient "$TEST_BUILD_PATH"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
