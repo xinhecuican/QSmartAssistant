@@ -7,7 +7,10 @@ macro(_FIND_LIBRARY libname)
         find_library(${LIB_NAME}_${libname}_LIBRARY 
         NAMES ${libname} 
         HINTS ${${LIB_NAME}_ROOT_DIR}/lib)
-        list(APPEND ${LIB_NAME}_LIBRARY ${${LIB_NAME}_${libname}_LIBRARY})
+        # 只在找到时加入；避免把 "xxx-NOTFOUND" 混进链接列表
+        if(${LIB_NAME}_${libname}_LIBRARY)
+            list(APPEND ${LIB_NAME}_LIBRARY ${${LIB_NAME}_${libname}_LIBRARY})
+        endif()
     endif()
 endmacro(_FIND_LIBRARY)
 set(${LIB_NAME}_INCLUDE_DIR "${${LIB_NAME}_INCLUDE_BASE}")

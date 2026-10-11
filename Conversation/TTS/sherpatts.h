@@ -11,7 +11,8 @@ public:
     void detect(const QString& text, const QString& type, int id) override;
     void stop() override;
 private:
-    const SherpaOnnxOfflineTts* tts;
+    // 初始化为 nullptr：创建失败时 detect()/stop() 依赖该状态判空
+    const SherpaOnnxOfflineTts* tts = nullptr;
     int speakerid;
     int extraVol;
     float speed;

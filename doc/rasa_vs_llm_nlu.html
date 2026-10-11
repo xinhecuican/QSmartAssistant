@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rasa NLU vs 微调 LLM —— 改完 rasa 之后重新对比</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1b2430; --ink2:#5b6675; --ink3:#8b95a3;
+    --line:#e3e7ec; --rasa:#d97706; --rasa-soft:#fdf1dc;
+    --llm:#2563eb; --llm-soft:#e6eeff;
+    --ok:#0e9f6e; --warn:#d97706; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+    "Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:44px 24px 80px}
+  h1{font-size:30px;line-height:1.3;margin:0 0 10px;letter-spacing:-.02em}
+  h2{font-size:20px;margin:0 0 6px;letter-spacing:-.01em}
+  h3{font-size:16px;margin:0 0 8px}
+  p{margin:0 0 12px}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 4px}
+  .meta{color:var(--ink3);font-size:13px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:24px 26px;margin:0 0 20px;
+    box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));
+    gap:14px;margin:26px 0 26px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .kpi .lab{font-size:12.5px;color:var(--ink3);letter-spacing:.02em;
+    margin-bottom:10px;text-transform:uppercase}
+  .kpi .row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .kpi .who{font-size:12.5px;color:var(--ink3);margin-bottom:1px}
+  .kpi .val{font-size:25px;font-weight:650;letter-spacing:-.02em;line-height:1.15}
+  .kpi .val.llm{color:var(--llm)}
+  .kpi .val.rasa{color:var(--rasa)}
+  .kpi .delta{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+    font-size:13px;color:var(--ink2)}
+  .kpi .delta b{color:var(--ok)}
+  .kpi .delta.slow b{color:var(--warn)}
+
+  .legend{display:flex;gap:20px;align-items:center;margin:0 0 18px;
+    font-size:13.5px;color:var(--ink2);flex-wrap:wrap}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;
+    margin-right:7px;vertical-align:middle}
+
+  .bars{display:flex;flex-direction:column;gap:20px}
+  .group .glab{font-size:13.5px;color:var(--ink2);margin-bottom:8px;
+    display:flex;justify-content:space-between}
+  .group .glab span.gain{color:var(--ok);font-weight:600}
+  .bar{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+  .bar .track{flex:1;background:#eef1f5;border-radius:7px;height:26px;
+    position:relative;overflow:hidden}
+  .bar .fill{height:100%;border-radius:7px;min-width:2px;
+    transition:width .8s cubic-bezier(.22,.8,.28,1)}
+  .bar .fill.rasa{background:linear-gradient(90deg,#f0a53c,var(--rasa))}
+  .bar .fill.llm{background:linear-gradient(90deg,#5b8def,var(--llm))}
+  .bar .fill.ghost{background:repeating-linear-gradient(45deg,#e6eaef,#e6eaef 6px,#dde2e8 6px,#dde2e8 12px)}
+  .bar .num{width:118px;font-variant-numeric:tabular-nums;font-size:13.5px;
+    color:var(--ink2);text-align:right;flex-shrink:0}
+  .bar .tag{width:56px;font-size:12.5px;color:var(--ink3);flex-shrink:0}
+
+  table{width:100%;border-collapse:collapse;font-size:13.8px}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-size:12.5px;color:var(--ink3);font-weight:600;letter-spacing:.02em;
+    text-transform:uppercase;white-space:nowrap}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr.zero td.cell-err{background:var(--rasa-soft);color:var(--bad);
+    font-weight:650;border-radius:5px;text-align:right}
+  tr.low td.cell-err{background:#fef7ea;color:var(--warn);font-weight:600;
+    text-align:right}
+  tbody tr:hover{background:#fafbfc}
+  tr.hl td{background:#f7fafe}
+  tr.hl td:first-child{font-weight:650}
+  .hint{font-size:12.8px;color:var(--ink3);margin:12px 0 0}
+
+  .stack{display:flex;height:34px;border-radius:8px;overflow:hidden;
+    margin:6px 0 14px;border:1px solid var(--line)}
+  .seg{display:flex;align-items:center;justify-content:center;color:#fff;
+    font-size:12.5px;font-weight:600;letter-spacing:.01em}
+  .seg.e3{background:#dc2626}.seg.e4{background:#d97706}
+  .seg.e1{background:#7c8fa8}.seg.e2{background:#a8b4c2}
+  .seg.zero{background:#e9edf1;color:var(--ink3)}
+  .attr-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;
+    color:var(--ink2);margin:0 0 4px}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:3px;
+    margin-right:6px;vertical-align:middle}
+
+  .callout{background:var(--llm-soft);border:1px solid #cddcff;border-left:4px solid var(--llm);
+    border-radius:10px;padding:16px 18px;margin:0 0 14px}
+  .callout.warn{background:var(--rasa-soft);border-color:#f5dfb8;border-left-color:var(--rasa)}
+  .callout.bad{background:#fef2f2;border-color:#fbd5d5;border-left-color:var(--bad)}
+  .callout p:last-child{margin-bottom:0}
+  ul,ol{margin:0 0 12px;padding-left:22px}
+  li{margin-bottom:7px}
+  code{background:#eef1f5;padding:1.5px 6px;border-radius:5px;font-size:13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre{background:#1b2430;color:#e6ebf2;padding:16px 18px;border-radius:11px;
+    overflow-x:auto;font-size:12.6px;line-height:1.65;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}
+    .bar .num{width:96px}.bar .tag{width:44px}}
+  footer{color:var(--ink3);font-size:12.6px;text-align:center;margin-top:34px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div style="border:1px solid #E24B4A;background:#FCEBEB;border-radius:12px;padding:16px 20px;margin:0 0 24px;color:#791F1F;font-size:13px;line-height:1.7">
+    <div style="font-weight:500;font-size:14px;color:#501313;margin-bottom:8px">⚠ 本文件已部分过时（2026-10-10 第二轮修正）</div>
+    三处结论需要更正，权威版本见 <code>doc/rasa_vs_llm_nlu.md</code> §0.1 与
+    <code>doc/time_slot_normalization.md</code> §5：<br>
+    ① <b>「探针集 rasa 反超 LLM 31.58 pt」作废</b> —— <code>make_probe.py</code> 硬编码了一份
+    与训练不一致的 system prompt，LLM 被喂错提示词。修正后 <b>rasa 100% / LLM 100% 打平</b>。<br>
+    ② <b>LLM 延迟是跨口径比较</b> —— 当时 LLM 记 <code>timing=e2e</code>、rasa 是全包，
+    补跑同口径后 LLM 为 212 ms（留出集）。<br>
+    ③ <b>新增延时/定时专项</b> —— <code>30分钟后开启热水器</code> 这类说法此前语料里不存在，
+    补语料后 rasa <b>18.18% → 100%</b>、LLM <b>45.45% → 90.91%</b>。
+  </div>
+
+  <p class="sub">QSmartAssistant · NLU 后端选型</p>
+  <h1>rasa DIET vs 微调 Qwen3.5-2B LoRA<br>同口径对照评测（改完 rasa 之后）</h1>
+  <p class="meta">65 条手写留出集（16 意图）+ 19 条未见实体探针 · 同一份指标实现 ·
+    受控随机种子 · 2026-10-10</p>
+
+  <!-- ============ 三条结论 ============ -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="lab">受控 A/B：只修抽取器</div>
+      <div class="row"><span class="who">exact</span><span class="val rasa">+15.4 pt</span></div>
+      <div class="delta">41.54% → <b>56.92%</b>，意图准确率<b>完全不变</b><br>
+        同一份 config / 语料 / 种子，只换两个自定义组件的代码</div>
+    </div>
+    <div class="kpi">
+      <div class="lab">留出集 exact</div>
+      <div class="row"><span class="who">LLM vs rasa</span><span class="val llm">93.85%</span></div>
+      <div class="delta">rasa <b>90.77%</b>，差 <b>3.08 pt</b>（原来是 53.85 pt）<br>
+        意图：rasa <b>100.00%</b> 反超 LLM 98.46%</div>
+    </div>
+    <div class="kpi">
+      <div class="lab">未见实体探针 exact</div>
+      <div class="row"><span class="who">rasa vs LLM</span><span class="val rasa">94.74%</span></div>
+      <div class="delta">LLM 只有 63.16% —— <b>rasa 反超 31.58 pt</b><br>
+        LLM 会把没见过的歌手当成歌名</div>
+    </div>
+    <div class="kpi">
+      <div class="lab">延迟 P50 / P90</div>
+      <div class="row"><span class="who">rasa vs LLM</span><span class="val rasa">34–42<span style="font-size:15px;font-weight:400"> ms</span></span></div>
+      <div class="delta slow">LLM 200 / 395 ms，rasa 快 <b>≈5.5× / ≈9.6×</b><br>
+        体积 28 MB vs ~4 GB</div>
+    </div>
+  </div>
+
+  <!-- ============ 一、结论三条 ============ -->
+  <div class="card">
+    <h2>结论先说（三条，按重要性排序）</h2>
+    <ol>
+      <li><b>rasa 原来的 40% exact 里，有 15.4 pt 是纯粹的软件 bug。</b>
+        两个自研规则抽取器（底层是 Microsoft Recognizers-Text 通用中文数字/日期解析器）
+        把「换一首」的「一」抽成 <code>n=1</code>，而且会先把 DIET 已经抽对的
+        <code>number</code> 结果<b>删掉</b>再塞自己的。修完之后伪数字 15 → 0、伪日期 3 → 1。</li>
+      <li><b>改完的 rasa 意图不输 LLM，泛化到未见实体时反超。</b>
+        留出集意图 100.00% vs 98.46%、exact 90.77% vs 93.85%；
+        探针集 exact 94.74% vs 63.16%；延迟快 5.5–9.6 倍。</li>
+      <li><b>上一版所有 rasa 数字都缺一个前提：随机种子。</b>
+        rasa 3.6.19 的 <code>rasa train nlu</code> 没有 <code>--random-seed</code>，
+        而 DIET 在未配置时用 <code>int(time.time())</code> 当种子。
+        <b>同一份数据同一份 config 重训两次，65 条留出集上 exact 差 3 条。</b>
+        本页里控了种子的对照才当因果。</li>
+    </ol>
+  </div>
+
+  <!-- ============ 二、修正了上一版什么 ============ -->
+  <div class="card">
+    <h2>上一版被推翻 / 修正的结论</h2>
+    <table>
+      <thead><tr><th>上一版的说法</th><th>这一版的事实</th><th>为什么变</th></tr></thead>
+      <tbody>
+        <tr><td>rasa 意图 67.69%，差 30.8 pt</td>
+            <td><b>100.00%</b>，反超 1.54 pt</td>
+            <td>语料 132 → 358 条；修掉 16 处被静默丢弃的实体标注</td></tr>
+        <tr><td>rasa exact 40.00%，差 53.85 pt</td>
+            <td><b>90.77%</b>，差 <b>3.08 pt</b></td>
+            <td>抽取器 + 语料 + 词典 + trend 语义，四层叠加</td></tr>
+        <tr><td>「瓶颈是标注量，不是模型容量」</td>
+            <td>只对一半：瓶颈是<b>分词边界 + 标注量</b>，<b>不是先验知识</b></td>
+            <td>探针集：rasa 94.74% 反超 LLM 63.16%</td></tr>
+        <tr><td>「要追平得补到 ~600 条」</td>
+            <td>358 条就到 90.77%，<b>~350 条附近边际收益见顶</b></td>
+            <td>剩下 7 条错例全是实体跨度，再加同类句子没用</td></tr>
+        <tr><td>自定义词典已生效</td>
+            <td><b>从来没生效过</b>：config 里拼成了 <code>dicionary_path</code></td>
+            <td>组件读 <code>config["dictionary_path"]</code>，拼错即静默不加载</td></tr>
+        <tr><td>LLM exact 93.85%＝「全面碾压」</td>
+            <td>探针集上被 rasa <b>反超 31.58 pt</b></td>
+            <td>探针集是本轮新增的评测集</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 三、受控 A/B ============ -->
+  <div class="card">
+    <h2>受控 A/B：只改抽取器代码值多少分</h2>
+    <p>阶梯式打补丁说不清单步因果，所以把「修抽取器」单独拎出来做干净 A/B：
+      两臂都是 <b>git 原始 config + git 原始 nlu.yml</b>（132 条），都显式
+      <code>random_seed: 42</code>，<b>只有两个自定义组件的代码不同</b>。</p>
+
+    <div class="group">
+      <div class="glab"><span>exact（65 条留出集）</span><span class="gain">+15.38 pt</span></div>
+      <div class="bar"><span class="tag">arm A</span>
+        <span class="track"><span class="fill rasa" style="width:41.54%"></span></span>
+        <span class="num">41.54% (27/65)</span></div>
+      <div class="bar"><span class="tag">arm B</span>
+        <span class="track"><span class="fill rasa" style="width:56.92%"></span></span>
+        <span class="num">56.92% (37/65)</span></div>
+    </div>
+
+    <table style="margin-top:20px">
+      <thead><tr><th>arm</th><th class="n">意图准确率</th><th class="n">exact</th>
+        <th class="n">槽位 P/R/F1</th><th class="n">应带/实际槽位</th>
+        <th class="n">E1 伪数字</th><th class="n">E2 伪日期</th><th class="n">E3 意图错</th></tr></thead>
+      <tbody>
+        <tr><td>A 原始抽取器</td><td class="n">75.38%</td><td class="n">41.54%</td>
+          <td class="n">.365/.365/.365</td><td class="n">25 / 33</td>
+          <td class="n">15</td><td class="n">3</td><td class="n">16</td></tr>
+        <tr class="hl"><td>B 重写抽取器</td><td class="n">75.38%</td>
+          <td class="n"><b>56.92%</b></td><td class="n"><b>.558/.519/.538</b></td>
+          <td class="n">25 / 18</td><td class="n"><b>0</b></td><td class="n"><b>1</b></td>
+          <td class="n">16</td></tr>
+        <tr><td>差</td><td class="n"><b>±0</b></td><td class="n"><b>+15.38 pt</b></td>
+          <td class="n">+0.173</td><td class="n">少报 15 条</td>
+          <td class="n">−15</td><td class="n">−2</td><td class="n"><b>±0</b></td></tr>
+      </tbody>
+    </table>
+    <p class="hint">意图一栏两边完全相同（连 E3 都是 16 条）→ 反过来验证这两个组件确实在
+      DIET 下游、不影响分类，A/B 没混入别的变量。exact 的 +15.38 pt 全部来自「少报了 15 个槽位」。</p>
+
+    <div class="callout">
+      <p><b>为什么是软件 bug 而不是能力问题。</b>原始实现里有两行致命代码：</p>
+      <pre># ① 把 DIET 已经抽对的 number 全删掉，再塞自己的结果
+exclude_entities = [e for e in entities if e['entity'] != 'number']
+message.set(ENTITIES, exclude_entities + extracted_entities, add_to_output=True)
+
+# ② 输出零宽 / 被截断的跨度（Recognizers-Text 的中文 offset 本来就是错的）
+TEXT: 换一首   → number value=1 start=1 end=1            ← 零宽
+TEXT: 今天     → time   value=2026-10-10 start=0 end=1   ← 只覆盖「今」
+TEXT: 明后天   → time   value=2026-10-12 start=1 end=2   ← 只覆盖「后」
+TEXT: 三十     → time   value=2026-09-30 start=0 end=1   ← 只覆盖「三」</pre>
+      <p>重写后改成<b>合并不覆盖</b>，并加三道闸：跨度不可用就丢（零宽/截断）、
+        量词搭配不当数值（<code>一首|一下|一个|一点|一遍|…</code>）、完整数词识别。</p>
+    </div>
+  </div>
+
+  <!-- ============ 四、随机种子 ============ -->
+  <div class="card">
+    <h2>⚠ 随机种子：不钉住 <code>random_seed</code> 的评测都不算数</h2>
+    <p>rasa 3.6.19 · <code>rasa/utils/tensorflow/models.py</code>：</p>
+    <pre>def __init__(self, random_seed: Optional[int] = None, **kwargs):
+    ...
+    if random_seed is None:
+        random_seed = int(time.time())      # ← 每秒都不同
+    self.random_seed = random_seed
+    self._set_random_seed()                 # random / numpy / tf / keras 全套</pre>
+    <p><code>random_seed</code> 的来源是 <b>DIETClassifier 组件配置</b>
+      （默认 <code>None</code>）。而 3.6.19 的 <code>rasa train nlu</code>
+      <b>没有 <code>--random-seed</code> 参数</b>，顶层 <code>rasa train</code> 也没有。
+      所以默认情况下每次训练出来的 DIET 权重都不一样。</p>
+
+    <h3 style="margin-top:18px">实测（同一份 nlu.yml + 同一份 config.yml）</h3>
+    <div class="group">
+      <div class="glab"><span>exact</span><span>换种子 / 不钉种子都会动 2–3 条</span></div>
+      <div class="bar"><span class="tag">无种子</span>
+        <span class="track"><span class="fill ghost" style="width:87.69%"></span></span>
+        <span class="num">87.69% (57/65)</span></div>
+      <div class="bar"><span class="tag">无种子·重训</span>
+        <span class="track"><span class="fill ghost" style="width:89.23%"></span></span>
+        <span class="num">89.23% (58/65)</span></div>
+      <div class="bar"><span class="tag">seed 42</span>
+        <span class="track"><span class="fill rasa" style="width:90.77%"></span></span>
+        <span class="num">90.77% (59/65)</span></div>
+      <div class="bar"><span class="tag">seed 42 · 重训</span>
+        <span class="track"><span class="fill rasa" style="width:90.77%"></span></span>
+        <span class="num">90.77% (59/65) ✓一致</span></div>
+      <div class="bar"><span class="tag">seed 7</span>
+        <span class="track"><span class="fill ghost" style="width:87.69%"></span></span>
+        <span class="num">87.69% (57/65)</span></div>
+    </div>
+
+    <div class="callout warn">
+      <p><b>怎么读后面那些阶梯数字。</b>阶梯 T2 / T2b / T2c 是在发现这个坑<b>之前</b>测的，
+        都没控种子。最直接的证据：阶梯 T2c 是 95.38%，把同一份数据<b>重训一次</b>就变成 100.00%。
+        所以「T2c 的 trend 语料把 MUSICINFO 带坏了」这个当时的结论<b>站不住</b> ——
+        它就是种子噪声。真正可信的只有：控了种子的 A/B、以及幅度远大于噪声的结论（20 pt vs 3 pt）。</p>
+      <p>代价是把 <code>random_seed: 42</code> 写进 <code>Data/rasa/config.yml</code> 的
+        DIETClassifier 段，已提交。</p>
+    </div>
+  </div>
+
+  <!-- ============ 五、主结果 ============ -->
+  <div class="card">
+    <h2>主结果</h2>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--rasa)"></span>rasa（各阶段）</span>
+      <span><span class="dot" style="background:var(--llm)"></span>微调 LLM</span>
+      <span><span class="dot" style="background:#dde2e8"></span>噪声区间（未控种子 / 换种子）</span>
+    </div>
+
+    <h3>65 条手写留出集</h3>
+    <table>
+      <thead><tr><th>版本</th><th class="n">意图准确率</th><th class="n">exact</th>
+        <th class="n">槽位 P/R/F1</th><th class="n">应带/实际槽位</th><th class="n">P50 / P90</th></tr></thead>
+      <tbody>
+        <tr><td>rasa 原始（40% 那版）</td><td class="n">67.69%</td><td class="n">40.00%</td>
+          <td class="n">.347/.375/.361</td><td class="n">25 / 32</td><td class="n">41 / 48 ms</td></tr>
+        <tr><td>A/B arm A 原始抽取器（seed 42）</td><td class="n">75.38%</td><td class="n">41.54%</td>
+          <td class="n">.365/.365/.365</td><td class="n">25 / 33</td><td class="n">48 / 54 ms</td></tr>
+        <tr><td>A/B arm B 重写抽取器（seed 42）</td><td class="n">75.38%</td><td class="n">56.92%</td>
+          <td class="n">.558/.519/.538</td><td class="n">25 / 18</td><td class="n">36 / 39 ms</td></tr>
+        <tr><td>阶梯 T2 补语料（未控种子）</td><td class="n">87.69%</td><td class="n">72.31%</td>
+          <td class="n">.680/.640/.659</td><td class="n">25 / 18</td><td class="n">46 / 51 ms</td></tr>
+        <tr><td>阶梯 T2b 词典/对齐（未控种子）</td><td class="n">100.00%</td><td class="n">87.69%</td>
+          <td class="n">.800/.740/.769</td><td class="n">25 / 21</td><td class="n">36 / 39 ms</td></tr>
+        <tr><td>阶梯 T2c trend 语义（未控种子）</td><td class="n">95.38%</td><td class="n">87.69%</td>
+          <td class="n">.800/.740/.769</td><td class="n">25 / 22</td><td class="n">36 / 39 ms</td></tr>
+        <tr class="hl"><td>最终（seed 42，已发布）</td><td class="n"><b>100.00%</b></td>
+          <td class="n"><b>90.77%</b></td><td class="n"><b>.880/.820/.849</b></td>
+          <td class="n">25 / 24</td><td class="n"><b>34–42 / 37–46 ms</b></td></tr>
+        <tr><td>　最终方案换 seed 7（佐证噪声）</td><td class="n">96.92%</td><td class="n">87.69%</td>
+          <td class="n">.800/.760/.779</td><td class="n">25 / 22</td><td class="n">38 / 42 ms</td></tr>
+        <tr><td>LLM Qwen3.5-2B + LoRA</td><td class="n">98.46%</td><td class="n"><b>93.85%</b></td>
+          <td class="n"><b>.893/.875/.884</b></td><td class="n">25 / 28</td><td class="n">200 / 395 ms</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:22px">19 条未见实体探针</h3>
+    <table>
+      <thead><tr><th>版本</th><th class="n">意图准确率</th><th class="n">exact</th>
+        <th class="n">槽位 P/R/F1</th><th class="n">应带/实际槽位</th><th class="n">P50 / P90</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>final（seed 42）</td><td class="n"><b>100.00%</b></td>
+          <td class="n"><b>94.74%</b></td><td class="n"><b>.947/.947/.947</b></td>
+          <td class="n">19 / 18</td><td class="n"><b>40 / 44 ms</b></td></tr>
+        <tr><td>final 同配置换 seed 7</td><td class="n">94.74%</td><td class="n">89.47%</td>
+          <td class="n">.895/.895/.895</td><td class="n">19 / 17</td><td class="n">40 / 47 ms</td></tr>
+        <tr><td>阶梯 T2b（未控种子）</td><td class="n">100.00%</td><td class="n">94.74%</td>
+          <td class="n">.947/.947/.947</td><td class="n">19 / 18</td><td class="n">45 / 46 ms</td></tr>
+        <tr><td>阶梯 T2c（未控种子）</td><td class="n">84.21%</td><td class="n">78.95%</td>
+          <td class="n">.895/.895/.895</td><td class="n">19 / 17</td><td class="n">37 / 39 ms</td></tr>
+        <tr><td>LLM Qwen3.5-2B + LoRA</td><td class="n"><b>100.00%</b></td>
+          <td class="n">63.16%</td><td class="n">.737/.684/.710</td><td class="n">19 / 19</td>
+          <td class="n">489 / 548 ms</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:22px">最终差距</h3>
+    <table>
+      <thead><tr><th>指标</th><th class="n">rasa（seed 42）</th><th class="n">LLM</th><th>谁赢</th></tr></thead>
+      <tbody>
+        <tr><td>留出集 意图准确率</td><td class="n"><b>100.00%</b></td><td class="n">98.46%</td><td>rasa +1.54 pt</td></tr>
+        <tr><td>留出集 exact</td><td class="n">90.77%</td><td class="n"><b>93.85%</b></td><td>LLM +3.08 pt</td></tr>
+        <tr><td>留出集 槽位 F1</td><td class="n">0.849</td><td class="n"><b>0.884</b></td><td>LLM +0.035</td></tr>
+        <tr><td>探针 意图准确率</td><td class="n"><b>100.00%</b></td><td class="n"><b>100.00%</b></td><td>平</td></tr>
+        <tr><td>探针 exact</td><td class="n"><b>94.74%</b></td><td class="n">63.16%</td><td><b>rasa +31.58 pt</b></td></tr>
+        <tr><td>探针 槽位 F1</td><td class="n"><b>0.947</b></td><td class="n">0.710</td><td><b>rasa +0.237</b></td></tr>
+        <tr><td>P50 / P90 延迟</td><td class="n"><b>34–42 / 37–46 ms</b></td><td class="n">200 / 395 ms</td>
+          <td><b>rasa 快 ≈5.5× / ≈9.6×</b></td></tr>
+        <tr><td>磁盘</td><td class="n"><b>28 MB</b></td><td class="n">~4 GB + 87 MB</td><td>rasa 小 145×</td></tr>
+        <tr><td>冷加载</td><td class="n">22–30 s</td><td class="n">≈35 s</td><td>同量级</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 六、探针 ============ -->
+  <div class="card">
+    <h2>未见实体探针：上一版的核心假设是错的</h2>
+    <p>探针用一批<b>已放进 jieba 词典、但两侧训练集都没出现过</b>的实体造句子
+      （吻别/红日/光辉岁月/晴天/七里香、王菲/张国荣/李宗盛/罗大佑/邓丽君、
+      天津/重庆/厦门/青岛、书房×灯 …）。这样 <b>token 边界是好的</b>，但
+      <b>没有监督信号</b> —— 于是能区分「瓶颈是分词」还是「瓶颈是没有先验知识」。</p>
+
+    <div class="group" style="margin-top:16px">
+      <div class="glab"><span>探针集 exact（19 条）</span><span class="gain">rasa 反超 31.58 pt</span></div>
+      <div class="bar"><span class="tag">rasa</span>
+        <span class="track"><span class="fill rasa" style="width:94.74%"></span></span>
+        <span class="num">94.74% (18/19)</span></div>
+      <div class="bar"><span class="tag">LLM</span>
+        <span class="track"><span class="fill llm" style="width:63.16%"></span></span>
+        <span class="num">63.16% (12/19)</span></div>
+    </div>
+
+    <p style="margin-top:18px">LLM 错的 7 条是同一类：<b>把没见过的歌手名当成歌名</b>。</p>
+    <table>
+      <thead><tr><th>输入</th><th>期望</th><th>LLM 实际</th><th>rasa 实际</th></tr></thead>
+      <tbody>
+        <tr><td>播放王菲的歌</td><td><code>10|g=王菲</code></td><td class="cell-err" style="color:var(--bad)"><code>10|s=王菲</code></td><td>✓</td></tr>
+        <tr><td>想听张国荣</td><td><code>10|g=张国荣</code></td><td style="color:var(--bad)"><code>10|s=张国荣</code></td><td>✓</td></tr>
+        <tr><td>放李宗盛的歌</td><td><code>10|g=李宗盛</code></td><td style="color:var(--bad)"><code>10|s=李宗盛</code></td><td>✓</td></tr>
+        <tr><td>来首罗大佑的</td><td><code>10|g=罗大佑</code></td><td style="color:var(--bad)"><code>10|g=罗大佑</code>（值被吃掉「的」）</td><td>✓</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">rasa 唯一的错例是 <code>来一首七里香 → 10</code>（漏了 <code>s=七里香</code>）。</p>
+
+    <div class="callout">
+      <p><b>怎么解释这个反直觉的结果。</b>rasa 的优势来自「<b>标注好边界就照猫画虎</b>」：
+        <code>[X](singer)</code> 这个模式在训练集里出现过 48 次，换一个没见过的名字进同一个位置，
+        DIET 照样标 —— 它不需要知道王菲是谁。LLM 的劣势恰恰来自它知道太多：
+        Qwen 知道「王菲是歌手」，但在 few-shot DSL 里 <code>s=</code> / <code>g=</code> 的判别规则
+        学得不够稳，于是靠常识去猜，猜反了。这也解释了它
+        <code>应带/实际槽位</code> 是 19/19 全报满、却只对 12 条。</p>
+    </div>
+  </div>
+
+  <!-- ============ 七、错例归因 ============ -->
+  <div class="card">
+    <h2>错例归因：四类错误随修改的消退</h2>
+    <div class="attr-legend">
+      <span><span class="sw" style="background:#7c8fa8"></span>E1 伪数字</span>
+      <span><span class="sw" style="background:#a8b4c2"></span>E2 伪日期</span>
+      <span><span class="sw" style="background:#dc2626"></span>E3 意图判错</span>
+      <span><span class="sw" style="background:#d97706"></span>E4 实体漏抽/截断</span>
+    </div>
+
+    <h3 style="margin-top:16px">rasa 原始（39 条错例）</h3>
+    <div class="stack">
+      <span class="seg e1" style="flex:15">E1 15</span>
+      <span class="seg e2" style="flex:3">3</span>
+      <span class="seg e3" style="flex:21">E3 21（语义能力）</span>
+      <span class="seg e4" style="flex:9">E4 9</span>
+    </div>
+
+    <h3>A/B arm B：只修抽取器（28 条错例）</h3>
+    <div class="stack">
+      <span class="seg zero" style="flex:15">E1 = 0</span>
+      <span class="seg e2" style="flex:1">1</span>
+      <span class="seg e3" style="flex:21">E3 21</span>
+      <span class="seg e4" style="flex:9">E4 9</span>
+    </div>
+
+    <h3>最终（6 条错例）</h3>
+    <div class="stack">
+      <span class="seg zero" style="flex:39;background:#e9edf1;color:#8b95a3">E1、E2、E3 全部为 0</span>
+      <span class="seg e4" style="flex:6">E4 6</span>
+    </div>
+    <p class="hint">「可重叠」口径：E1=15 / E2=3 / E3=21 / E4=9（原始）→ E1=0 / E2=0 / E3=0 / E4=6（最终）。</p>
+
+    <h3 style="margin-top:22px">剩余 7 条错例（留出集 6 + 探针 1）—— 全是实体跨度，0 条意图错</h3>
+    <table>
+      <thead><tr><th>输入</th><th>期望</th><th>实际</th><th>归因</th></tr></thead>
+      <tbody>
+        <tr><td>想听陈奕迅</td><td><code>10|g=陈奕迅</code></td><td><code>10|g=迅</code></td><td><b>三字人名边界崩</b>，只吃到最后一个字</td></tr>
+        <tr><td>放孙燕姿的遇见</td><td><code>10|s=遇见,g=孙燕姿</code></td><td><code>10|g=孙燕姿</code></td><td>漏多槽里的 s</td></tr>
+        <tr><td>来首李荣浩的模特</td><td><code>10|s=模特,g=李荣浩</code></td><td><code>10|g=李荣浩</code></td><td>同上</td></tr>
+        <tr><td>放一下夜曲</td><td><code>10|s=夜曲</code></td><td><code>10</code></td><td>未见歌名，边界没敢标</td></tr>
+        <tr><td>把声音调大点</td><td><code>3|t=大</code></td><td><code>3|t=调</code></td><td>trend 跨度切在「调」上</td></tr>
+        <tr><td>客听的灯开一下</td><td><code>11|f=灯,l=客厅</code></td><td><code>11|f=灯</code></td><td>同音错字「客听」没进词典</td></tr>
+        <tr><td>来一首七里香（探针）</td><td><code>10|s=七里香</code></td><td><code>10</code></td><td>未见歌名，边界没敢标</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:22px">与 LLM 的错例性质对照</h3>
+    <table>
+      <thead><tr><th></th><th class="n">意图错</th><th class="n">实体错</th><th>错的根因</th></tr></thead>
+      <tbody>
+        <tr><td>rasa final</td><td class="n"><b>0</b></td><td class="n">7</td>
+          <td>中文专有名词的 token 边界；缺同音变体</td></tr>
+        <tr><td>LLM</td><td class="n">1</td><td class="n">10</td>
+          <td>预训练常识与 DSL 约定冲突；训练数据覆盖</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">两边的「病」完全不同 —— 这正好是混合方案的理由。</p>
+  </div>
+
+  <!-- ============ 八、结论 ============ -->
+  <div class="card">
+    <h2>结论与建议</h2>
+    <h3>结论</h3>
+    <ol>
+      <li><b>上一版「rasa 差 53.85 pt」的结论要撤回。</b>修正后的量级是：
+        抽取出错 ≈ <b>15.4 pt</b>（纯 bug）→ 语料不足 ≈ <b>30 pt</b>（132 → 358 条）→
+        词典拼错 + 实体标注被丢 ≈ 另有一部分 → 剩下的 ~3 pt 才是真正的能力差。</li>
+      <li><b>在 16 类固定指令这个封闭域里，rasa 已经是合理选择</b>：留出集意图满分、
+        exact 90.77%；探针集 exact 94.74%（反超 LLM 31.58 pt）；延迟快 5.5–9.6 倍；28 MB。</li>
+      <li><b>但这个结论有前提，必须一起说</b>：
+        <ul>
+          <li>语料 132 → 358 条是<b>必要条件</b>，原始语料下怎么调都到不了；</li>
+          <li>语料是<b>为这 16 个意图定制</b>的，扩到新意图/新实体类型要重新标注；</li>
+          <li>65 条留出集<b>已被用于迭代</b>，90.77% 偏乐观；更可信的是探针集 94.74%，
+            但只有 19 条，置信区间很宽；</li>
+          <li><b>不钉 <code>random_seed</code> 就没有可复现性</b>，±3 条的抖动比很多「优化」都大。</li>
+        </ul></li>
+      <li><b>LLM 的价值不在这个封闭域内的 exact，而在开集泛化</b>：留出集 exact 略胜 3 pt，
+        代价是 5.5–9.6 倍延迟、145 倍体积；探针集上反而输 31.58 pt。</li>
+    </ol>
+
+    <h3 style="margin-top:20px">落地</h3>
+    <ul>
+      <li>最终模型已发布到应用实际读取的路径 <code>Data/rasa/models/default.tar.gz</code>
+        （<code>Data/default_config.json</code> 里 <code>rasa.model</code> 指的就是它）。</li>
+      <li>原始模型保留在 <code>Data/rasa/models/_orig_default_pretrain.tar.gz</code>，也可从 git 取回。</li>
+      <li>训练源 <code>Data/rasa/{config.yml, data/nlu/nlu.yml, components/}</code>
+        与发布的模型一一对应，已钉 <code>random_seed: 42</code>。</li>
+      <li>中间版本模型留在 <code>Data/rasa/models_v2/</code> 供复核（不在 git 里）。</li>
+    </ul>
+
+    <h3 style="margin-top:20px">还能再改什么（按性价比排序）</h3>
+    <ol>
+      <li><b>给 s/g 加 <code>RegexEntityExtractor</code> + lookup table</b> ——
+        剩余 7 条错例里 4 条是它，而歌手/歌名本身就是有限集合，成本很低。</li>
+      <li><b>把 trend 跨度在 normalizer 里再收敛一次</b>：<code>把声音调大点</code> 现在标成
+        <code>t=调</code>，应按字表收敛到含方向字的那个字/词。</li>
+      <li><b>补同音变体表</b>（「客听」→「客厅」），或在训练前统一做同音纠错。</li>
+      <li><b>给「家」这类词定标注口径</b>，两侧同改，否则永远是错例。</li>
+      <li><b>混合路线接口</b>：rasa 的 <code>confidence_entity</code> / <code>confidence_role</code>
+        可以直接做阈值，低置信度整句升到 LLM。</li>
+    </ol>
+  </div>
+
+  <!-- ============ 九、复现 ============ -->
+  <div class="card">
+    <h2>复现</h2>
+    <pre># 1) 训练（必须显式 --seed，见 §随机种子）
+cd /d/projects/QSmartAssistant
+python tools/nlu_llm_finetune/train_rasa.py --name nlu-final --seed 42 --force
+
+# 2) 评测（CWD 必须是 Data/rasa：model_weights 是相对路径）
+cd Data/rasa
+/d/libs/python310/python.exe ../../tools/nlu_llm_finetune/eval_rasa.py \
+    --model models/default.tar.gz \
+    --eval ../../tools/nlu_llm_finetune/data/sft_holdout.jsonl \
+    --dump-json   ../../tools/nlu_llm_finetune/output/rasa_s42_metrics.json \
+    --dump-errors ../../tools/nlu_llm_finetune/output/rasa_s42_errors.jsonl
+# 换 --eval .../probe_unseen.jsonl 即跑探针集
+
+# 3) 受控 A/B：只换抽取器代码
+python tools/nlu_llm_finetune/ab_extractor_fix.py --seed 42
+
+# 4) 归因与汇总
+cd tools/nlu_llm_finetune
+python analyze_errors.py output/rasa_s42_errors.jsonl
+python summarize.py            # 主表
+python summarize.py --probe    # 探针表
+python summarize.py --seed     # 种子敏感性
+python check_nlu_leak.py       # 语料 / 留出集零重叠
+python check_entity_alignment.py   # 无跨边界实体标注</pre>
+
+    <div class="callout bad">
+      <p><b>环境坑（都是踩过的）</b></p>
+      <ol style="margin-bottom:0">
+        <li>rasa 3.6.19 <b>只支持 Python 3.8–3.10</b>；embedding 包要手工改 <code>python310._pth</code> + <code>get-pip.py</code>。</li>
+        <li><b>transformers 必须钉 4.36.2</b>（rasa 里 <code>from transformers import TFPreTrainedModel</code>，5.x 删掉了 TF 支持）。</li>
+        <li><code>Agent.load()</code> <b>不会</b>把 CWD 加进 <code>sys.path</code>，项目内相对组件导入会失败。</li>
+        <li><code>os.chdir(rasa_dir)</code> 会打断相对路径参数 —— 必须先把所有路径 <code>abspath()</code>。</li>
+        <li><code>rasa train nlu</code> <b>既没有 <code>--force</code> 也没有 <code>--random-seed</code></b>；
+          前者删 <code>.rasa/cache</code> 替代，后者只能写进 config 的 DIETClassifier 段。</li>
+        <li>实体标注跨 jieba token 边界会被 <b>静默丢弃</b>（只发 <code>UserWarning</code>，样本保留、实体丢掉）。改完 <code>nlu.yml</code> 一定跑一遍对齐检查。</li>
+        <li><code>dicionary_path</code> 这类拼错<b>不会报错</b>，只会静默不加载 —— 改 config 后核对模型包里
+          有没有真的出现 <code>components/train_*</code>。</li>
+      </ol>
+    </div>
+  </div>
+
+  <footer>
+    QSmartAssistant · NLU 后端选型 · 数据落盘于
+    <code>tools/nlu_llm_finetune/output/</code> · 同内容长文见 <code>doc/rasa_vs_llm_nlu.md</code>
+  </footer>
+</div>
+</body>
+</html>

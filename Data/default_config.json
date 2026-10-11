@@ -83,9 +83,9 @@
         "chunkSize": 3200
     },
 	"unit":{
-		"apiKey": "c6AcEFLAYjp7jAezYekKlCI2",
-		"secret": "IMLmMjXajZlF5FpDlAcyBGVN3XrzuINX",
-		"unitId": "S83040",
+		"apiKey": "xxx",
+		"secret": "xxx",
+		"unitId": "xxx",
 		"confThresh": 50
 	},
 	"silero":{
@@ -231,5 +231,30 @@
 		"segdict": "paraformer-seaco/seg_dict",
 		"hw_model": "paraformer-seaco/model_eb.int8.onnx",
 		"hotword": "paraformer-seaco/hotword.txt"
+	},
+	"nlu": {
+		"backend": "onnx"
+	},
+	"onnx_nlu": {
+		"model": "onnx_nlu/nlu_int8.onnx",
+		"vocab": "onnx_nlu/vocab.txt",
+		"rules": "onnx_nlu/rules.json",
+		"schema": "nlu_schema.json",
+		"conf": 0.5,
+		"max_len": 64,
+		"threads": 0
+	},
+	"livekit_wakeup": {
+		"dir": "livekit",
+		"model": "size_small.onnx",
+		"mel": "melspectrogram.onnx",
+		"emb": "embedding_model.onnx",
+		"threshold": 0.55,
+		"trigger_level": 2,
+		"refractory": 25,
+		"chunk_bytes": 2560,
+		"window_samples": 32000,
+		"threads": 1,
+		"incremental": true
 	}
 }

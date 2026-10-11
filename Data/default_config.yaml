@@ -1,0 +1,365 @@
+# =============================================================================
+# QSmartAssistant 默认配置模板
+# -----------------------------------------------------------------------------
+# 程序首次启动时，若 ~/.config/QSmartAssistant/Data/config.yaml 不存在，
+# 会以本文件为蓝本生成运行期配置。
+#
+# ⚠ 本文件是「模板」：改这里只影响「新装机」；已经生成过的运行期
+#   config.yaml 需要同样改一遍（程序不会覆盖已存在的运行期配置）。
+#   （改完模板想重新生成：删掉运行期 config.yaml 或把选项外科式改掉。）
+#
+# 注释由本文件承载。程序保存 config.yaml 时会按本文件的键路径回贴注释，
+# 所以运行期文件同样可读。
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# wakeup —— 对话状态机 / 唤醒后录音与断句
+# -----------------------------------------------------------------------------
+wakeup:
+  chunkSize: 640              # 每帧采样数（16k 单声道 PCM；640 = 40ms）
+  detectSlient: 600           # 唤醒后「静音多少 ms 判定一句话结束」
+  undetectSlient: 4000        # 未唤醒状态下静音多久回到待唤醒
+  minChunk: 3                 # 最少录音帧数，低于此值丢弃（防咳嗽/噪声误触）
+  responseSlient: 30000       # 等待响应（如 TTS/技能执行）的超时 ms
+  enable_prevad: false        # 唤醒前是否先跑 VAD 预筛（省算力，但可能漏唤醒）
+  enable_notify: true         # 是否有唤醒/结束提示音
+  prevad_interval: 2000       # prevad 检测间隔 ms
+  start_voice: start.wav      # 开始录音提示音（Data/ 下）
+  end_voice: end.wav          # 结束录音提示音
+  intentMap:                  # 直接由唤醒词映射意图（跳过 NLU 的快捷通道）
+    - index: 10086            # 序号，仅用于日志区分
+      text: 开灯               # 该条目的说明文字
+      intents:                # 直接产出的意图列表
+        - name: OPEN_FURNITURE
+          slots:
+            - name: furniture
+              value: 灯
+
+# -----------------------------------------------------------------------------
+# plugin —— 插件系统
+# -----------------------------------------------------------------------------
+plugin:
+  orderFile: plugin_order.txt # 插件加载顺序文件名（Data/ 下）
+
+# -----------------------------------------------------------------------------
+# 唤醒引擎（多选一，按编译期选项决定实际生效者）
+#   默认组合见 doc：livekit-wakeword；以下是各引擎的历史配置位。
+# -----------------------------------------------------------------------------
+
+# Picovoice Porcupine（商用授权，需 key）
+porcupine:
+  keyword: 小云_zh.ppn        # .ppn 唤醒词文件
+  model: porcupine_params_zh.pv # 中文参数文件
+  key: xxx                    # 授权 key（Picovoice 控制台获取）
+  sensitivity: "0.5"          # 灵敏度 0~1，越高越易触发也越易误触
+
+# Picovoice Cobra（语音活动检测）
+cobra:
+  confidence: "0.5"           # 置信度阈值 0~1
+
+# Picovoice Koala（降噪）
+koala:
+  model: koala_params.pv      # 降噪模型文件
+
+# SpeexDSP 前处理
+speex:
+  frame_size: 320             # 处理帧长（采样点数）
+
+# openWakeWord（tflite）
+openwakeup:
+  model: nihao_wenwen.tflite  # 唤醒模型文件
+
+# Duilite（思必驰）唤醒 + 本地 ASR —— 厂商私有库，需 duilite_login.json
+duilite:
+  login: duilite_login.json   # 厂商登录凭证（Data/ 下）
+  res: wakeup_far.bin         # 唤醒资源
+  wakeword: ni hao xiao zhi   # 唤醒词拼音，多个用「,」分隔（与 thresh/subword 一一对应）
+  thresh: "0.15"              # 唤醒阈值，多个用「,」对应上面的唤醒词
+  subword: "0"                # 唤醒词分段，多个用「,」
+  chunkSize: 640              # 送入唤醒引擎的帧长
+  asrRes: ngram_lasr_v1.16_221218_dymc_oneshot_multidecoder.bin # ASR 模型
+  gram: gram.gram             # 语言模型
+  asrEnv: "use_frame_split=1;use_filler=1;filler_penalty_score=2.0;" # ASR 参数串
+  vadRes: vad_aicar_v0.16.bin # 厂商 VAD 资源
+
+# -----------------------------------------------------------------------------
+# 语音识别 ASR
+# -----------------------------------------------------------------------------
+
+# sherpa-onnx ASR（Paraformer / SenseVoice 等）
+sherpa:
+  model: sherpa-onnx-paraformer-zh-2024-03-09/model.int8.onnx # 模型路径
+  tokens: sherpa-onnx-paraformer-zh-2024-03-09/tokens.txt     # 词表
+  stream: false               # 是否流式识别
+
+# FunASR / paraformer-seaco（热词增强版）
+funasr:
+  model: paraformer-seaco/model.int8.onnx # 主模型
+  cmvn: paraformer-seaco/am.mvn           # 归一化参数
+  token: paraformer-seaco/tokens.json     # 词表
+  segdict: paraformer-seaco/seg_dict      # 分词词典
+  hw_model: paraformer-seaco/model_eb.int8.onnx # 热词模型
+  hotword: paraformer-seaco/hotword.txt   # 热词表
+
+# -----------------------------------------------------------------------------
+# 语音合成 TTS —— sherpa-onnx VITS
+# -----------------------------------------------------------------------------
+sherpa_tts:
+  model: vits-zh-aishell3/vits-aishell3.int8.onnx # 声学模型
+  lexicon: vits-zh-aishell3/lexicon.txt           # 词典
+  tokens: vits-zh-aishell3/tokens.txt             # 词表
+  rules: vits-zh-aishell3/date.fst,vits-zh-aishell3/number.fst,vits-zh-aishell3/phone.fst,vits-zh-aishell3/new_heteronym.fst # 文本正则化 FST（可多份，逗号分隔；官方 vits-zh-aishell3 包内无 rule.fst）
+  vocoder: hifigan_v3.onnx    # 声码器
+  dict: matcha-icefall-zh-baker/dict # 可选：matcha 系模型的音素词典
+  data_dir: ""                # 可选：模型数据目录（部分模型需要）
+  noise: 0.2                  # 声学模型噪声强度（随机性）
+  noise-w: 0.3                # 时长预测噪声权重
+  length: 1                   # 语速缩放（>1 更慢）
+  speakerid: 66               # 说话人 ID（多说话人模型）
+  speed: 1                    # 语速
+  extra_volume: 20            # 额外音量增益（dB 近似），补偿 TTS 音量偏小
+
+# -----------------------------------------------------------------------------
+# 唤醒词引擎：sherpa-onnx KWS
+# -----------------------------------------------------------------------------
+sherpa_wakeup:
+  model: sherpa-kws/%1-epoch-12-avg-2-chunk-16-left-64.int8.onnx # %1 由 keywords.txt 的模型名替换
+  thres: 0.5                  # 触发阈值
+  score: 0.5                  # 加权分数（与 thres 共同决定灵敏度）
+  tokens: sherpa-kws/tokens.txt    # 词表
+  hotword: sherpa-kws/keywords.txt # 关键词文件
+
+# Snowboy（老式唤醒，需自行编译）
+snowboy:
+  resource: common.res        # 通用资源
+  thres: 0.8                  # 触发阈值
+  model: snowboy.umdl         # 唤醒模型
+  chunkSize: 3200             # 帧长
+
+# -----------------------------------------------------------------------------
+# VAD（语音活动检测）—— 默认 silero
+# -----------------------------------------------------------------------------
+silero:
+  model: silero_vad.onnx      # 模型文件
+  chunkSize: 1024             # 每帧采样点数（silero 要求 512/1024）
+  thresh: 0.1                 # 语音判定阈值，越低越灵敏
+  abandonNum: 5               # 连续多少帧非语音才判「说话结束」
+
+# sherpa-onnx 版 VAD（默认组合使用，可换 ten-vad 等模型）
+sherpa_vad:
+  model: silero_vad.onnx      # 模型文件（可换 ten-vad.int8.onnx）
+  chunkSize: 1024             # 帧长
+  threshold: 0.1              # 语音判定阈值
+  min_silence_duration: 0.5   # 最短静音时长（秒），满此值才断句
+  min_speech_duration: 0.5    # 最短语音时长（秒），短于此丢弃
+  max_speech_duration: 100    # 最长语音时长（秒），超过强制断句
+
+# livekit-wakeword 唤醒（默认组合）
+livekit_wakeup:
+  dir: livekit                # 模型目录（Data/ 下）
+  model: size_small.onnx      # 分类模型
+  mel: melspectrogram.onnx    # mel 特征提取模型
+  emb: embedding_model.onnx   # 嵌入模型
+  threshold: 0.55             # 唤醒阈值
+  trigger_level: 2            # 连续命中帧数才触发（抗抖动）
+  refractory: 25              # 触发后冷却帧数，避免重复唤醒
+  chunk_bytes: 2560           # 每次送入的字节数
+  window_samples: 32000       # 滑动窗口采样点数（2 秒 @16k）
+  threads: 1                  # ONNX 推理线程数
+  incremental: true           # 是否增量推理（省算力）
+
+# wekws 唤醒
+wekws_wakeup:
+  model: avg_30_infer.int8.onnx # 模型文件
+  chunkSize: 3200             # 帧长
+  thres: 0.5                  # 触发阈值
+  num_bin: 80                 # fbank 特征维度
+  batch_size: 10              # 批大小
+  keyword: 你好小智            # 关键词（训练时定义）
+  token: wekws/tokens.txt     # 词表
+
+# 微软 Azure 自定义关键词（tflite）
+azure:
+  model: 你好小智.table       # 关键词模型
+  chunkSize: 640              # 帧长
+
+# -----------------------------------------------------------------------------
+# NLU（自然语言理解）
+# -----------------------------------------------------------------------------
+nlu:
+  # 后端选择：onnx（自研，默认，轻量低延迟）| rasa | llm
+  backend: onnx
+
+# 自研 ONNX NLU（rbtl3 + 意图头 + 逐 token 槽位头）
+onnx_nlu:
+  model: onnx_nlu/nlu_int8.onnx # int8 量化模型
+  vocab: onnx_nlu/vocab.txt     # 词表
+  rules: onnx_nlu/rules.json    # 规则层（同义词/趋势归一化）
+  schema: nlu_schema.json       # 意图/槽位 schema（与训练时一致）
+  conf: 0.5                     # 置信度阈值，低于则拒识
+  max_len: 64                   # 最大输入 token 数
+  threads: 0                    # ONNX 线程数，0 = 自动
+
+# rasa（兜底后端；启用会拉起 Python + TF/torch，约占 2GB 内存）
+rasa:
+  url: http://127.0.0.1:5005/ # rasa server 地址
+  model: rasa/models/default.tar.gz # 模型包
+  python_venv: "absolute path to activate" # venv 的 activate 路径；
+                                # 留空则自动探测（resolveRasaVenv）
+  record_samples: true        # 是否记录对话样本（用于再训练）
+  conf: 0.5                   # 置信度阈值
+
+# 微调 LLM 作为 NLU 后端
+llm_nlu:
+  enabled: false              # 是否启用
+  llm: ""                     # 使用的 llm 后端名（对应 llm.backends 的键）
+  conf: 0.5                   # 置信度阈值
+  timeout_ms: 5000            # 单次推理超时
+  temperature: 0.0            # 采样温度（NLU 建议 0）
+  max_tokens: 256             # 最大生成 token
+  schema: nlu_schema.json     # 意图/槽位 schema
+
+# -----------------------------------------------------------------------------
+# 大模型对话（chat + llm）
+# -----------------------------------------------------------------------------
+chat:
+  modelName: gpt-3.5-turbo    # 默认使用的模型名（对应 llm.backends 的键）
+  temperature: 1              # 采样温度
+  limit_token: 4096           # 上下文长度上限（超出会截断历史）
+  stream: true                # 是否流式输出（边生成边 TTS）
+  max_tokens: 512             # 单次回复最大 token
+  with_proxy: true            # 是否走 llm.proxy 代理
+  max_tool_rounds: 5          # 工具调用最大轮数（MCP/技能）
+  payload: 你是一个非常实用的AI助手，可以精确简短的回答问题 # 系统提示词
+  append_payload: ""          # 追加到系统提示词后的额外内容
+
+llm:
+  proxy: 127.0.0.1:7890       # HTTP 代理，空串表示直连
+  default: gpt-3.5-turbo      # 默认后端名
+  llamaDir: ""                # llama.cpp 运行库目录（本地 GGUF 推理用）
+  backends:                   # 后端表：键名即「模型名」
+    gpt-3.5-turbo:
+      modelName: gpt-3.5-turbo # 实际请求体里的 model 字段
+      key: sk-xxx             # API key
+      maxTokens: 512          # 单次最大 token
+      api_base: https://api.openai.com/v1/chat/completions # 接口地址
+    # 本地 llama.cpp 后端示例（type=llamacpp）
+    # local-qwen:
+    #   type: llamacpp
+    #   model: Qwen3.5-2B-Q4_K_M.gguf # GGUF 文件（Data/ 下）
+    #   gpuLayers: 0            # 卸载到 GPU 的层数，0 = 纯 CPU
+
+# -----------------------------------------------------------------------------
+# MCP（Model Context Protocol）工具服务
+# -----------------------------------------------------------------------------
+mcp:
+  enabled: false              # 是否启用 MCP
+  servers: {}                 # 服务器表：名字 -> {command,args,env,...}
+
+# 技能（Skill）系统
+skills:
+  enabled: false              # 是否启用
+  dir: skills                 # 技能目录（Data/ 下）
+
+# -----------------------------------------------------------------------------
+# 智能家居 / 外部服务
+# -----------------------------------------------------------------------------
+
+# Home Assistant
+hass:
+  url: http://127.0.0.1:8123  # HA 地址（ws:// 可走 WebSocket）
+  key: "Bearer xxx"           # 长期访问令牌；有的版本要带 "Bearer " 前缀
+  subscribeEvents: [state_changed] # 订阅的事件类型
+  services:                   # 意图 -> HA 服务调用映射
+    - intent: OPEN_FURNITURE  # 触发的意图名
+      notify: false           # 是否播报执行结果
+      useAssistant: true      # 是否交给助手继续处理（false = 直接执行）
+      params:                 # 请求体参数
+        entity_id: script.unknown_3
+        variables:
+          duration: "{time|--}" # 占位符，运行时由 NLU 槽位填充
+      path: /api/services/script/turn_on # HA 服务路径
+      pattern: ".*热水器.*"    # 文本匹配正则（配合槽位使用）
+      response:               # 结果校验方式
+        valid: false          # 是否需要校验返回
+        matchId: false        # 是否按 id 匹配事件
+        event: event/state_changed # 结果事件路径
+        matchPath: event/data/entity_id # 校验字段路径
+        matchValue: switch.cuco_v3_57c4_switch # 期望值
+        successPath: event/data/new_state/state
+        successValue: "on"    # 成功时的值
+        responseText: 设备执行成功 # 播报文本
+    - intent: CLOSE_FURNITURE
+      slots:
+        - slotName: furniture
+          slotValue: 热水器
+      path: /api/services/switch/turn_off
+      params:
+        entity_id: switch.cuco_cp2d_46fc_switch
+        time: "{number|--}"
+
+# 网易云音乐（node 模式 = NeteaseCloudMusicApi Enhanced）
+netease_cloud:
+  phone: xxx                  # 手机号（与 email 二选一，非空则走短信登录）
+  password: xxx               # 密码
+  email: ""                   # 邮箱登录；非空则用邮箱通道（失败无短信兜底）
+  captchaTimeoutSec: 300      # 短信验证码有效期（秒）
+  apiMode: node               # node（本地起 NeteaseCloudMusicApi）| official
+  cookie: ""                  # 登录态缓存；有效时跳过登录
+  volumeStep: 10              # 每次调音量的步长
+  # NeteaseCloudMusicApi 安装目录，**留空即自动探测**（跨平台通用，推荐）：
+  #   依次尝试 $QSA_NETEASE_HOME、~/.config/QSmartAssistant/lib/NeteaseCloudMusicApi、
+  #   仓库相对 lib/NeteaseCloudMusicApi（含 Plugins/neteasemusic/ 下）、
+  #   数据根相对 lib/NeteaseCloudMusicApi；第一个含 app.js 的目录胜出。
+  # 也可写绝对路径（Linux 如 /opt/... ；Windows 如 D:/...），但只对对应系统有效。
+  homeDir: ""
+  nodeExe: ""                 # node 不在 PATH 时指定其绝对路径（留空自动）
+  port: "34793"               # 本地 API 端口
+  official:                   # 官方开放平台模式（apiMode=official 时用）
+    appId: ""                 # 应用 ID
+    privateKey: ""            # RSA 私钥（PEM）
+    clientSecret: ""          # 客户端密钥
+    baseUrl: ""               # 接口基址
+    deviceId: ""              # 设备 ID
+    clientIp: ""              # 客户端 IP
+    timeoutMs: 5000           # 请求超时
+    qrLogin: false            # 是否用扫码登录
+
+# 和风天气
+Weather:
+  key: xxx                    # API key
+  home: xxx                   # 默认城市/地点
+
+# 腾讯 UNIT 对话
+unit:
+  apiKey: xxx                 # 应用 API key
+  secret: xxx                 # 应用密钥
+  unitId: xxx                 # 机器人 ID
+  confThresh: 50              # 置信度阈值
+
+# -----------------------------------------------------------------------------
+# 音频前处理 / 网络服务
+# -----------------------------------------------------------------------------
+
+# WebRTC 音频前处理（AEC/NS/AGC）
+webrtc:
+  aec: true                   # 回声消除
+  deviceName: alsa_output.pci-0000_00_1f.3.analog-stereo.monitor # 参考音源设备
+  ns: true                    # 噪声抑制
+  agc: true                   # 自动增益
+  delay: 200                  # 参考延迟 ms
+  ns_level: 1                 # 降噪等级 0~3
+  agc_level: 1                # 增益等级 0~3
+
+# 内置 HTTP/WebSocket 服务（供 App/插件调用）
+server:
+  port: 20214                 # 监听端口
+
+# MQTT（与外部系统对接）
+mqtt:
+  topic: QSmartAssistant/     # 主题前缀
+  host: 127.0.0.1             # broker 地址
+  port: 1883                  # broker 端口
+  user: abc                   # 用户名
+  password: "123"             # 密码

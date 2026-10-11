@@ -1,0 +1,17 @@
+{
+  "aut": 0.068612820512820,
+  "fpph": 4.615384615384615,
+  "recall": 0.581000000000000,
+  "accuracy": 0.789217948717949,
+  "threshold": 0.500000000000000,
+  "optimal_threshold": 0.170000000000000,
+  "optimal_recall": 0.818333333333333,
+  "optimal_fpph": 128.653846153846160,
+  "optimal_accuracy": 0.873429487179487,
+  "n_positive": 3000,
+  "n_negative": 3120,
+  "validation_hours": 1.7333,
+  "confusion_at_0.5": {"tp": 1743, "fn": 1257, "fp": 8, "tn": 3112},
+  "wall_ms": 59357,
+  "mode": "audio"
+}

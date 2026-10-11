@@ -1,0 +1,148 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-msvc",
+      "displayName": "Windows MSVC x64 (Visual Studio 2022)",
+      "description": "使用官方 Qt6 (>= 6.8.4, msvc2022_64) + Visual Studio 2022。请先设置环境变量 QT_ROOT 指向 Qt 的 msvc2022_64 目录。",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "WAKEUP_LIVEKIT": "ON",
+        "WAKEUP_SHERPA": "OFF",
+        "WAKEUP_DUILITE": "OFF",
+        "VAD_SILERO": "ON",
+        "VAD_DUILITE": "OFF",
+        "ASR_SHERPA": "ON",
+        "TTS_SHERPA": "ON",
+        "NLU_ONNX": "ON",
+        "NLU_RASA": "OFF",
+        "NLU_BAIDU": "OFF",
+        "USE_OPENSSL": "OFF"
+      }
+    },
+    {
+      "name": "windows-msvc-ninja",
+      "displayName": "Windows MSVC x64 (Ninja, 单配置)",
+      "description": "需要在 VS 开发者命令行中运行；要求 Qt 6.8.4+ (msvc2022_64)。",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "WAKEUP_LIVEKIT": "ON",
+        "WAKEUP_SHERPA": "OFF",
+        "WAKEUP_DUILITE": "OFF",
+        "VAD_SILERO": "ON",
+        "VAD_DUILITE": "OFF",
+        "ASR_SHERPA": "ON",
+        "TTS_SHERPA": "ON",
+        "NLU_ONNX": "ON",
+        "NLU_RASA": "OFF",
+        "NLU_BAIDU": "OFF",
+        "USE_OPENSSL": "OFF"
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "displayName": "Linux x86_64 GCC (Ubuntu 22.04, Ninja)",
+      "description": "最终部署目标之一。跨平台模块组合：livekit-wakeword 唤醒 + silero VAD + sherpa ASR/TTS + ONNX NLU（进程内，无需 rasa）。Qt6 路径由 QT_ROOT 环境变量或 CMAKE_PREFIX_PATH 提供。",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-x86_64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "WAKEUP_LIVEKIT": "ON",
+        "WAKEUP_SHERPA": "OFF",
+        "WAKEUP_DUILITE": "OFF",
+        "VAD_SILERO": "ON",
+        "VAD_DUILITE": "OFF",
+        "ASR_SHERPA": "ON",
+        "TTS_SHERPA": "ON",
+        "NLU_ONNX": "ON",
+        "NLU_RASA": "OFF",
+        "NLU_BAIDU": "OFF",
+        "USE_OPENSSL": "OFF"
+      }
+    },
+    {
+      "name": "linux-arm64",
+      "displayName": "Linux aarch64 GCC (Raspberry Pi 4b/5, Ninja)",
+      "description": "树莓派 64 位部署。sherpa-onnx 与 onnxruntime 官方有 aarch64 预编译包，但源码构建 sherpa-onnx 需 30-60 分钟，建议先跑 scripts/build_linux.sh --build-sherpa 预热。",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-arm64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "WAKEUP_LIVEKIT": "ON",
+        "WAKEUP_SHERPA": "OFF",
+        "WAKEUP_DUILITE": "OFF",
+        "VAD_SILERO": "ON",
+        "VAD_DUILITE": "OFF",
+        "ASR_SHERPA": "ON",
+        "TTS_SHERPA": "ON",
+        "NLU_ONNX": "ON",
+        "NLU_RASA": "OFF",
+        "NLU_BAIDU": "OFF",
+        "USE_OPENSSL": "OFF"
+      }
+    },
+    {
+      "name": "linux-makefiles",
+      "displayName": "Linux GCC + Unix Makefiles（无 Ninja 时）",
+      "description": "通用回退：任何有 gcc + make 的 Linux 都能用。注意多配置生成器会往输出目录追加 $CACHE_BUILD_TYPE 子目录，CMakeLists 已处理。",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/linux-make",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "WAKEUP_LIVEKIT": "ON",
+        "WAKEUP_SHERPA": "OFF",
+        "WAKEUP_DUILITE": "OFF",
+        "VAD_SILERO": "ON",
+        "VAD_DUILITE": "OFF",
+        "ASR_SHERPA": "ON",
+        "TTS_SHERPA": "ON",
+        "NLU_ONNX": "ON",
+        "NLU_RASA": "OFF",
+        "NLU_BAIDU": "OFF",
+        "USE_OPENSSL": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msvc-ninja",
+      "configurePreset": "windows-msvc-ninja"
+    },
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc"
+    },
+    {
+      "name": "linux-arm64",
+      "configurePreset": "linux-arm64"
+    },
+    {
+      "name": "linux-makefiles",
+      "configurePreset": "linux-makefiles"
+    }
+  ]
+}

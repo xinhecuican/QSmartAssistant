@@ -14,7 +14,10 @@ pipeline:
 # - name: "MitieNLP"
 #   model: "data/total_word_feature_extractor_zh.dat"
 - name: components.jieba_tokenizer.JiebaTokenizer
-  dicionary_path: "data/jieba_userdict"
+  # ★ 原来写的是 "dicionary_path"（拼错），而组件读的是 config["dictionary_path"]，
+  #   于是自定义词典**从来没有被加载过**；模型包里也因此没有 train_JiebaTokenizer 资源
+  #   （`Agent.load` 时 read_from 抛 ValueError 被 except 吞掉，静默降级）。
+  dictionary_path: "data/jieba_userdict"
 # - name: "MitieFeaturizer" 
 - name: "LexicalSyntacticFeaturizer"
 - name: "CountVectorsFeaturizer"
@@ -29,6 +32,13 @@ pipeline:
   from_pt: True
 - name: "RegexFeaturizer"
 - name: "DIETClassifier"
+  # ★ 必须显式钉住随机种子。rasa 3.6.19 的 DIET 在 random_seed 为 None 时
+  #   用的是 `int(time.time())`（见 rasa/utils/tensorflow/models.py），而且
+  #   `rasa train nlu` **没有** --random-seed 参数 —— 也就是说不写这一行，
+  #   每次训练出来的模型都不一样。实测同一份语料同一份 config，
+  #   65 条留出集上 exact 会差 3 条（±4.6 pt），意图能差 0–3 条。
+  #   钉住之后重训逐条一致，A/B 才可比。
+  random_seed: 42
   epochs: 300
   num_transformer_layers: 0
   embedding_dimension: 30
@@ -39,6 +49,9 @@ pipeline:
 # 会删除前面数字和时间的识别结果
 - name: components.custom_number_extractor.CustomNumberExtractor
 - name: components.custom_time_extractor.CustomTimeExtractor
+# ★ 必须在所有实体抽取器之后：把 trend 的表面说法（「太小了」）
+#   归一化成 DSL 要求的**动作方向**（t=大）。规则见组件 docstring。
+- name: components.custom_trend_normalizer.CustomTrendNormalizer
 # - name: "CRFEntityExtractor"
 # - name: "RegexEntityExtractor"
 #   case_sensitive: False

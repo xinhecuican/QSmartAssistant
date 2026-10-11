@@ -1,5 +1,6 @@
 #include "sherpawakeup.h"
 #include "../../Utils/config.h"
+#include <QDebug>
 
 SherpaWakeup::SherpaWakeup(QObject* parent) : WakeupModel(parent){
     QJsonObject config = Config::instance()->getConfig("sherpa_wakeup");
@@ -34,8 +35,22 @@ SherpaWakeup::SherpaWakeup(QObject* parent) : WakeupModel(parent){
     onlineConfig.keywords_score = score;
     onlineConfig.keywords_file = hotwords.c_str();
 
+    // 模型/关键字文件缺失时 sherpa 返回空句柄。这里显式判空，避免后续
+    // detect() 解引用空指针直接段错误；valid 仅在创建成功时才置 true，
+    // 供析构函数正确释放资源(基类默认 valid=false)。
     spotter = SherpaOnnxCreateKeywordSpotter(&onlineConfig);
-    stream = SherpaOnnxCreateKeywordStream(spotter);
+    if (spotter == nullptr) {
+        qCritical() << "[SherpaWakeup] 关键词唤醒模型创建失败，请检查 sherpa_wakeup 配置，"
+                       "以及 Data/sherpa-kws 下的模型与 keywords 文件:"
+                    << model;
+    } else {
+        stream = SherpaOnnxCreateKeywordStream(spotter);
+        if (stream == nullptr) {
+            qCritical() << "[SherpaWakeup] 关键词识别流创建失败";
+        } else {
+            valid = true;
+        }
+    }
 }
 
 SherpaWakeup::~SherpaWakeup(){
@@ -43,6 +58,9 @@ SherpaWakeup::~SherpaWakeup(){
 }
 
 void SherpaWakeup::detect(const QByteArray& data){
+    if (spotter == nullptr || stream == nullptr) {
+        return;
+    }
     char* rawData = const_cast<char*>(data.data());
     const int16_t* intData = reinterpret_cast<int16_t*>(rawData);
     int dataLength = data.length() / 2;
@@ -60,17 +78,23 @@ void SherpaWakeup::detect(const QByteArray& data){
     }
     const SherpaOnnxKeywordResult* r =
         SherpaOnnxGetKeywordResult(spotter, stream);
-    if(strlen(r->keyword)){
-        emit detected(false);
+    if (r != nullptr) {
+        if(strlen(r->keyword)){
+            emit detected(false);
+        }
+        SherpaOnnxDestroyKeywordResult(r);
     }
-    SherpaOnnxDestroyKeywordResult(r);
 }
 
 void SherpaWakeup::stop(){
-    if(valid){
+    valid = false;
+    if (stream != nullptr) {
         SherpaOnnxDestroyOnlineStream(stream);
+        stream = nullptr;
+    }
+    if (spotter != nullptr) {
         SherpaOnnxDestroyKeywordSpotter(spotter);
-        valid = false;
+        spotter = nullptr;
     }
 }
 

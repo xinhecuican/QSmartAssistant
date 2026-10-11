@@ -2,20 +2,39 @@
 
 set(CMAKE_AUTOMOC ON)
 
+# ---------------------------------------------------------------------------
+# 唤醒 / VAD 引擎选择
+#
+# 默认安装（全平台统一）：livekit-wakeword 唤醒 + silero VAD。
+#   两者都是跨平台、纯 onnxruntime 的纯自研方案，不依赖厂商私有 .so。
+#   duilite / sherpa-kws 默认关闭，需要时显式 -DWAKEUP_DUILITE=ON 等。
+#
+# 历史沿革：Linux 曾默认 duilite（厂商私有 .so），Windows 默认 sherpa-kws。
+#   现已统一，方便「一份配置两处部署」。
+# ---------------------------------------------------------------------------
+set(_wakeup_livekit_default ON)
+set(_wakeup_duilite_default OFF)
+set(_wakeup_sherpa_default OFF)
+set(_vad_duilite_default OFF)
+set(_vad_silero_default ON)
+
 # wakeup
 option(WAKEUP_PORCUPINE "porcupine wakeup" OFF)
 option(WAKEUP_OPEN "open wakeup" OFF)
-option(WAKEUP_DUILITE "duilite wakeup" ON)
-option(WAKEUP_SHERPA "sherpa wakeup" OFF)
+option(WAKEUP_DUILITE "duilite wakeup" ${_wakeup_duilite_default})
+option(WAKEUP_SHERPA "sherpa wakeup" ${_wakeup_sherpa_default})
 option(WAKEUP_SNOWBOY "snowboy wakeup" OFF)
 option(WAKEUP_WEKWS "wekws wakeup" OFF)
 option(WAKEUP_AZURE "azure wakeup" OFF)
+# livekit-wakeword 唤醒词（自训练，如「你好小智」）。默认开启 = 默认唤醒引擎。
+# 与 WAKEUP_SHERPA 同时开启时本引擎优先生效（见 wakeup.cpp 中 #if 顺序）。
+option(WAKEUP_LIVEKIT "livekit-wakeword wakeup" ${_wakeup_livekit_default})
 
 # vad
 option(VAD_COBRA "cobra vad" OFF)
 option(VAD_F "f vad" OFF)
-option(VAD_SILERO "silero vad" OFF)
-option(VAD_DUILITE "duilit vad" ON)
+option(VAD_SILERO "silero vad" ${_vad_silero_default})
+option(VAD_DUILITE "duilit vad" ${_vad_duilite_default})
 option(VAD_SHERPA "sherpa vad" OFF)
 
 # audio process
@@ -93,6 +112,20 @@ if(WAKEUP_AZURE)
     add_custom_lib(azurekws)
 endif()
 
+# ---------------------------------------------------------------------------
+# livekit-wakeword 唤醒（自训练中文唤醒词，纯 onnxruntime 三段式推理）
+#   核心推理 Qt 无关，放在 Livekit/ 下，可被离线评估工具复用。
+# ---------------------------------------------------------------------------
+if(WAKEUP_LIVEKIT)
+    message(STATUS "wakeup livekit")
+    target_compile_definitions(QSmartAssistant PUBLIC -DWAKEUP_LIVEKIT)
+    target_sources(QSmartAssistant PUBLIC
+        Wakeup/livekitwakeup.cpp Wakeup/livekitwakeup.h
+        Livekit/livekitwakeword.cpp Livekit/livekitwakeword.h
+    )
+    add_custom_lib(onnxruntime)
+endif()
+
 if(VAD_COBRA)
     message(STATUS "vad cobra")
     target_compile_definitions(QSmartAssistant  PUBLIC -DVAD_COBRA)
@@ -156,7 +189,11 @@ endif()
 
 if(PROCESS_WEBRTC)
     message(STATUS "process webrtc")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD -DPROCESS_WEBRTC")
+    if(MSVC)
+        add_compile_definitions(WEBRTC_AUDIO_PROCESSING_ONLY_BUILD PROCESS_WEBRTC)
+    else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWEBRTC_AUDIO_PROCESSING_ONLY_BUILD -DPROCESS_WEBRTC")
+    endif()
     target_sources(QSmartAssistant PUBLIC
     Process/webrtcprocessing.cpp Process/webrtcprocessing.h
     )
@@ -165,5 +202,7 @@ endif()
 
 if( WAKEUP_DUILITE OR ASR_DUILITE OR VAD_DUILITE)
     add_custom_lib(duilite)
-    add_custom_file(duilite ${${LIB_NAME}_ROOT_DIR}/lib/libduilite.so)
+    if(NOT WIN32)
+        add_custom_file(duilite ${${LIB_NAME}_ROOT_DIR}/lib/libduilite.so)
+    endif()
 endif()

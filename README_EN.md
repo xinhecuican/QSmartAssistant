@@ -6,12 +6,27 @@ A modular, fully offline, low-occupancy, high-efficiency dialogue robot/smart sp
 
 - [x] Developed using C++/Qt, most deep learning models use onnxruntime to improve running speed
 - [x] Fully modularized preprocessing, wake-up, voice endpoint detection, ASR, TTS, NLU, making it very simple to develop components. Has a plugin mechanism that allows you to customize your own plugins
-- [x] Supports porcupine, openwakeword, duilite, snowboy wake-up models, and can freely customize wake-up words. Supports cobra, fvad, silero, duilitevad models. Combined with webrtc and speex, it can accurately wake up and reduce false wake-up rate.
+- [x] Supports livekit, porcupine, openwakeword, sherpa, duilite, snowboy wake-up models, and can freely customize wake-up words. Supports cobra, fvad, silero, duilite, sherpa models. Combined with webrtc and speex, it can accurately wake up and reduce false wake-up rate.
 - [x] Supports streaming ASR and TTS
-- [x] Supports rasa, allowing you to collect dialogue corpus to train NLU
+- [x] Supports onnx / rasa / llm NLU backends, allowing you to collect dialogue corpus to train NLU
 - [x] Supports custom plugins, can choose which plugins to load and the loading order
 - [x] Supports MQTT
 - [ ] Supports multi-machine joint control
+
+# Default installation
+
+The default combo is unified across platforms since 2026-10:
+
+```
+livekit-wakeword  wake-up  +  silero VAD  +  sherpa ASR  +  sherpa TTS  +  ONNX NLU
+```
+
+Everything is cross-platform and pure `onnxruntime` — **no Python / TensorFlow /
+PyTorch at runtime**. The NLU backend is a self-trained ONNX model
+(`rbtl3` BertModel + intent head + per-token slot head) that replaces rasa's DIET;
+`rasa` is still compiled and can be re-enabled by setting `nlu.backend` to `"rasa"`.
+Measured on the same 65-sample holdout set: intent 98.46% / slot-exact 93.85% at
+P50 ≈ 1 ms and ~127 MB RSS, vs. rasa's 100% / 92.31% at ≈42 ms and ~1982 MB.
 
 # Processing Flow
 
@@ -30,22 +45,64 @@ Memory requirements: When fully offline, the occupancy is approximately between 
 
 # Quick Start
 
-```
+Supported on x86_64 Ubuntu 22.04 and Raspberry Pi 4B/5 (64-bit). Full details:
+[Linux build & deployment guide](doc/linux.md). The same command works on Windows
+(the script picks `.ps1` automatically).
+
+Getting **livekit wakeup + silero VAD + sherpa ASR + sherpa TTS + ONNX NLU** up and
+running takes four steps:
+
+```bash
 git clone https://github.com/xinhecuican/QSmartAssistant
 cd QSmartAssistant
-cp Data/default_config.json Data/config.json
-cp Data/plugin_order_default.txt Data/plugin_order.txt
 
-cd scripts
-./install_snowboy.sh
-./install_openssl.sh
-./install_sherpa_onnx.sh
-./install_onnxruntime.sh
-./install_rasa.sh
-./install_neteasejs.sh
-cd ..
-cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWAKEUP_DUILITE=OFF -DVAD_DUILITE=OFF -DWAKEUP_SNOWBOY=ON -DVAD_SILERO=ON -DNETEASE_USE_JS=ON -B build/
-# The configuration in config.json needs to be changed as needed
+# 1. install the minimal end-to-end chain (wakeup + VAD + ASR + TTS + NLU)
+python3 scripts/setup.py --profile minimal
+
+# 2. build (auto-detects Qt6 and the architecture)
+bash scripts/build_linux.sh
+
+# 3. dependency self-check (plugins are dlopen'ed, ldd on the exe cannot see them)
+bash scripts/check_runtime_linux.sh
+
+# 4. run (default config is RelWithDebInfo; step 2 prints the exact path)
+./build/RelWithDebInfo/bin/QSmartAssistant
+```
+
+`--profile minimal` is exactly that chain. Where each piece comes from:
+
+| Stage | Model / files | Source |
+| ----- | ------------- | ------ |
+| wakeup | `Data/livekit/{size_small,melspectrogram,embedding_model}.onnx` | **committed to the repo** |
+| VAD | `Data/silero_vad.onnx` | **committed to the repo** |
+| ASR | `sherpa-onnx-paraformer-zh-small` | downloaded by `setup.py` (~74 MB) |
+| NLU | `Data/onnx_nlu/{vocab.txt,rules.json}` + `Data/nlu_schema.json` | **committed to the repo** |
+| NLU | `Data/onnx_nlu/nlu_int8.onnx` (~57 MB int8 weights) | **GitHub Release**, fetched by `setup.py` |
+| TTS | `vits-zh-aishell3` | downloaded by `setup.py` (~140 MB) |
+
+> The **wakeword classification head** (`Data/livekit/size_small.onnx`) is a
+> self-trained model that is not part of the openWakeWord release, so it is
+> **committed to this repo** together with mel/emb — no `--livekit-src` /
+> `--livekit-head` needed after a clone. Use those flags only to install a
+> different self-trained wakeword.
+>
+> The **ONNX NLU int8 weights** (`nlu_int8.onnx`, ~57 MB) are too large for git, so
+> they are published on
+> [Releases](https://github.com/xinhecuican/QSmartAssistant/releases) and fetched by
+> `setup.py` from `.../releases/latest/download/nlu_int8.onnx` (override with
+> `--nlu-url`). To prepare them by hand, drop the file at `Data/onnx_nlu/nlu_int8.onnx`.
+>
+> The config file has been **YAML** since 2026-10 (`Data/config.yaml`; the template
+> `Data/default_config.yaml` carries per-option inline comments). Legacy JSON is
+> still supported: if only `config.json` is present, the program writes out a
+> `config.yaml` on first start and uses it (the old JSON is kept, never deleted,
+> so you can always diff or roll back).
+
+Enable at boot:
+
+```bash
+sudo cp scripts/qsmartassistant.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now qsmartassistant
 ```
 
 # Installation and Configuration

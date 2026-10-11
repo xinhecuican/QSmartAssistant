@@ -8,7 +8,13 @@ macro(_FIND_LIBRARY libname)
         find_library(${LIB_NAME}_${libname}_LIBRARY 
         NAMES ${libname} 
         HINTS ${${LIB_NAME}_ROOT_DIR}/lib)
-        list(APPEND ${LIB_NAME}_LIBRARY ${${LIB_NAME}_${libname}_LIBRARY})
+        # 只有真正找到时才加入链接列表；否则会把 "xxx-NOTFOUND" 追加进去，
+        # 在缺少该库的平台(例如 Windows 上不存在 cargs)导致 CMake 生成失败。
+        if(${LIB_NAME}_${libname}_LIBRARY)
+            list(APPEND ${LIB_NAME}_LIBRARY ${${LIB_NAME}_${libname}_LIBRARY})
+        else()
+            message(STATUS "sherpa_onnx: optional library '${libname}' not found, skipped")
+        endif()
     endif()
 endmacro(_FIND_LIBRARY)
 set(${LIB_NAME}_INCLUDE_DIR ${${LIB_NAME}_INCLUDE_BASE})

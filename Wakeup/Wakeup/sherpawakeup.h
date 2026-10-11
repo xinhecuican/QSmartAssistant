@@ -12,8 +12,9 @@ public:
     void stop() override;
     int getChunkSize() override;
 private:
-    const SherpaOnnxKeywordSpotter* spotter;
-    const SherpaOnnxOnlineStream* stream;
+    // 初始化为 nullptr：创建失败时 detect()/stop() 依赖该状态判空
+    const SherpaOnnxKeywordSpotter* spotter = nullptr;
+    const SherpaOnnxOnlineStream* stream = nullptr;
     int chunkSize;
     float samples[8000];
 };

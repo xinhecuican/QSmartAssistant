@@ -30,6 +30,14 @@ public:
     void playSound(const QString &fileName, bool blockThread, bool currentPlaying);
     void playPrevious();
     void pause();
+    // 「用户主动暂停 / 继续」——必须与 playSound() 为播提示音而做的临时暂停
+    // 区分开：唤醒提示音会把音乐换源、播完再自动恢复，若不单独记录用户的
+    // 意图，用户的暂停会被静默撤销；另外媒体仍在加载时 QMediaPlayer::pause()
+    // 有被丢弃的情况，需要等媒体就绪后再压一次（见 enforceUserPause）。
+    void pauseByUser();
+    void resumeByUser();
+    void clearUserPause() { userPaused = false; }
+    bool isUserPaused() const { return userPaused; }
     void clear();
     QVariant getCurrentMeta() const;
     bool normalEnd();
@@ -90,6 +98,7 @@ private:
         bool isLast() { return list.size() == index; }
     };
     void setMedia(const AudioMedia &media);
+    void enforceUserPause();
 
 private:
     QList<Playlist> audiolist;
@@ -101,6 +110,8 @@ private:
     bool isPlaying;
     bool isPosition = false;
     qint64 position;
+    // 用户主动暂停标记（与 isBlock 表示的「临时压住以便播提示音」区分）
+    bool userPaused = false;
     QEventLoop eventLoop;
 };
 

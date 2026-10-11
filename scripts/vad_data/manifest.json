@@ -1,0 +1,1810 @@
+{
+  "source": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi",
+  "rounds": "clean",
+  "trimmed": true,
+  "note": "speech = 含唤醒词 + 非唤醒词语音(均为语音活动); noise = 纯背景噪声",
+  "speech": [
+    {
+      "file": "wake_0000_clip_000000.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000000.wav",
+      "dur": 0.56,
+      "raw_dur": 1.6,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0001_clip_000010.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000010.wav",
+      "dur": 1.34,
+      "raw_dur": 4.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0002_clip_000020.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000020.wav",
+      "dur": 0.96,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0003_clip_000030.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000030.wav",
+      "dur": 1.06,
+      "raw_dur": 2.24,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0004_clip_000040.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000040.wav",
+      "dur": 1.06,
+      "raw_dur": 2.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0005_clip_000050.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000050.wav",
+      "dur": 0.92,
+      "raw_dur": 6.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0006_clip_000061.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000061.wav",
+      "dur": 0.68,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0007_clip_000071.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000071.wav",
+      "dur": 1.5,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0008_clip_000081.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000081.wav",
+      "dur": 0.48,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0009_clip_000091.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000091.wav",
+      "dur": 1.02,
+      "raw_dur": 2.4,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0010_clip_000101.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000101.wav",
+      "dur": 0.9,
+      "raw_dur": 1.6,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0011_clip_000111.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000111.wav",
+      "dur": 1.22,
+      "raw_dur": 2.24,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0012_clip_000121.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000121.wav",
+      "dur": 0.72,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0013_clip_000131.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000131.wav",
+      "dur": 1.2,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0014_clip_000141.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000141.wav",
+      "dur": 0.7,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0015_clip_000151.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000151.wav",
+      "dur": 0.82,
+      "raw_dur": 2.56,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0016_clip_000161.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000161.wav",
+      "dur": 0.78,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0017_clip_000172.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000172.wav",
+      "dur": 0.76,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0018_clip_000182.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000182.wav",
+      "dur": 0.46,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0019_clip_000192.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000192.wav",
+      "dur": 1.14,
+      "raw_dur": 4.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0020_clip_000202.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000202.wav",
+      "dur": 0.94,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0021_clip_000212.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000212.wav",
+      "dur": 0.9,
+      "raw_dur": 2.24,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0022_clip_000222.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000222.wav",
+      "dur": 0.86,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0023_clip_000232.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000232.wav",
+      "dur": 0.92,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0024_clip_000242.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000242.wav",
+      "dur": 0.54,
+      "raw_dur": 1.6,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0025_clip_000252.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000252.wav",
+      "dur": 1.4,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0026_clip_000262.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000262.wav",
+      "dur": 0.92,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0027_clip_000272.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000272.wav",
+      "dur": 1.3,
+      "raw_dur": 2.24,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0028_clip_000283.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000283.wav",
+      "dur": 0.8,
+      "raw_dur": 3.2,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0029_clip_000293.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000293.wav",
+      "dur": 0.82,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0030_clip_000303.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000303.wav",
+      "dur": 0.98,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0031_clip_000313.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000313.wav",
+      "dur": 2.72,
+      "raw_dur": 3.2,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0032_clip_000323.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000323.wav",
+      "dur": 0.8,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0033_clip_000333.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000333.wav",
+      "dur": 0.8,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0034_clip_000343.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000343.wav",
+      "dur": 0.92,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0035_clip_000353.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000353.wav",
+      "dur": 0.78,
+      "raw_dur": 2.4,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0036_clip_000363.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000363.wav",
+      "dur": 1.06,
+      "raw_dur": 13.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0037_clip_000373.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000373.wav",
+      "dur": 1.36,
+      "raw_dur": 3.04,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0038_clip_000383.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000383.wav",
+      "dur": 0.64,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0039_clip_000394.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000394.wav",
+      "dur": 0.66,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0040_clip_000404.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000404.wav",
+      "dur": 0.86,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0041_clip_000414.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000414.wav",
+      "dur": 0.96,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0042_clip_000424.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000424.wav",
+      "dur": 0.76,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0043_clip_000434.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000434.wav",
+      "dur": 1.54,
+      "raw_dur": 3.04,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0044_clip_000444.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000444.wav",
+      "dur": 0.86,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0045_clip_000454.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000454.wav",
+      "dur": 1.0,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0046_clip_000464.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000464.wav",
+      "dur": 1.76,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0047_clip_000474.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000474.wav",
+      "dur": 0.6,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0048_clip_000484.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000484.wav",
+      "dur": 0.82,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0049_clip_000494.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000494.wav",
+      "dur": 0.84,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0050_clip_000505.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000505.wav",
+      "dur": 0.88,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0051_clip_000515.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000515.wav",
+      "dur": 1.08,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0052_clip_000525.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000525.wav",
+      "dur": 1.04,
+      "raw_dur": 2.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0053_clip_000535.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000535.wav",
+      "dur": 0.58,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0054_clip_000545.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000545.wav",
+      "dur": 0.6,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0055_clip_000555.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000555.wav",
+      "dur": 1.08,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0056_clip_000565.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000565.wav",
+      "dur": 0.96,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0057_clip_000575.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000575.wav",
+      "dur": 0.76,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0058_clip_000585.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000585.wav",
+      "dur": 1.3,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0059_clip_000595.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000595.wav",
+      "dur": 1.4,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0060_clip_000605.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000605.wav",
+      "dur": 0.52,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0061_clip_000616.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000616.wav",
+      "dur": 0.94,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0062_clip_000626.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000626.wav",
+      "dur": 0.6,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0063_clip_000636.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000636.wav",
+      "dur": 0.9,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0064_clip_000646.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000646.wav",
+      "dur": 1.2,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0065_clip_000656.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000656.wav",
+      "dur": 0.84,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0066_clip_000666.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000666.wav",
+      "dur": 0.72,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0067_clip_000676.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000676.wav",
+      "dur": 1.32,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0068_clip_000686.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000686.wav",
+      "dur": 0.92,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0069_clip_000696.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000696.wav",
+      "dur": 0.96,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0070_clip_000706.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000706.wav",
+      "dur": 0.9,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0071_clip_000716.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000716.wav",
+      "dur": 0.82,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0072_clip_000727.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000727.wav",
+      "dur": 0.64,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0073_clip_000737.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000737.wav",
+      "dur": 0.7,
+      "raw_dur": 1.6,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0074_clip_000747.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000747.wav",
+      "dur": 1.48,
+      "raw_dur": 2.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0075_clip_000757.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000757.wav",
+      "dur": 0.86,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0076_clip_000767.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000767.wav",
+      "dur": 0.74,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0077_clip_000777.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000777.wav",
+      "dur": 1.28,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0078_clip_000787.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000787.wav",
+      "dur": 1.4,
+      "raw_dur": 2.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0079_clip_000797.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000797.wav",
+      "dur": 0.68,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0080_clip_000807.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000807.wav",
+      "dur": 0.86,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0081_clip_000817.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000817.wav",
+      "dur": 0.86,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0082_clip_000827.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000827.wav",
+      "dur": 1.28,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0083_clip_000838.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000838.wav",
+      "dur": 0.52,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0084_clip_000848.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000848.wav",
+      "dur": 0.66,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0085_clip_000858.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000858.wav",
+      "dur": 1.24,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0086_clip_000868.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000868.wav",
+      "dur": 1.02,
+      "raw_dur": 2.56,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0087_clip_000878.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000878.wav",
+      "dur": 0.58,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0088_clip_000888.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000888.wav",
+      "dur": 0.84,
+      "raw_dur": 2.72,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0089_clip_000898.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000898.wav",
+      "dur": 0.62,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0090_clip_000908.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000908.wav",
+      "dur": 1.28,
+      "raw_dur": 2.72,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0091_clip_000918.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000918.wav",
+      "dur": 1.14,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0092_clip_000928.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000928.wav",
+      "dur": 1.7,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0093_clip_000938.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000938.wav",
+      "dur": 0.6,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0094_clip_000949.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000949.wav",
+      "dur": 0.84,
+      "raw_dur": 2.88,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0095_clip_000959.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000959.wav",
+      "dur": 0.84,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0096_clip_000969.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000969.wav",
+      "dur": 0.96,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0097_clip_000979.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000979.wav",
+      "dur": 0.9,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0098_clip_000989.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000989.wav",
+      "dur": 1.22,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "wake_0099_clip_000999.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\positive_test\\clip_000999.wav",
+      "dur": 1.22,
+      "raw_dur": 2.72,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0000_clip_000000.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000000.wav",
+      "dur": 1.08,
+      "raw_dur": 2.4,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0001_clip_000017.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000017.wav",
+      "dur": 0.64,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0002_clip_000034.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000034.wav",
+      "dur": 0.66,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0003_clip_000051.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000051.wav",
+      "dur": 1.14,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0004_clip_000068.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000068.wav",
+      "dur": 0.8,
+      "raw_dur": 2.88,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0005_clip_000085.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000085.wav",
+      "dur": 0.52,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0006_clip_000102.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000102.wav",
+      "dur": 13.74,
+      "raw_dur": 13.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0007_clip_000119.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000119.wav",
+      "dur": 0.96,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0008_clip_000135.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000135.wav",
+      "dur": 1.24,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0009_clip_000152.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000152.wav",
+      "dur": 1.12,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0010_clip_000169.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000169.wav",
+      "dur": 1.48,
+      "raw_dur": 2.56,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0011_clip_000186.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000186.wav",
+      "dur": 0.96,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0012_clip_000203.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000203.wav",
+      "dur": 0.52,
+      "raw_dur": 0.64,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0013_clip_000220.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000220.wav",
+      "dur": 1.1,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0014_clip_000237.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000237.wav",
+      "dur": 0.74,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0015_clip_000254.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000254.wav",
+      "dur": 1.04,
+      "raw_dur": 3.68,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0016_clip_000271.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000271.wav",
+      "dur": 0.52,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0017_clip_000288.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000288.wav",
+      "dur": 1.7,
+      "raw_dur": 2.56,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0018_clip_000305.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000305.wav",
+      "dur": 0.54,
+      "raw_dur": 0.64,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0019_clip_000322.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000322.wav",
+      "dur": 1.12,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0020_clip_000339.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000339.wav",
+      "dur": 0.88,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0021_clip_000356.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000356.wav",
+      "dur": 0.7,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0022_clip_000373.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000373.wav",
+      "dur": 0.9,
+      "raw_dur": 6.56,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0023_clip_000389.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000389.wav",
+      "dur": 1.6,
+      "raw_dur": 3.52,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0024_clip_000406.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000406.wav",
+      "dur": 0.66,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0025_clip_000423.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000423.wav",
+      "dur": 0.64,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0026_clip_000440.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000440.wav",
+      "dur": 0.54,
+      "raw_dur": 3.04,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0027_clip_000457.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000457.wav",
+      "dur": 0.74,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0028_clip_000474.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000474.wav",
+      "dur": 0.76,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0029_clip_000491.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000491.wav",
+      "dur": 0.82,
+      "raw_dur": 2.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0030_clip_000508.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000508.wav",
+      "dur": 0.96,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0031_clip_000525.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000525.wav",
+      "dur": 1.36,
+      "raw_dur": 3.84,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0032_clip_000542.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000542.wav",
+      "dur": 0.58,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0033_clip_000559.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000559.wav",
+      "dur": 0.68,
+      "raw_dur": 1.44,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0034_clip_000576.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000576.wav",
+      "dur": 0.84,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0035_clip_000593.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000593.wav",
+      "dur": 0.9,
+      "raw_dur": 2.24,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0036_clip_000610.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000610.wav",
+      "dur": 1.52,
+      "raw_dur": 3.2,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0037_clip_000626.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000626.wav",
+      "dur": 0.46,
+      "raw_dur": 0.64,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0038_clip_000643.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000643.wav",
+      "dur": 0.62,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0039_clip_000660.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000660.wav",
+      "dur": 1.0,
+      "raw_dur": 5.6,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0040_clip_000677.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000677.wav",
+      "dur": 1.2,
+      "raw_dur": 1.6,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0041_clip_000694.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000694.wav",
+      "dur": 0.72,
+      "raw_dur": 3.36,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0042_clip_000711.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000711.wav",
+      "dur": 0.98,
+      "raw_dur": 1.28,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0043_clip_000728.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000728.wav",
+      "dur": 1.72,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0044_clip_000745.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000745.wav",
+      "dur": 0.6,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0045_clip_000762.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000762.wav",
+      "dur": 0.6,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0046_clip_000779.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000779.wav",
+      "dur": 0.96,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0047_clip_000796.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000796.wav",
+      "dur": 0.8,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0048_clip_000813.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000813.wav",
+      "dur": 0.7,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0049_clip_000830.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000830.wav",
+      "dur": 0.88,
+      "raw_dur": 1.92,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0050_clip_000847.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000847.wav",
+      "dur": 1.6,
+      "raw_dur": 1.76,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0051_clip_000864.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000864.wav",
+      "dur": 0.78,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0052_clip_000880.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000880.wav",
+      "dur": 0.94,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0053_clip_000897.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000897.wav",
+      "dur": 0.78,
+      "raw_dur": 0.8,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0054_clip_000914.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000914.wav",
+      "dur": 0.76,
+      "raw_dur": 2.08,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0055_clip_000931.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000931.wav",
+      "dur": 0.72,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0056_clip_000948.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000948.wav",
+      "dur": 0.78,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0057_clip_000965.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000965.wav",
+      "dur": 0.92,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0058_clip_000982.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000982.wav",
+      "dur": 0.74,
+      "raw_dur": 0.96,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "nonwake_0059_clip_000999.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\negative_test\\clip_000999.wav",
+      "dur": 0.84,
+      "raw_dur": 1.12,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    }
+  ],
+  "noise": [
+    {
+      "file": "bg_0000_clip_000000.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000000.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0001_clip_000001.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000001.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0002_clip_000002.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000002.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0003_clip_000003.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000003.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0004_clip_000004.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000004.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0005_clip_000005.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000005.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0006_clip_000006.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000006.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0007_clip_000007.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000007.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0008_clip_000008.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000008.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0009_clip_000009.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000009.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0010_clip_000010.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000010.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0011_clip_000011.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000011.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0012_clip_000012.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000012.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0013_clip_000013.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000013.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0014_clip_000014.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000014.wav",
+      "dur": 1.9,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0015_clip_000015.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000015.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0016_clip_000016.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000016.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0017_clip_000017.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000017.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0018_clip_000018.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000018.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0019_clip_000019.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000019.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0020_clip_000020.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000020.wav",
+      "dur": 0.82,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0021_clip_000021.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000021.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0022_clip_000022.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000022.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0023_clip_000023.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000023.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0024_clip_000024.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000024.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0025_clip_000025.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000025.wav",
+      "dur": 0.52,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0026_clip_000026.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000026.wav",
+      "dur": 1.78,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0027_clip_000027.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000027.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0028_clip_000028.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000028.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0029_clip_000029.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000029.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0030_clip_000030.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000030.wav",
+      "dur": 1.18,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0031_clip_000031.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000031.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0032_clip_000032.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000032.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0033_clip_000033.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000033.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0034_clip_000034.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000034.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0035_clip_000035.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000035.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0036_clip_000036.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000036.wav",
+      "dur": 0.76,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0037_clip_000037.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000037.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0038_clip_000038.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000038.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    },
+    {
+      "file": "bg_0039_clip_000039.wav",
+      "src": "C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b/output/nihao_xiaozhi\\background_test\\clip_000039.wav",
+      "dur": 2.0,
+      "raw_dur": 2.0,
+      "sr": 16000,
+      "ch": 1,
+      "trimmed": true
+    }
+  ]
+}

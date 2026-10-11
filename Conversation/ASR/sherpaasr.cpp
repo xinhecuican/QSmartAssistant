@@ -1,5 +1,6 @@
 #include "sherpaasr.h"
 #include "../../Utils/config.h"
+#include <QDebug>
 
 SherpaASR::SherpaASR(QObject *parent) : ASRModel(parent) {
 
@@ -69,13 +70,30 @@ SherpaASR::SherpaASR(QObject *parent) : ASRModel(parent) {
             onlineConfig.model_config.paraformer.encoder = modelS2.c_str();
         }
     }
+    // 模型缺失/配置错误时 sherpa 会返回空句柄，这里必须显式判空并置 valid=false，
+    // 否则后续 detect() 会解引用空指针导致进程崩溃。
     if (_isStream) {
         onlineRecognizer = SherpaOnnxCreateOnlineRecognizer(
             const_cast<SherpaOnnxOnlineRecognizerConfig *>(&onlineConfig));
-        onlineStream = SherpaOnnxCreateOnlineStream(onlineRecognizer);
+        if (onlineRecognizer != nullptr) {
+            onlineStream = SherpaOnnxCreateOnlineStream(onlineRecognizer);
+        }
+        if (onlineRecognizer == nullptr || onlineStream == nullptr) {
+            valid = false;
+            qCritical() << "[SherpaASR] 在线识别模型创建失败，请检查 sherpa 配置与模型文件:"
+                        << model;
+        }
     } else {
-        recognizer = SherpaOnnxCreateOfflineRecognizer(const_cast<SherpaOnnxOfflineRecognizerConfig *>(&config));
-        stream = SherpaOnnxCreateOfflineStream(recognizer);
+        recognizer = SherpaOnnxCreateOfflineRecognizer(
+            const_cast<SherpaOnnxOfflineRecognizerConfig *>(&config));
+        if (recognizer != nullptr) {
+            stream = SherpaOnnxCreateOfflineStream(recognizer);
+        }
+        if (recognizer == nullptr || stream == nullptr) {
+            valid = false;
+            qCritical() << "[SherpaASR] 离线识别模型创建失败，请检查 sherpa 配置与模型文件:"
+                        << model;
+        }
     }
 }
 
@@ -84,6 +102,13 @@ SherpaASR::~SherpaASR() { stop(); }
 bool SherpaASR::isStream() { return _isStream; }
 
 void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
+    if (_isStream) {
+        if (onlineRecognizer == nullptr || onlineStream == nullptr)
+            return;
+    } else {
+        if (recognizer == nullptr || stream == nullptr)
+            return;
+    }
     char *rawData = const_cast<char *>(data.data());
     const int16_t *intData = reinterpret_cast<int16_t *>(rawData);
     int dataLength = data.length() / 2;
@@ -102,11 +127,12 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
         SherpaOnnxDestroyOfflineStream(stream);
         stream = SherpaOnnxCreateOfflineStream(recognizer);
         QString result = "";
-        if (strlen(r->text)) {
+        if (r != nullptr && strlen(r->text)) {
             result = r->text;
         }
         emit recognized(result, id);
-        SherpaOnnxDestroyOfflineRecognizerResult(r);
+        if (r != nullptr)
+            SherpaOnnxDestroyOfflineRecognizerResult(r);
     } else {
         int currentPos = 0;
         while (currentPos < dataLength) {
@@ -131,7 +157,7 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
             SherpaOnnxGetOnlineStreamResult(onlineRecognizer, onlineStream);
         QString result = "";
         if (SherpaOnnxOnlineStreamIsEndpoint(onlineRecognizer, onlineStream) || isLast) {
-            if (strlen(r->text)) {
+            if (r != nullptr && strlen(r->text)) {
                 result = r->text;
             }
             SherpaOnnxOnlineStreamReset(onlineRecognizer, onlineStream);
@@ -140,7 +166,8 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
             SherpaOnnxDestroyOnlineStream(onlineStream);
             onlineStream = SherpaOnnxCreateOnlineStream(onlineRecognizer);
         }
-        SherpaOnnxDestroyOnlineRecognizerResult(r);
+        if (r != nullptr)
+            SherpaOnnxDestroyOnlineRecognizerResult(r);
         this->result.append(result);
         if (isLast) {
             emit recognized(this->result, id);
@@ -150,15 +177,27 @@ void SherpaASR::detect(const QByteArray &data, bool isLast, int id) {
 }
 
 void SherpaASR::stop() {
-    if (valid) {
-        if (_isStream) {
-            SherpaOnnxDestroyOnlineRecognizer(onlineRecognizer);
+    valid = false;
+    // 逐句柄判空释放，保证 stop() 可重复调用(析构/退出流程都会调用)且不会
+    // 在创建半途失败时泄漏已创建的资源。
+    if (_isStream) {
+        if (onlineStream != nullptr) {
             SherpaOnnxDestroyOnlineStream(onlineStream);
-        } else {
-            SherpaOnnxDestroyOfflineRecognizer(recognizer);
-            SherpaOnnxDestroyOfflineStream(stream);
+            onlineStream = nullptr;
         }
-        valid = false;
+        if (onlineRecognizer != nullptr) {
+            SherpaOnnxDestroyOnlineRecognizer(onlineRecognizer);
+            onlineRecognizer = nullptr;
+        }
+    } else {
+        if (stream != nullptr) {
+            SherpaOnnxDestroyOfflineStream(stream);
+            stream = nullptr;
+        }
+        if (recognizer != nullptr) {
+            SherpaOnnxDestroyOfflineRecognizer(recognizer);
+            recognizer = nullptr;
+        }
     }
 }
 

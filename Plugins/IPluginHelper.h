@@ -4,12 +4,13 @@
 #include "../Utils/LPcommonGlobal.h"
 #include "../Utils/ParsedIntent.h"
 #include "../Utils/config.h"
+#include "../Utils/LLM/LLMManager.h"
 #include <QString>
-#include "../Utils/LLMManager.h"
 
 class LPCOMMON_EXPORT IPluginHelper {
 public:
-    virtual ~IPluginHelper() {}
+    IPluginHelper();
+    virtual ~IPluginHelper();
     virtual void say(const QString &text, int id = 0, bool block = false,
                      const QString &type = "") = 0;
     virtual void

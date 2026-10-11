@@ -18,6 +18,12 @@
 #if defined(NLU_RASA)
 #include "NLU/rasanlu.h"
 #endif
+#if defined(NLU_LLM)
+#include "NLU/llmnlu.h"
+#endif
+#if defined(NLU_ONNX)
+#include "NLU/onnxnlu.h"
+#endif
 #if defined(TTS_SHERPA)
 #include "TTS/sherpatts.h"
 #endif
@@ -42,8 +48,71 @@ Conversation::Conversation(Player *player, QObject *parent)
 #if defined(NLU_BAIDU)
     nlu = new BaiduNLU(this);
 #endif
+    // ---- NLU 后端选择 ----
+    // 顺序很重要：**先构造不需要外部进程的后端（onnx / llm），最后才兜底 rasa**。
+    //
+    // 为什么不能像以前那样「先 new RasaNLU 再替换」：RasaNLU 的构造函数会
+    // 立刻发一个异步 HTTP 探测（`/status`），失败就 `startRasa()` 拉起
+    // 一个 Python + TensorFlow + PyTorch 的服务进程（实测 RSS ≈ 1.98 GB /
+    // commit ≈ 3.03 GB）。以前靠「紧接着 delete 掉它」侥幸避开了这个副作用
+    // ——但那是**事件循环先后顺序**决定的：只要网络回复比这次的 delete 先到，
+    // 服务进程就已经被拉起来了。改成「需要哪个才构造哪个」之后，
+    // nlu.backend=onnx 的启动路径上根本不存在 RasaNLU 对象。
+#if defined(NLU_RASA) || defined(NLU_LLM) || defined(NLU_ONNX)
+    bool nluReady = false;   // 非兜底后端是否已成功建立
+#endif
+#if defined(NLU_LLM) || defined(NLU_ONNX)
+    const QString nluBackend =
+        Config::instance()->getConfig("nlu").value("backend").toString("rasa");
+#endif
+#if defined(NLU_ONNX)
+    // ONNX NLU：进程内 onnxruntime 跑自训练的 rbtl3 双头模型，**不需要
+    // Python / TensorFlow / PyTorch / HTTP 服务 / 端口**。
+    // 权重 / 词表 / 规则表 / schema 任一路径不对就回落，不阻塞启动。
+    if (!nluReady && nluBackend == "onnx") {
+        auto *onnxNlu = new ONNXNLU(this);
+        const QJsonObject oc = Config::instance()->getConfig("onnx_nlu");
+        ONNXNLU::Settings s;
+        s.model = Config::getDataPath(
+            oc.value("model").toString("onnx_nlu/nlu_int8.onnx"));
+        s.vocab = Config::getDataPath(
+            oc.value("vocab").toString("onnx_nlu/vocab.txt"));
+        s.rules = Config::getDataPath(
+            oc.value("rules").toString("onnx_nlu/rules.json"));
+        s.schema = Config::getDataPath(
+            oc.value("schema").toString("nlu_schema.json"));
+        s.conf = static_cast<float>(oc.value("conf").toDouble(0.5));
+        s.maxLen = oc.value("max_len").toInt(64);
+        s.threads = oc.value("threads").toInt(0);
+        if (onnxNlu->load(s)) {
+            delete nlu;
+            nlu = onnxNlu;
+            nluReady = true;
+            qInfo() << "[nlu-onnx] ready |" << s.model;
+        } else {
+            delete onnxNlu;
+            qWarning() << "[nlu-onnx] load failed, fallback to rasa";
+        }
+    }
+#endif
+#if defined(NLU_LLM)
+    if (!nluReady && nluBackend == "llm") {
+        auto *llmNlu = new LLMNLU(this);
+        if (llmNlu->isValid()) {
+            delete nlu;
+            nlu = llmNlu;
+            nluReady = true;
+        } else {
+            delete llmNlu;
+            qWarning() << "llm nlu unavailable, fallback to rasa";
+        }
+    }
+#endif
 #if defined(NLU_RASA)
-    nlu = new RasaNLU(this);
+    // 兜底：只要前面没建立成功，就用 rasa（会拉起外部服务进程）。
+    if (!nluReady) {
+        nlu = new RasaNLU(this);
+    }
 #endif
 #if defined(TTS_SHERPA)
     tts = new SherpaTTS();

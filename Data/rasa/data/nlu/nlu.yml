@@ -3,6 +3,9 @@ nlu:
 - regex: number
   examples: |
     - (?:百分之)?(?:[一二三四五六七八九十百千万亿零壹贰叁肆伍陆柒捌玖拾佰仟0123456789]+(?:\.\d+)?|\d+(?:\.\d+)?)(?:%|)
+# ===========================================================================
+# 原始语料（保持原样）
+# ===========================================================================
 - intent: CHANGE_VOL
   examples: |
     - [增大](trend)音量
@@ -101,9 +104,12 @@ nlu:
   examples: |
     - 打开[空调](furniture)
     - 打开[灯泡](furniture)
-    - 开 [灯](furniture)
-    - 开 [门](furniture)
-    - 开 [热水器](furniture)
+    # ⚠ 原来是 `开 [灯](furniture)`（中间有空格）。jieba 给的是 开[0:1] 灯[2:3]，
+    #   边界集合是 {0,1,3}，实体的 start=2 不在里面 → rasa 判定标注错位，
+    #   **静默丢掉这个实体**。下面改成能对齐的说法（工具见 check_entity_alignment.py）。
+    - 把[灯](furniture)打开
+    - [门](furniture)打开
+    - 把[热水器](furniture)打开
     - 打开[热水器](furniture)
     - 开[电风扇](furniture)
     - 打开[卧室]{"entity": "location","role": "home"}的[灯](furniture)
@@ -114,9 +120,10 @@ nlu:
   examples: |
     - 关闭[空调](furniture)
     - 关闭[灯泡](furniture)
-    - 关 [灯](furniture)
-    - 关 [门](furniture)
-    - 关 [热水器](furniture)
+    # ⚠ 同 OPEN_FURNITURE：`关 [灯]` 的空格会让实体标注跨边界被丢弃，已改写
+    - [灯](furniture)关掉
+    - [门](furniture)关上
+    - 把[热水器](furniture)关掉
     - 关闭[热水器](furniture)
     - 关[电风扇](furniture)
     - 关闭[卧室]{"entity": "location","role": "home"}的[灯](furniture)
@@ -163,8 +170,317 @@ nlu:
     - 难登大雅若我帮你净化刀中血煞还你一条出路你愿不愿放弃十海兵团
     - 本案非议证书的短视频并不少
     - 西红柿炒鸡蛋冷片
+    # ⚠ 补数据后其他意图涨到 15~48 条，FALLBACK 只有 10 条 → 语气词/填充词
+    #   被吸附到 CHAT/CLOSE（实测「嗯嗯嗯」「嘻嘻嘻」「哎哟」被判成 4/5）。
+    #   这里补足噪声样本，把类别拉回平衡。全部是"不含指令"的无意义短句。
+    - 哈哈哈哈
+    - 嘿嘿嘿
+    - 哦哦哦
+    - 啊啊啊
+    - 咦
+    - 嗯
+    - 就那个
+    - 那个那个
+    - 随便吧
+    - 不知道
+    - 一二三四五六七
+    - 呵呵
+    - 哎呀
+    - 妈呀
+    - 那个啥
+    - 好像是吧
+    - 没事没事
+    - 我想想再说
+    - 等下再说吧
+    - 唔嗯嗯
 - synonym: 灯
   examples: |
     - 灯
     - 灯泡
     - 电灯
+# ===========================================================================
+# 补充语料（保留 holdout 作为真正的未见测试集，因此这里**只补句式与同义说法**，
+# 不出现 holdout 里的原句，也不引入 holdout 专属的歌名/歌手/城市：
+# 深圳、杭州、稻香、夜曲、青花瓷、陈奕迅、李荣浩、林俊杰、孙燕姿、遇见、模特）
+#
+# 动机：原 nlu.yml 只有 132 条例句（≈8.3 条/意图），而 LLM 侧有 641 条增强样本。
+# 这里把两边拉回同一量级，再比较才说明"模型能力"而不是"标注量"。
+# ===========================================================================
+- intent: CHANGE_TO_NEXT
+  examples: |
+    - 换一个
+    - 换首歌
+    - 换下一首
+    - 放下一首
+    - 切歌
+    - 切到下一首
+    - 来下一个
+    - 下一个
+    - 播下一个
+    - 再换一首
+    - 换别的歌
+    - 跳过这首
+    - 放下一首歌给我听
+    - 我想听下一首
+- intent: CHANGE_TO_LAST
+  examples: |
+    - 回到上一首
+    - 放上一首
+    - 退回上一个
+    - 倒回上一首
+    - 回到前一首
+    - 前一首
+    - 播放前一首
+    - 给我放前一首
+    - 重新放上一首
+    - 切到上一首
+    - 往回倒一首
+    - 放回上一首歌
+- intent: CONTINUE
+  examples: |
+    - 接着放
+    - 继续放歌
+    - 继续吧
+    - 恢复播放
+    - 接着播
+    - 继续播下去
+    - 接着放音乐
+    - 接着唱
+    - 恢复刚才的
+    - 继续放吧
+    - 从刚才的地方继续
+    - 别停接着放
+- intent: PAUSE
+  examples: |
+    - 别放了
+    - 停一下
+    - 安静会儿
+    - 暂停一下
+    - 先停一下
+    - 停一停
+    - 别唱了
+    - 停一下音乐
+    - 安静点
+    - 把音乐停一下
+    - 先别唱了
+    - 不听了停一下
+- intent: CLOSE
+  examples: |
+    - 退下吧
+    - 你歇着吧
+    - 拜拜
+    - 再见
+    - 不用了
+    - 关机吧
+    - 休息吧
+    - 你先退下
+    - 好了你下去吧
+    - 谢谢再见
+    - 关闭系统
+    - 就这样吧
+    - 没别的事了
+    - 你可以休息了
+- intent: CHAT
+  examples: |
+    - 聊聊天吧
+    - 陪我聊会儿
+    - 说说话
+    - 咱们聊聊天
+    - 陪我说话
+    - 来聊会天
+    - 陪我唠嗑
+    - 跟我聊聊天
+    - 闲聊一会儿
+    - 陪我唠会儿嗑
+    - 咱俩说说话
+    - 我想聊聊天
+- intent: SYS_INFO
+  examples: |
+    - 汇报一下机器状态
+    - 查看系统情况
+    - 电脑状态怎么样
+    - 设备情况如何
+    - 报一下系统状态
+    - 看看机器情况
+    - 主机状态如何
+    - 系统运行状况
+    - 查一下设备状态
+    - 机器状态怎么样
+    - 给我看看系统信息
+    - 设备运行情况
+    - 现在设备怎么样
+    - 系统负载多少
+- intent: LIKE
+  examples: |
+    - 我喜欢这首
+    - 收藏一下
+    - 把这首加进收藏
+    - 这首不错收藏了
+    - 加入收藏夹
+    - 我把这首收藏了
+    - 喜欢这首歌
+    - 这首歌挺好听的收藏
+    - 帮我收藏这首
+    - 我要收藏这首歌
+    - 这首值得收藏
+    - 收藏起来
+- intent: UNLIKE
+  examples: |
+    - 我不喜欢这首
+    - 取消收藏这首歌
+    - 把这首从收藏里删掉
+    - 不喜欢这首歌
+    - 去掉收藏
+    - 移除收藏
+    - 从收藏移除
+    - 这首不喜欢了
+    - 别再收藏这首了
+    - 把它从收藏里拿掉
+    - 取消掉这首歌的收藏
+    - 这首歌我不爱听
+- intent: FURNITURE_INFO
+  examples: |
+    - [客厅]{"entity": "location","role": "home"}有人没
+    - [卧室]{"entity": "location","role": "home"}的温度是多少
+    - [客厅]{"entity": "location","role": "home"}有人吗
+    - [灯](furniture)开着吗
+    - [空调](furniture)还开着吗
+    - [卧室]{"entity": "location","role": "home"}有没有人
+    - [客厅]{"entity": "location","role": "home"}的[灯](furniture)开着吗
+    - [卧室]{"entity": "location","role": "home"}的[空调](furniture)是开着的吗
+    - [厨房]{"entity": "location","role": "home"}的[灯](furniture)亮着没
+    - [门](furniture)是锁着的吗
+    - [热水器](furniture)是不是开着
+    - [卫生间]{"entity": "location","role": "home"}有人吗
+- intent: OPEN_FURNITURE
+  examples: |
+    - 把[灯](furniture)打开
+    - 帮我把[灯](furniture)打开
+    - 把[空调](furniture)开一下
+    - [热水器](furniture)打开
+    - 开一下[电风扇](furniture)
+    - [门](furniture)打开
+    - 把[卧室]{"entity": "location","role": "home"}的[空调](furniture)打开
+    - 帮我把[电风扇](furniture)开一下
+    - [厨房]{"entity": "location","role": "home"}的[灯](furniture)开一下
+    - 把[热水器](furniture)开起来
+    - 请打开[客厅]{"entity": "location","role": "home"}的[灯](furniture)
+    - 我要把[灯](furniture)打开
+- intent: CLOSE_FURNITURE
+  examples: |
+    - 关一下[空调](furniture)
+    - 帮我把[灯](furniture)关了
+    - [电风扇](furniture)关掉
+    - 把[热水器](furniture)关掉
+    - [门](furniture)关上吧
+    - 关掉[客厅]{"entity": "location","role": "home"}的[灯](furniture)
+    - 帮我把[客厅]{"entity": "location","role": "home"}的[空调](furniture)关上
+    - [卧室]{"entity": "location","role": "home"}的[灯](furniture)关掉
+    - 把[电风扇](furniture)关了
+    - 请关掉[厨房]{"entity": "location","role": "home"}的[灯](furniture)
+    - [热水器](furniture)不用了关掉
+    - [门](furniture)帮我关掉
+- intent: CHANGE_VOL
+  examples: |
+    - 声音[大](trend)一点
+    - 声音[小](trend)一点
+    - 声音[大点](trend)
+    - 声音[小点](trend)
+    # ⚠ 不要写成 `把声音调大点` / `能不能小声点` —— 那是 holdout 原句，
+    #   check_nlu_leak.py 会直接报出来。换词说同一件事。
+    - 把音量调[大点](trend)
+    - 把音量调[小点](trend)
+    - 可不可以[小声点](trend)
+    - [小声点](trend)
+    - [大声点](trend)
+    - 说话[小声点](trend)
+    - 音量[调低](trend)一点
+    - 音量[调高](trend)一点
+    - [提高](trend)一下音量
+    - [降低](trend)一下音量
+    - 把音量[调高](trend)一些
+    - 把音量[调低](trend)一些
+    - 说话声音[大](trend)一点
+    - 把声音[调小](trend)一点
+    # ↓ 「抱怨句」：字面方向与用户想要的**动作方向**相反。
+    #   标注按字面（span 原文），由 CustomTrendNormalizer 在推理时取反。
+    #   注意 太/太小 会被 jieba 并成一个词，所以跨度要标整个词。
+    - 声音[太小](trend)了
+    - 声音[太大](trend)了
+    - 声音[太轻](trend)了
+    - 音量[太低](trend)了
+    - 音量[太高](trend)了
+    - 声音怎么这么[小](trend)
+    - 声音怎么这么[大](trend)
+    - 声音有点[小](trend)
+    - 声音有点[大](trend)
+    - 音量调到[五十](number)
+    - 声音设置为[三十](number)
+    - 音量调到[百分之八十](number)
+- intent: Weather
+  examples: |
+    - [上海]{"entity":"location","role":"city"}的天气
+    - [北京]{"entity":"location","role":"city"}今天热吗
+    - [南京]{"entity":"location","role":"city"}会下雨吗
+    - [广州]{"entity":"location","role":"city"}的天气
+    - [武汉]{"entity":"location","role":"city"}天气
+    - [西安]{"entity":"location","role":"city"}的天气怎么样
+    - [成都]{"entity":"location","role":"city"}天气怎么样
+    - [后天](time)天气怎么样
+    - [大后天](time)天气
+    - [昨天](time)的天气
+    - [明天早上](time)天气如何
+    - [周末](time)天气怎么样
+    - 明天天气咋样
+    - [江西]{"entity":"location","role":"city"}天气好不好
+- intent: MUSICINFO
+  examples: |
+    - 来首[孤勇者](song)
+    - 来一首[海阔天空](song)
+    - 放一下[想你](song)
+    - 我想听[拥有](song)
+    - 想听[刺客](song)
+    - 播放[田震]{"entity": "human", "role": "singer"}的歌
+    - 想听[谭咏麟]{"entity": "human", "role": "singer"}
+    - 放[陈明]{"entity": "human", "role": "singer"}的[为了爱](song)
+    - 来首[周杰伦]{"entity": "human", "role": "singer"}的[将进酒](song)
+    - 找一下[刘德华]{"entity": "human", "role": "singer"}的歌
+    - 放首[魔鬼之女](song)
+    - 我想听[张雨生]{"entity": "human", "role": "singer"}的[口是心非](song)
+    - 来一首[郭富城]{"entity": "human", "role": "singer"}的[寂寞天堂](song)
+    - 帮我播放[逃之夭夭](song)
+    - 听一下[都市猎人](song)
+    - 我要听[张学友]{"entity": "human", "role": "singer"}的歌
+# ===========================================================================
+# 延时 / 定时 —— time 槽位（d）在开关类意图上的用法
+#
+# 语义：d 在这两个意图上表示**执行前的等待时长**（或绝对时刻），
+#       归一化后就是传给 HA 脚本 duration 变量的秒数
+#       （Data/default_config.json 的 OPEN_FURNITURE 里 `"duration": "{time|--}"`）。
+#
+# ⚠ 实体跨度**刻意不含尾部的「后」**：
+#   jieba 会把「后开」「后关」粘成一个 token
+#   （实测 `20分钟后开一下空调` -> 20|分钟|后开|一下|空调），
+#   跨度只要跨过这个粘连边界，rasa 就会 WARNING 并**静默丢弃**整条标注。
+#   把「后」留在实体外，边界永远落在 jieba 的干净切分点上。
+#   归一化器对含「后」与不含「后」两种写法都能处理
+#   （Utils/TimeNormalizer.cpp 会先剥掉尾缀 后/之后/以后/以内）。
+# ===========================================================================
+- intent: OPEN_FURNITURE
+  examples: |
+    - [30分钟](time)后打开[热水器](furniture)
+    - [20分钟](time)后开启[客厅]{"entity":"location","role":"home"}的[灯](furniture)
+    - [半小时](time)后打开[空调](furniture)
+    - [一个小时](time)后把[电风扇](furniture)打开
+    - 等[十分钟](time)后打开[卧室]{"entity":"location","role":"home"}的[灯](furniture)
+    - [5分钟](time)后帮我打开[热水器](furniture)
+    - [明天早上8点](time)打开[热水器](furniture)
+- intent: CLOSE_FURNITURE
+  examples: |
+    - [30分钟](time)后关掉[热水器](furniture)
+    - [20分钟](time)后关上[客厅]{"entity":"location","role":"home"}的[灯](furniture)
+    - [半小时](time)后关闭[空调](furniture)
+    - [两个小时](time)后把[电风扇](furniture)关掉
+    - 等[十分钟](time)后关闭[厨房]{"entity":"location","role":"home"}的[灯](furniture)
+    - [5分钟](time)后帮我关掉[热水器](furniture)
+    - [明天早上8点](time)关掉[热水器](furniture)

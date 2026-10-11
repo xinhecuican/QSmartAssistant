@@ -1,0 +1,86 @@
+# QSmartAssistant systemd unit
+#
+# 安装：
+#   sudo cp scripts/qsmartassistant.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now qsmartassistant
+#
+# 查看：
+#   systemctl status qsmartassistant
+#   journalctl -u qsmartassistant -f
+#
+# ---------------------------------------------------------------------------
+# 为什么需要它（Windows 版没有对应物）：
+#   1. 应用不是自己拉起 rasa 的 systemd 单元。RasaNLU 只在
+#      "HTTP status 探测失败" 时才调 Data/start-rasa.sh，而那次调用是
+#      **阻塞在构造函数里的**（waitForFinished）。若 rasa 尚未就绪，
+#      应用启动会被拖住。把 rasa 做成独立单元先跑起来更干净。
+#   2. 语音助手要开机自启 + 崩溃自动重启，这两件事 systemd 都原生支持。
+#   3. 日志进 journald，磁盘满了会自动轮转；nohup > log.txt 不会。
+#
+# 注意 rasa 的加载时间：首次加载 default.tar.gz 约需 30-60s。
+# 应用侧的 HTTP 探测有超时，所以 Rasa= 不设 Wants=，
+# 避免 rasa 慢启动时把应用一起拖进启动失败。
+# ---------------------------------------------------------------------------
+
+[Unit]
+Description=QSmartAssistant offline voice assistant
+Documentation=https://github.com/your-org/QSmartAssistant
+# 安装了图形界面就改成 graphical.target；纯 SSH 部署保持 multi-user。
+After=network-online.target sound.target
+Wants=network-online.target
+# 若用 HomeAssistant/NeteaseMusic 等 node 服务，按需解开：
+# After=netease-cloud-music.service
+# Wants=netease-cloud-music.service
+
+[Service]
+Type=simple
+# ⚠ 必须用普通用户运行。应用的运行期数据固定写在
+#   ~/.config/QSmartAssistant/（CMake 里 CONFIG_PATH = $HOME/.config/...），
+#   用 root 跑会把配置写到 /root/.config 下，之后切回普通用户就"配置丢了"。
+#   部署时把 qsa 换成实际用户名。
+User=qsa
+Group=qsa
+
+# 改成可执行文件的实际安装路径（build_linux.sh 装完会打印它）。
+WorkingDirectory=/opt/QSmartAssistant
+ExecStart=/opt/QSmartAssistant/QSmartAssistant
+
+# 数据目录由 C++ 通过 QSA_DATA_DIR 传给 Data/start-rasa.sh 与 stop-rasa.sh；
+# 设了它就不依赖 HOME 的推导（非 root + 自定义数据目录时是必需的）。
+# 注意：这个目录必须可写（要写 rasa.pid / rasa.log / Tmp/）。
+Environment=QSA_DATA_DIR=/home/qsa/.config/QSmartAssistant/Data
+Environment=QT_QPA_PLATFORM=xcb
+
+# 运行期依赖（Ubuntu 22.04 名称）：
+#   libasound2      音频输出（Qt Multimedia）
+#   libgl1 / libegl1  Qt GUI 平台插件
+#   libxcb-*         xcb 平台插件的一堆依赖
+#   libvulkan1      仅当 llama.cpp 用 Vulkan 后端时
+# 若构建时用了 --no-plugin-deploy 并链接了系统 Qt，上面这些都需要。
+# 运行一次 `ldd <exe> | grep 'not found'` 就能确定还缺什么，
+# 或直接用 scripts/check_runtime_linux.sh。
+
+Restart=on-failure
+RestartSec=5
+# 反复崩溃时不要无限重启（一般是配置/模型缺失，重启也没用）
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=qsmartassistant
+
+# 安全加固：应用要写自己的数据目录和 TTS 音频，别的都不需要。
+# 若目标机没有音频组，把下面两行的 audio 组删掉。
+SupplementaryGroups=audio
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+# 上面 ProtectHome=read-only 会挡住写 ~/.config，需要放开只读之外的写权限：
+ReadWritePaths=/home/qsa/.config/QSmartAssistant
+
+[Install]
+WantedBy=multi-user.target

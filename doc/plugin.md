@@ -156,12 +156,18 @@ Option: `netease_cloud`
 | phone      | xxx    | Login phone number       |
 | password   | xxx    | Login password         |
 | volumeStep | 10     | Volume adjustment step each time |
-| homeDir    | xxx    | js API path address   |
+| homeDir    | ""     | js API path; **empty = auto-detect** (portable across Linux/Windows) |
 | port       | 34932  | Port used by js API |
 
 Currently supports Qt version API and js version API. If you want to use Qt version API, you can run `scripts/install_QCloudMusicApi.sh`. However, due to login issues, many APIs cannot be called in the Qt version, so js API is currently recommended.
 
 To enable js API, you can run `cmake -DNETEASE_USE_JS=ON ..`
+
+**Lazy login**: when the plugin is loaded (i.e. at program startup) it does **not** start the node server and does **not** attempt to log in — it only parses the config. The node backend is started and the login flow runs only on first real use (when a music intent such as "play music" is handled). Benefits:
+
+- users who never touch NetEase pay no node process, network request, or risk-control cost;
+- avoids hitting NetEase's human-verification challenge (`code -462`) during startup;
+- faster startup, and no warning spam when node is not installed.
 
 Call examples:
 

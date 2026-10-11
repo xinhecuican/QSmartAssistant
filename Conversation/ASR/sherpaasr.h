@@ -13,10 +13,11 @@ public:
     void stop() override;
     void clear() override;
 private:
-    const SherpaOnnxOfflineRecognizer* recognizer;
-    const SherpaOnnxOfflineStream *stream;
-    const SherpaOnnxOnlineRecognizer* onlineRecognizer;
-    const SherpaOnnxOnlineStream* onlineStream;
+    // 必须初始化为 nullptr：模型创建失败时 stop()/detect() 需要据此判断句柄是否有效
+    const SherpaOnnxOfflineRecognizer* recognizer = nullptr;
+    const SherpaOnnxOfflineStream *stream = nullptr;
+    const SherpaOnnxOnlineRecognizer* onlineRecognizer = nullptr;
+    const SherpaOnnxOnlineStream* onlineStream = nullptr;
     float samples[16000];
     bool _isStream;
     QString result;

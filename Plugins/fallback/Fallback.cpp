@@ -1,66 +1,80 @@
 #include "Fallback.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
+#include <QDebug>
 
-Fallback::Fallback() {}
+Fallback::Fallback() = default;
 
 QString Fallback::getName() { return "Fallback"; }
 
-void Fallback::setPluginHelper(IPluginHelper *helper) { 
-    this->helper = helper; 
-    this->llmManager = helper->getLLMManager();
-    this->conversation = new LLMConversation();
-    QJsonObject payload;
-    payload.insert("role", "system");
-    payload.insert("content", "你是一名语言专家，用户的输入为语音识别后的句子。它可能是有意义的命令但是存在一些识别错误，也可能 \
-                    是误触接收到的毫无意义的句子，也可能是用户提出的问题。你需要判断该句是否有意义，或者是否为一个问题，\
-                    如果是一个问题输出2,如果该句有意义则输出1，如果是无意义的句子则输出0。");
-    conversation->conversation.append(payload);
+void Fallback::setPluginHelper(IPluginHelper *helper) {
+    this->helper = helper;
+    llmManager = helper->getLLMManager();
 
-    conversation->stream = false;
-    conversation->temperature = 0;
-    conversation->withProxy = false;
-    conversation->onResponse = [=](const QString& text, bool last){
-        QString content;
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(text.toUtf8());
-        QJsonObject jsonObj = jsonDoc.object();
-        if (jsonObj.contains("choices")) {
-            QJsonArray choicesArray = jsonObj["choices"].toArray();
-            if (!choicesArray.isEmpty()) {
-                QJsonObject messageObj =
-                    choicesArray.at(0).toObject()["message"].toObject();
-                content = messageObj["content"].toString();
+    // 一次性分类任务：判断这句话是「有意义但非指令」「是个问题」还是「纯噪声」。
+    // 只需要一个字符的结论，因此禁用流式、把 max_tokens 压到极低。
+    session = llmManager->createSession(QString(), this);
+    if (session == nullptr) {
+        qCritical() << "fallback: no llm backend";
+        return;
+    }
+    session->setSystemPrompt(QString::fromUtf8(kFallbackPrompt));
+    session->setTemperature(0);
+    session->setStream(false);
+    session->setMaxTokens(4);
+    session->setWithProxy(false);
+    session->setToolsEnabled(false);
+    // 不保留历史：每句都是独立判断，留着只会干扰分类并拖慢
+    session->setHistoryLimit(0);
+
+    connect(session, &LLMSession::finished, this, [=](const QString &result) {
+        // 模型只需回一个数字，取首个数字即可，容忍前后废话
+        int verdict = -1;
+        for (int i = 0; i < result.size(); i++) {
+            if (result.at(i).isDigit()) {
+                verdict = result.at(i).digitValue();
+                break;
             }
         }
-        if (content == "2") {
-            PluginMessage message;
-            message.id = this->currentId;
-            message.dst = "Chat";
-            message.message = "chat";
-            emit sendMessage(message);
-        } else if (content == "1") {
-            helper->say("您说的是" + this->text, this->currentId);
+        switch (verdict) {
+        case 2: // 是个问题 -> 转闲聊
+            emit sendMessage(PluginMessage{currentId, QStringLiteral("Fallback"),
+                                           QStringLiteral("Chat"),
+                                           QStringLiteral("chat")});
+            break;
+        case 1: // 有意义但没匹配到指令 -> 回读确认
+            helper->say("您说的是" + text, currentId);
+            break;
+        default: // 无意义（误触、噪声）-> 静默忽略
+            break;
         }
-    };
+    });
+
+    connect(session, &LLMSession::failed, this, [=](const QString &error) {
+        qWarning() << "fallback llm failed:" << error;
+    });
 }
 
 Fallback::~Fallback() {
-    delete conversation;
+    if (session != nullptr) {
+        session->abort();
+    }
 }
 
-bool Fallback::handle(const QString &text, const ParsedIntent &parsedIntent, int id,
-                      bool &isImmersive) {
-    if (conversation->conversation.size() > 1) {
-        conversation->conversation.removeAt(1);
+bool Fallback::handle(const QString &text, const ParsedIntent &parsedIntent,
+                      int id, bool &isImmersive) {
+    Q_UNUSED(parsedIntent);
+    Q_UNUSED(isImmersive);
+    if (session == nullptr) {
+        return false;
     }
-    conversation->conversation.append(QJsonObject{{"role", "user"}, {"content", text}});
     this->text = text;
     this->currentId = id;
-    llmManager->query("", conversation);
+    session->ask(text);
     return true;
 }
 
-void Fallback::recvMessage(const QString &text,
-                           const ParsedIntent &parsedIntent,
-                           const PluginMessage &message) {}
+void Fallback::recvMessage(const QString &text, const ParsedIntent &parsedIntent,
+                           const PluginMessage &message) {
+    Q_UNUSED(text);
+    Q_UNUSED(parsedIntent);
+    Q_UNUSED(message);
+}

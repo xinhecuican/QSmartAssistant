@@ -1,5 +1,9 @@
 #include "silerovad.h"
 #include "../../Utils/config.h"
+#include <exception>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 SileroVad::SileroVad(QObject *parent) : VadModel(parent) {
     QJsonObject sileroConfig = Config::instance()->getConfig("silero");
@@ -25,6 +29,9 @@ SileroVad::SileroVad(QObject *parent) : VadModel(parent) {
 SileroVad::~SileroVad() { stop(); }
 
 bool SileroVad::detectVoice(const QByteArray &data) {
+    if (vad == nullptr) {
+        return false;
+    }
     char *rawData = const_cast<char *>(data.data());
     const int16_t *intData = reinterpret_cast<int16_t *>(rawData);
     for (int i = 0; i < data.length() / 2; i++) {
@@ -37,15 +44,18 @@ bool SileroVad::detectVoice(const QByteArray &data) {
 
 void SileroVad::stop() {
     VadModel::stop();
-    if (valid) {
+    if (vad != nullptr) {
         delete vad;
         vad = nullptr;
-        valid = false;
     }
+    valid = false;
 }
 
 void SileroVad::startDetect(bool isResponse) {
     VadModel::startDetect(isResponse);
+    if (vad == nullptr) {
+        return;
+    }
     vad->reset_states();
     abandonCurrent = 0;
 }
@@ -64,6 +74,9 @@ VadIterator::VadIterator(const std::string ModelPath, int Sample_rate,
 
     window_size_samples = windows_frame_size * sr_per_ms;
 
+    // silero-vad v5.1+/v6.2：模型输入为 context + 新采样，context 16k=64 / 8k=32
+    context_size = (sample_rate == 16000) ? 64 : 32;
+
     min_speech_samples = sr_per_ms * min_speech_duration_ms;
     speech_pad_samples = sr_per_ms * speech_pad_ms;
 
@@ -73,9 +86,9 @@ VadIterator::VadIterator(const std::string ModelPath, int Sample_rate,
     min_silence_samples = sr_per_ms * min_silence_duration_ms;
     min_silence_samples_at_max_speech = sr_per_ms * 98;
 
-    input.resize(window_size_samples);
+    input.resize(window_size_samples + context_size);
     input_node_dims[0] = 1;
-    input_node_dims[1] = window_size_samples;
+    input_node_dims[1] = window_size_samples + context_size;
 
     _state.resize(size_state);
     sr.resize(1);
@@ -94,14 +107,36 @@ void VadIterator::init_onnx_model(const std::string &model_path) {
     // Init threads = 1 for
     init_engine_threads(1, 1);
     // Load model
-
-    session = std::make_shared<Ort::Session>(env, model_path.c_str(),
-                                             session_options);
+    // 模型缺失或损坏时 Ort::Session 会抛异常：必须捕获，否则未捕获异常会
+    // 直接 std::terminate 使进程异常退出。此处降级为 session=nullptr，
+    // 由 vadDetect() 判空后返回 false（等价于“未检测到人声”）。
+    try {
+#if defined(_WIN32)
+        // ONNX Runtime 在 Windows 上 ORTCHAR_T 为 wchar_t，模型路径需转成宽字符，
+        // 且要按 UTF-8 解码（路径可能包含中文）。
+        std::wstring wpath;
+        int wlen = MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(), -1, nullptr, 0);
+        if (wlen > 0) {
+            wpath.resize(wlen - 1);
+            MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(), -1, &wpath[0], wlen);
+        }
+        session = std::make_shared<Ort::Session>(env, wpath.c_str(), session_options);
+#else
+        session = std::make_shared<Ort::Session>(env, model_path.c_str(),
+                                                 session_options);
+#endif
+    } catch (const std::exception &e) {
+        session = nullptr;
+        fprintf(stderr, "[SileroVad] 加载 VAD 模型失败: %s (%s)\n",
+                model_path.c_str(), e.what());
+    }
 }
 
 void VadIterator::reset_states() {
     // Call reset before each audio start
     std::memset(_state.data(), 0.0f, _state.size() * sizeof(float));
+    // 官方 wrapper：reset 后 context 置空，下一帧重建为零向量
+    _context.clear();
     triggered = false;
     temp_end = 0;
     current_sample = 0;
@@ -113,9 +148,17 @@ void VadIterator::reset_states() {
 }
 
 bool VadIterator::vadDetect(const std::vector<float> &data) {
+    if (session == nullptr) {
+        return false;
+    }
     // Infer
-    // Create ort tensors
-    input.assign(data.begin(), data.end());
+    // 复刻官方 OnnxWrapper（v5.1+/v6.2）：模型输入 = context(首帧为零) + 新采样；
+    // 推理后 context 更新为新采样的最后 context_size 个采样，state 递归传递。
+    if (_context.empty()) {
+        _context.assign(context_size, 0.0f);
+    }
+    input.assign(_context.begin(), _context.end());
+    input.insert(input.end(), data.begin(), data.end());
     Ort::Value input_ort = Ort::Value::CreateTensor<float>(
         memory_info, input.data(), input.size(), input_node_dims, 2);
     Ort::Value sr_ort = Ort::Value::CreateTensor<int64_t>(
@@ -138,5 +181,8 @@ bool VadIterator::vadDetect(const std::vector<float> &data) {
     float speech_prob = ort_outputs[0].GetTensorMutableData<float>()[0];
     float *stateN = ort_outputs[1].GetTensorMutableData<float>();
     std::memcpy(_state.data(), stateN, size_state * sizeof(float));
+    if (data.size() >= static_cast<size_t>(context_size)) {
+        _context.assign(data.end() - context_size, data.end());
+    }
     return speech_prob > threshold;
 }

@@ -18,11 +18,21 @@ void PluginManager::loadPlugin() {
         qWarning() << "plugin order file unexist";
         return;
     }
+    // 插件目录与扩展名随平台变化：Windows 为 .dll，其他平台为 .so
+    const QString pluginDir =
+        QDir::homePath() + "/.config/QSmartAssistant/plugins/lib/";
+#if defined(Q_OS_WIN)
+    const QString pluginSuffix = ".dll";
+#elif defined(Q_OS_MAC)
+    const QString pluginSuffix = ".dylib";
+#else
+    const QString pluginSuffix = ".so";
+#endif
     while (!file.atEnd()) {
         QString pluginName = file.readLine().trimmed();
-        QPluginLoader loader(QDir::homePath() +
-                             "/.config/QSmartAssistant/plugins/lib" +
-                             pluginName + ".so");
+        if (pluginName.isEmpty())
+            continue;
+        QPluginLoader loader(pluginDir + pluginName + pluginSuffix);
         QObject *plugin = loader.instance();
         if (plugin) {
             auto centerInterface = qobject_cast<Plugin *>(plugin);

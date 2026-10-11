@@ -66,6 +66,9 @@ Thumbs.db
 # Python byte code
 *.pyc
 
+# 构建/部署临时日志
+*.log
+
 # Binaries
 # --------
 *.dll
@@ -76,3 +79,16 @@ lib/
 build*/
 .vscode/
 ModelConfig.pri
+
+# 运行期本地配置（含密钥、本机路径），不入库；模板是 Data/default_config.yaml
+Data/config.yaml
+Data/config.json
+
+# 大体积本地模型 / 训练与构建产物（不入库）
+#   models/    由 scripts/fetch_llm_model.py 下载（Qwen3.5-2B，约 4.3GB）
+#   tools/     含微调 checkpoint、fp32 nlu.onnx 等大产物
+#   .buildtmp/ 本机构建与调试用的临时目录
+/models/
+/tools/
+/.buildtmp/
+/.workbuddy/

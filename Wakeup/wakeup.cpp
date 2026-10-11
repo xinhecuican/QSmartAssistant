@@ -27,6 +27,9 @@
 #if defined(WAKEUP_AZURE)
 #include "Wakeup/azurewakeup.h"
 #endif
+#if defined(WAKEUP_LIVEKIT)
+#include "Wakeup/livekitwakeup.h"
+#endif
 #if defined(VAD_COBRA)
 #include "Vad/cobravad.h"
 #endif
@@ -78,6 +81,10 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 #endif
 #if defined(WAKEUP_AZURE)
     wakeupModel = new AZureWakeup(this);
+#endif
+    // livekit-wakeword 自训练唤醒词：放在最后，若与其它引擎同时启用则由它生效
+#if defined(WAKEUP_LIVEKIT)
+    wakeupModel = new LivekitWakeup(this);
 #endif
 
 #if defined(VAD_COBRA)
@@ -137,7 +144,7 @@ Wakeup::Wakeup(Player *player, QObject *parent)
 
     AC::WavFileReader endVoiceReader;
     QString endFileName = wakeupConfig.value("end_voice").toString("end.wav");
-    endVoiceReader.OpenWavFile(Config::getDataPath(startFileName).toStdString());
+    endVoiceReader.OpenWavFile(Config::getDataPath(endFileName).toStdString());
     int endVoiceLen = endVoiceReader.GetDataLength();
     endVoice.resize(endVoiceLen);
     endVoiceReader.ReadData(endVoice.data(), endVoiceLen);
@@ -335,13 +342,13 @@ void Wakeup::parseIntentConfig(const QJsonObject& obj) {
             info.text = mapObj.value("text").toString();
             QJsonArray intentArr = mapObj.value("intents").toArray();
             for (int j = 0; j < intentArr.size(); j++) {
-                QJsonObject intentObj = intentArr.at(i).toObject();
+                QJsonObject intentObj = intentArr.at(j).toObject();
                 Intent intent;
                 intent.name = intentObj.value("name").toString();
                 intent.conf = 1;
                 QJsonArray slotsArr = intentObj.value("slots").toArray();
                 for (int k = 0; k < slotsArr.size(); k++) {
-                    QJsonObject slotObj = slotsArr.at(i).toObject();
+                    QJsonObject slotObj = slotsArr.at(k).toObject();
                     IntentSlot slot;
                     slot.name = slotObj.value("name").toString();
                     slot.value = slotObj.value("value").toString();

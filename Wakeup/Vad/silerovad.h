@@ -92,7 +92,11 @@ public:
 
 private:
     // model config
-    int64_t window_size_samples;  // Assign when init, support 256 512 768 for 8k; 512 1024 1536 for 16k.
+    // 每次调用的“新”采样数：16k 必须 512，8k 必须 256（silero-vad v5.1+/v6.2 硬约束）。
+    // 模型实际输入 = context(16k 64 / 8k 32 采样) + 新采样，官方 OnnxWrapper 在
+    // Python 侧拼 context，此处 C++ 复刻同一协议（见 silerovad.cpp vadDetect）。
+    int64_t window_size_samples;
+    int context_size = 0;
     int sample_rate;  //Assign when init support 16000 or 8000      
     int sr_per_ms;   // Assign when init, support 8 or 16
     float threshold; 
@@ -123,6 +127,9 @@ private:
     std::vector<float> input;
     unsigned int size_state = 2 * 1 * 128; // It's FIXED.
     std::vector<float> _state;
+    // 跨帧上下文（官方 wrapper 语义）：首帧为零，之后保存上一帧“新采样”的最后
+    // context_size 个采样；reset_states() 清空（下一帧重新置零）。
+    std::vector<float> _context;
     std::vector<int64_t> sr;
 
     int64_t input_node_dims[2] = {};
@@ -153,7 +160,8 @@ public:
     void startDetect(bool isResponse = false) override;
 
 private:
-    VadIterator *vad;
+    // 初始化为 nullptr：模型加载失败时 detectVoice()/stop() 需要判空
+    VadIterator *vad = nullptr;
     int chunkSize;
     QTimer *undetectTimer;
     int detectSlient;

@@ -2,6 +2,7 @@
 #include "../../Utils/config.h"
 #include "../../Utils/Utils.h"
 #include "../../Utils/AudioWriter.h"
+#include <QDebug>
 
 SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
     SherpaOnnxOfflineTtsConfig config;
@@ -63,6 +64,12 @@ SherpaTTS::SherpaTTS(QObject* parent) : TTSModel(parent) {
         config.model.zipvoice.guidance_scale = 1.0;
     }
     tts = SherpaOnnxCreateOfflineTts(&config);
+    // 模型文件缺失时 sherpa 返回空句柄，必须判空，否则 detect() 会崩溃。
+    if (tts == nullptr) {
+        valid = false;
+        qCritical() << "[SherpaTTS] TTS 模型创建失败，请检查 sherpa_tts 配置与模型文件:"
+                    << model;
+    }
 }
 
 SherpaTTS::~SherpaTTS(){
@@ -71,9 +78,17 @@ SherpaTTS::~SherpaTTS(){
 
 
 void SherpaTTS::detect(const QString& text, const QString& type, int id){
+    if (tts == nullptr) {
+        qWarning() << "[SherpaTTS] TTS 未初始化，跳过语音合成:" << text;
+        return;
+    }
     std::string textS = text.toStdString();
     const SherpaOnnxGeneratedAudio* audio =
         SherpaOnnxOfflineTtsGenerate(tts, textS.c_str(), speakerid, speed);
+    if (audio == nullptr) {
+        qWarning() << "[SherpaTTS] 语音合成失败:" << text;
+        return;
+    }
     QByteArray data;
     data.resize(audio->n * 2);
     for(int i=0; i<audio->n; i++){
@@ -81,13 +96,17 @@ void SherpaTTS::detect(const QString& text, const QString& type, int id){
         data[(i<<1)] = sample;
         data[(i<<1)+1] = (sample >> 8);
     }
+    int sampleRate = audio->sample_rate;
+    // 原实现未释放 sherpa 分配的合成音频，长时间运行会持续泄漏内存
+    SherpaOnnxDestroyOfflineTtsGeneratedAudio(audio);
     AudioWriter::changeVol(data, extraVol);
-    emit dataArrive(data, audio->sample_rate, type, id);
+    emit dataArrive(data, sampleRate, type, id);
 }
 
 void SherpaTTS::stop(){
-    if(valid){
-        valid = false;
+    valid = false;
+    if (tts != nullptr) {
         SherpaOnnxDestroyOfflineTts(tts);
+        tts = nullptr;
     }
 }

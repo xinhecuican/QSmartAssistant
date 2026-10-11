@@ -22,8 +22,11 @@ Player::Player(QObject *parent) : QObject(parent) {
     player->setAudioOutput(playerOut);
 #endif
 
+#ifndef Q_OS_WIN
+    // Linux 下通过 amixer 控制系统音量；Windows 走 QAudioOutput
     getVolumeProcess.setProgram("amixer");
     getVolumeProcess.setArguments({"get", "Master"});
+#endif
     volume = 0;
 }
 
@@ -33,12 +36,12 @@ void Player::play(const QString &fileName,
 }
 
 void Player::pause() {
-    playlist->pause();
+    // 走「用户暂停」路径：记录用户意图，避免被唤醒提示音/TTS 的自动恢复
+    // 撤销，也避免媒体加载中调用 pause() 被 Qt 丢弃。
+    playlist->pauseByUser();
 }
 
-void Player::resume() {
-    playlist->playNext();
-}
+void Player::resume() { playlist->resumeByUser(); }
 
 void Player::stop() {
     player->stop();
@@ -51,12 +54,29 @@ void Player::playSoundEffect(const QString &fileName, bool blockThread, bool cur
 }
 
 void Player::setVolume(int volume) {
+#if defined(Q_OS_WIN)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (playerOut) {
+        playerOut->setVolume(qBound(0.0, volume / 100.0, 1.0));
+    }
+#endif
+    this->volume = volume;
+#else
     QProcess::execute("amixer",
                       {"set", "Master", QString::number(volume) + "%"});
     // player->setVolume(volume);
+#endif
 }
 
 int Player::getVolume() {
+#if defined(Q_OS_WIN)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (playerOut) {
+        volume = qRound(playerOut->volume() * 100);
+    }
+#endif
+    return volume;
+#else
     getVolumeProcess.start();
     getVolumeProcess.waitForFinished(1000);
     QByteArray data = getVolumeProcess.readAllStandardOutput();
@@ -65,9 +85,13 @@ int Player::getVolume() {
     int index2 = str.indexOf(']');
     volume = str.mid(index + 1, index2 - index - 2).toInt();
     return volume;
+#endif
 }
 
 void Player::modifyVolume(int value) {
+#if defined(Q_OS_WIN)
+    setVolume(qBound(0, getVolume() + value, 100));
+#else
     if (value > 0) {
         QProcess::execute("amixer",
                           {"set", "Master", QString::number(value) + "%+"});
@@ -76,6 +100,7 @@ void Player::modifyVolume(int value) {
         QProcess::execute("amixer",
                           {"set", "Master", QString::number(value) + "%-"});
     }
+#endif
 }
 
 void Player::next() { playlist->playNext(true); }

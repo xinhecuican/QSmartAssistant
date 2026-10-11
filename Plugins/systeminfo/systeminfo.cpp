@@ -1,6 +1,9 @@
 #include "systeminfo.h"
 #include <QFile>
 #include <QProcess>
+#if defined(Q_OS_WIN)
+#include <windows.h>
+#endif
 
 SystemInfo::SystemInfo() {}
 
@@ -23,6 +26,15 @@ bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent, i
     }
     for (auto &intent : parsedIntent.intents) {
         if (intent.name == "SYS_INFO") {
+            int mem = 0; // 剩余可用内存(MB)
+#if defined(Q_OS_WIN)
+            // Windows 没有统一的 CPU 温度读取接口，这里只汇报剩余内存
+            MEMORYSTATUSEX memStatus;
+            memStatus.dwLength = sizeof(memStatus);
+            if (GlobalMemoryStatusEx(&memStatus)) {
+                mem = int(memStatus.ullAvailPhys / (1024 * 1024));
+            }
+#else
             QFile temperature("/sys/class/thermal/thermal_zone0/temp");
             float temp = 0;
             if (!temperature.open(QIODevice::ReadOnly)) {
@@ -35,7 +47,6 @@ bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent, i
             memUsage.waitForFinished(2000);
             QString memInfo = memUsage.readAllStandardOutput();
             QString memSplit = memInfo.split('\n').at(1);
-            int mem = 0;
             int currentNumber = 1;
             bool containsNumber = false;
             for (int i = memSplit.size() - 1; i >= 0; i--) {
@@ -48,6 +59,7 @@ bool SystemInfo::handle(const QString &text, const ParsedIntent &parsedIntent, i
                 }
             }
             helper->say("内核温度为" + QString::number(temp), id);
+#endif
             if ((mem / 1024) == 0) {
                 helper->say("剩余内存为" + QString::number(mem) + "兆", id);
             } else {

@@ -1,0 +1,124 @@
+{
+  "intents": {
+    "0": {
+      "name": "FALLBACK"
+    },
+    "1": {
+      "name": "CHANGE_TO_LAST"
+    },
+    "2": {
+      "name": "CHANGE_TO_NEXT"
+    },
+    "3": {
+      "name": "CHANGE_VOL",
+      "entities": [
+        "n",
+        "t"
+      ]
+    },
+    "4": {
+      "name": "CHAT"
+    },
+    "5": {
+      "name": "CLOSE"
+    },
+    "6": {
+      "name": "CLOSE_FURNITURE",
+      "entities": [
+        "f",
+        "l",
+        "d"
+      ]
+    },
+    "7": {
+      "name": "CONTINUE"
+    },
+    "8": {
+      "name": "FURNITURE_INFO",
+      "entities": [
+        "f",
+        "l",
+        "m"
+      ]
+    },
+    "9": {
+      "name": "LIKE"
+    },
+    "10": {
+      "name": "MUSICINFO",
+      "entities": [
+        "s",
+        "g"
+      ]
+    },
+    "11": {
+      "name": "OPEN_FURNITURE",
+      "entities": [
+        "f",
+        "l",
+        "d"
+      ]
+    },
+    "12": {
+      "name": "PAUSE"
+    },
+    "13": {
+      "name": "SYS_INFO"
+    },
+    "14": {
+      "name": "UNLIKE"
+    },
+    "15": {
+      "name": "Weather",
+      "entities": [
+        "c",
+        "d"
+      ]
+    }
+  },
+  "entities": {
+    "n": "number",
+    "t": "trend",
+    "s": "song",
+    "g": "singer",
+    "f": "furniture",
+    "l": "location",
+    "m": "member",
+    "c": "city",
+    "d": "time"
+  },
+  "hints": {
+    "OPEN_FURNITURE": "房间用 l=,延时用 d=（照抄时长原话，如 30分钟）,",
+    "CLOSE_FURNITURE": "房间用 l=,延时用 d=（照抄时长原话，如 30分钟）,",
+    "FURNITURE_INFO": "成员在否用 m=有/无,",
+    "Weather": "城市用 c=,日期用 d=,",
+    "MUSICINFO": "歌曲用 s=,歌手用 g=,",
+    "CHANGE_VOL": "数值用 n=,增减用 t=大/小,"
+  },
+  "shots": [
+    {
+      "text": "30分钟后打开热水器",
+      "target": "11|d=30分钟,f=热水器"
+    },
+    {
+      "text": "30分钟后关掉热水器",
+      "target": "6|d=30分钟,f=热水器"
+    },
+    {
+      "text": "打开空调",
+      "target": "11|f=空调"
+    },
+    {
+      "text": "播放孤勇者",
+      "target": "10|s=孤勇者"
+    },
+    {
+      "text": "上一首",
+      "target": "1"
+    },
+    {
+      "text": "获得当前音量",
+      "target": "3"
+    }
+  ]
+}

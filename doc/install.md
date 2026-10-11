@@ -51,7 +51,7 @@ Pulseaudio implements two echo cancellation methods: webrtc and speex. Webrtc ha
 
 # Component Installation
 
-Need to `cp Data/default_config.json Data/config.json` to edit the component configuration
+Need to `cp Data/default_config.yaml Data/config.yaml` to edit the component configuration
 
 Use `cmake -Dxxx` to select which component to enable, for example `cmake -DWAKEUP_PORCUPINE=ON`
 
@@ -61,14 +61,28 @@ Wakeup, Vad, ASR, TTS, NLU must ensure that only one component is enabled and ef
 
 | Name | Platform | Definition |
 |-|-|-|
+| [livekit wakeword](#livekit-wakeword) | x86,arm | WAKEUP_LIVEKIT |
 | [porcupine](#porcupine) | x86,arm | WAKEUP_PORCUPINE |
 | [openwakeword](#openwakeword) | any | WAKEUP_OPEN |
 | [duilite](#duilite) | x86 | WAKEUP_DUILITE |
 | [snowboy](#snowboy) | x86,arm | WAKEUP_SNOWBOY |
 
+> **Default combo (unified across platforms since 2026-10-11)**: livekit-wakeword
+> wake-up + silero VAD + sherpa ASR + sherpa TTS + ONNX NLU.
+> Passing no `-D` flags yields exactly this combo.
+
+### livekit wakeword
+
+**The default wake-up engine.** A three-stage model: mel-spectrogram frontend +
+shared embedding + a self-trained classification head, all inferred in-process
+via onnxruntime. Install with [the setup script](../scripts/setup.py)
+(or enable manually with `-DWAKEUP_LIVEKIT=ON`). Model download / training is
+covered in [livekit_wakeup.md](livekit_wakeup.md); options are documented under
+the `livekit_wakeup` section of [config.md](config.md).
+
 ### porcupine
 
-[Enter the console](https://console.picovoice.ai/) and fill the accessKey into the corresponding position in config.json
+[Enter the console](https://console.picovoice.ai/) and fill the accessKey into the corresponding position in config.yaml
 
 ```
     "porcupine": {
@@ -131,7 +145,7 @@ Enter the `scripts` directory and run `install_snowboy.sh`
 
 ### sherpa asr
 
-[Run the installation script](../scripts/install_sherpa_onnx.sh), [download the corresponding model according to the documentation](https://k2-fsa.github.io/sherpa/onnx/index.html), then change the model directory in config.json.
+[Run the installation script](../scripts/install_sherpa_onnx.sh), [download the corresponding model according to the documentation](https://k2-fsa.github.io/sherpa/onnx/index.html), then change the model directory in config.yaml.
 
 ```
 	"sherpa":{
@@ -161,6 +175,9 @@ Configuration method is the same as [sherpa asr](#sherpa-asr)
 
 ## NLU
 
+Three backends are available; pick exactly one via `nlu.backend`
+(`"onnx"` / `"rasa"` / `"llm"`).
+
 ### Baidu NLU
 
 [Configuration page is](https://ai.baidu.com/unit/v2#/sceneliblist)
@@ -169,6 +186,30 @@ Currently only the following skills are added
 
 ![image-20240301110749866](https://image.xinhecuican.tech/img/image-20240301110749866.png)
 
-### rasa
+### onnx nlu (default)
 
-Rasa is an open source dialogue robot project that includes NLU. It can freely configure NLU models and can customize intents and entities. This project currently mainly uses rasa. [Installation can be seen](../tree/master/scripts/install_rasa.sh).
+**The default backend since 2026-10-11.** A self-trained `rbtl3` dual-head model
+(intent classification + per-token slots) runs in-process via onnxruntime,
+so **no Python / TensorFlow / PyTorch / HTTP service is required at runtime**.
+The vocabulary and rule table ship with the repo (`Data/onnx_nlu/`) and CMake
+copies them into the runtime directory; the 57 MB int8 weight (`nlu_int8.onnx`)
+is published on GitHub Releases and fetched automatically by `scripts/setup.py`
+— **there is nothing extra to install**. Options are documented under the
+`nlu` / `onnx_nlu` sections of [config.md](config.md).
+
+Rule layers that rasa used to provide (`EntitySynonymMapper`, the trend
+normalizer, time-slot normalization) are reimplemented in C++.
+
+Measured against rasa on the same 65-sample holdout set: intent 98.46 % /
+slot-exact 93.85 % at P50 ≈ 1 ms and ~127 MB RSS, vs. rasa's 100 % / 92.31 %
+at ≈42 ms and ~1982 MB.
+
+### rasa (optional fallback)
+
+Rasa is an open source dialogue robot project that includes NLU. It can freely
+configure NLU models and can customize intents and entities. **Since 2026-10 it
+is only a fallback backend** — you only need it when expanding the corpus by
+hand and retraining DIET. To use it, set `nlu.backend` to `"rasa"` in
+`config.yaml` and build with `-DNLU_RASA=ON`.
+[Installation can be seen](../tree/master/scripts/install_rasa.sh).
+It needs Python 3.8–3.10 plus torch (~1.2 GB) and loads its model in 30–60 s.
