@@ -397,7 +397,12 @@ bool MCPClient::request(const QString &method, const QJsonObject &params,
         }
     });
     timer.start(timeoutMs);
-    loop.exec(QEventLoop::ExcludeUserInputEvents);
+    // 预检：响应有可能在 connect 之前就已经到达（那种情况下
+    // readyReadStandardOutput 不会再补发一次），先取一遍；确实没有才进事件循环等。
+    drainBuffer();
+    if (!pending.contains(id)) {
+        loop.exec(QEventLoop::ExcludeUserInputEvents);
+    }
 
     QJsonObject response;
     if (!takeResponse(id, &response)) {
@@ -454,6 +459,14 @@ bool MCPClient::takeResponse(qint64 id, QJsonObject *out) {
 }
 
 void MCPClient::drainBuffer() {
+    // ⚠⚠ 必须先把 QProcess 里已经到达的 stdout 字节**搬进**累积缓冲。
+    //   readyReadStandardOutput 只是「有新数据了」的通知，数据本身要主动
+    //   readAllStandardOutput() 取走；本函数只负责「按行切分 + 解析」，从不碰
+    //   process。早期版本漏了这一步 —— 于是 buffer 永远为空、pending 永远没有
+    //   响应，表现为 initialize 卡满 30s 超时，而 server 其实早就正常回包了
+    //   （这个用例在受限环境一直被 QSKIP，接进 CI 才暴露出来）。
+    buffer += process.readAllStandardOutput();
+
     int newline;
     while ((newline = buffer.indexOf('\n')) >= 0) {
         const QByteArray line = buffer.left(newline).trimmed();
