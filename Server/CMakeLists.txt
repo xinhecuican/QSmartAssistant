@@ -1,23 +1,19 @@
 
-
-
 set(CMAKE_AUTOMOC ON)
 if(SERVER)
     if(Qt6HttpServer_FOUND)
         target_compile_definitions(QSmartAssistant PUBLIC -DSERVER)
-        target_sources(QSmartAssistant PUBLIC server.h server.cpp)
+        target_sources(QSmartAssistant PRIVATE server.h server.cpp)
+        # 网页资源：只打包真正被 index.html 引用到的文件
         qt_add_resources(QSmartAssistant "web"
             PREFIX "/"
-            FILES 
+            FILES
                 Web/index.html
                 Web/favicon.ico
                 Web/src/base.js
-                Web/src/bootstrap.css
-                Web/src/bootstrap.js
+                Web/src/style.css
                 Web/src/human.png
-                Web/src/jquery.min.js
                 Web/src/robot.png
-                Web/src/scaffolding.css
         )
     endif()
 endif()

@@ -65,6 +65,21 @@ public:
      * @param message
      */
     virtual void sendMessage(PluginMessage message) = 0;
+
+    /**
+     * @brief 应用即将退出时收摊（可选实现）
+     *
+     * PluginManager 会在卸载插件之前调用（入口是 Conversation::stop()，
+     * 也就是 Robot::stop() / 退出流程）。需要释放后台资源的插件——子进程、
+     * 定时器、在途网络请求——请在这里释放，**不要只写在析构函数里**：
+     * DLL 插件实例的析构时机由插件加载器决定，实测可能晚到
+     * QCoreApplication 已经被拆掉之后，那时再去析构 QProcess / QTimer /
+     * QNetworkAccessManager 会直接崩（进程退出码 0xC0000409）。
+     *
+     * 默认空实现：不需要收摊的插件不必关心它。新虚函数一律追加在接口末尾，
+     * 避免挪动已有槽位的 vtable 偏移（插件 DLL 与本库分开编译）。
+     */
+    virtual void shutdown() {}
 };
 #define QSmartAssistant_PLUGIN_ID "QSmartAssistant_plugin1.0"
 Q_DECLARE_INTERFACE(Plugin, QSmartAssistant_PLUGIN_ID)

@@ -36,11 +36,12 @@ jobs:
           - qt_version: 6.12.0
             qt_arch: linux_gcc_64
             # 只装真正用到的模块：
-            #   qtmultimedia —— ASR/TTS/播放器
-            #   qtwebsockets —— Hass 插件（插件是运行期 dlopen 的，
-            #                   windeployqt 扫不到，必须显式装）
+            #   qtmultimedia  —— ASR/TTS/播放器
+            #   qtwebsockets  —— Hass 插件 + Server 的 WebSocket
+            #   qthttpserver  —— Server 的 HTTP 层（只在单测构建里开 SERVER，
+            #                    见下面 "Configure & build tests"）
             # 不需要 qtwebengine（没有 QWebEngineView）与 qtnetworkauth。
-            qt_modules: "qtmultimedia qtwebsockets"
+            qt_modules: "qtmultimedia qtwebsockets qthttpserver"
 
     env:
       BUILD_TYPE: Release
@@ -135,20 +136,28 @@ jobs:
       # ---------------------------------------------------------------------
       # 单测单独一个 build 目录：TEST=ON 会把 QTest 与 netease official client
       # 一起编进可执行文件，不该混进发布产物。
+      #
+      # -DSERVER=ON 只加在这里、不放进 CMAKE_MODULES：发布产物保持不开内置
+      # HTTP/WebSocket 服务（不改变对外行为），但 serverHttp / serverWebSocket
+      # 两个用例必须真的编到、跑到 —— 在此之前 Server/ 根本没参与过 CI 构建。
       # ---------------------------------------------------------------------
       - name: Configure & build tests
         run: |
           cmake -S . -B "$TEST_BUILD_PATH" \
             -DCMAKE_BUILD_TYPE=Debug \
             -DTEST=ON \
+            -DSERVER=ON \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             $CMAKE_MODULES
           cmake --build "$TEST_BUILD_PATH" -j"$(nproc)"
 
-      # hassRegex / mcpClient 是纯逻辑单测，不依赖 ASR/TTS/NLU 模型文件，适合
-      # 放 CI。asrSherpa / ttsSherpa / vad 需要先下载模型到运行期 Data 目录
-      # （python3 scripts/fetch_models.py），在 runner 上属于环境依赖而非代码问题，
-      # 所以只在本机跑。
+      # hassRegex / mcpClient / serverHttp / serverWebSocket / pluginReplySource /
+      # neteaseCaptcha 是纯逻辑单测，不依赖 ASR/TTS/NLU 模型文件，适合放 CI。
+      # asrSherpa / ttsSherpa / vad 需要先下载模型到运行期 Data 目录
+      # （python3 scripts/fetch_models.py），在 runner 上属于环境依赖而非代码
+      # 问题，所以只在本机跑。同理还有 conversationRoundTrip —— 它走的是
+      # 「一段话 -> ONNX NLU -> 真实插件 -> TTS 文本」的完整对话链路，
+      # 少了 nlu_int8.onnx（在 Release tag 上，setup.py/fetch_models 才下）会 QSKIP。
       #
       # ⚠ 一个用例一个 step，而不是"一条命令跑两个用例"：step 名与失败 annotation
       #   都能用 REST API 匿名读到，而日志不能（下载日志要 admin 权限）。拆开之后
@@ -167,6 +176,37 @@ jobs:
           QSA_PYTHON: python3
           QT_QPA_PLATFORM: offscreen
         run: bash scripts/run_test_case.sh mcpClient "$TEST_BUILD_PATH"
+
+      - name: "Test: serverHttp"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh serverHttp "$TEST_BUILD_PATH"
+
+      - name: "Test: serverWebSocket"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh serverWebSocket "$TEST_BUILD_PATH"
+
+      - name: "Test: pluginReplySource"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh pluginReplySource "$TEST_BUILD_PATH"
+
+      # 网易云短信验证码「一轮问答后怎么走」的纯逻辑（空回答 vs 格式错误）。
+      # 插件本体要 node 后端不能进 CI，但这段判定在 captchaflow.h 里，只依赖
+      # QtCore —— 它守的是那次「一句话没说却连听几次『格式不正确』」的回归。
+      - name: "Test: neteaseCaptcha"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh neteaseCaptcha "$TEST_BUILD_PATH"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

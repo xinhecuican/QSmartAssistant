@@ -1,50 +1,49 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#12141a" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="QSmartAssistant 对话界面" />
   <title>QSmartAssistant</title>
-  <link href="src/bootstrap.css" rel="stylesheet">
-  <link href="src/scaffolding.css" rel="stylesheet">
-  <style>
-    .mbg {
-      margin: 40px 0;
-      padding: 20px 0;
-      background: rgba(0, 0, 0, 0.3);
-      color: #222222;
-    }
-
-    .media {
-      background-color: rgba(240, 240, 240, 1);
-      border-radius: 10px;
-      padding: 10px;
-    }
-  </style>
+  <link rel="icon" href="favicon.ico" />
+  <link rel="stylesheet" href="src/style.css" />
 </head>
 <body>
-<div class="container">
-  <div class="row">
-    <div class="col-md-9">
-      <div class="panel panel-default">
-        <!-- <div class="panel-heading">
-          <h3 class="panel-title">QSmartAssistant</h3>
-        </div> -->
-        <div class="panel-body">
-          <div class="well" id="contentList">
-
-          </div>
-          <form class="form-inline">
-            <textarea class="form-control" id="content" style="width: 90%;"></textarea>
-            <button class="btn btn-primary form-control" type="button" id="btSend" style="width: auto;">发送</button>
-          </form>
-        </div>
-      </div>
-
+<div class="app">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span class="brand-name">QSmartAssistant</span>
     </div>
-  </div>
+    <div class="header-actions">
+      <span class="status" id="status" role="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">连接中…</span>
+      </span>
+      <button class="ghost-btn" id="clearBtn" type="button" title="清空对话">清空</button>
+    </div>
+  </header>
+
+  <main class="chat" id="chat" aria-live="polite">
+    <div class="welcome" id="welcome">
+      <img class="welcome-avatar" src="src/robot.png" alt="" />
+      <h1>有什么可以帮您？</h1>
+      <p>输入内容后按回车发送。回复会标注来源：由插件（如天气、音乐）处理，还是由主程序生成。</p>
+    </div>
+  </main>
+
+  <footer class="composer">
+    <textarea id="input" rows="1" placeholder="说点什么…" autocomplete="off"
+              enterkeyhint="send" aria-label="输入消息"></textarea>
+    <button class="send-btn" id="sendBtn" type="button" aria-label="发送">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3.4 20.4 20.85 12 3.4 3.6l.01 6.53L15 12 3.41 13.87z" />
+      </svg>
+    </button>
+  </footer>
 </div>
-<script src="src/jquery.min.js"></script>
-<script src="src/bootstrap.js"></script>
 <script src="src/base.js"></script>
 </body>
 </html>

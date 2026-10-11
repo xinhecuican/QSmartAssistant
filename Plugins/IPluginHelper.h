@@ -36,6 +36,27 @@ public:
      * @return 解析的结果
      */
     virtual ParsedIntent parse(const QString &text) = 0;
+
+    /**
+     * @brief 当前这次对话能否真的拿到 question() 的答案
+     *
+     * 三种情形：
+     *   * 本地麦克风对话 —— 问题念出来、用户用语音回答；
+     *   * 网页 / WebSocket 请求 —— 问题同时推给网页并用语音念出来，
+     *     **哪个回答先到用哪个**（见 Server 的 ask / answer 协议）；
+     *   * 一次性 HTTP 请求（/intent）—— 没有任何回话通道，question()
+     *     只会把问题当文本回给请求方并**立刻返回空串**。
+     *
+     * 前两种为 true，第三种为 false。需要多轮问答的插件（如网易云短信
+     * 验证码）必须先问这个：否则会把「根本没人能回答」误判成「答错了」，
+     * 反复报错并把重试次数迅速耗光（用户实测：一句话没说却连听几次
+     * 「格式不正确」）。
+     *
+     * 默认 true，保持既有实现（含单测桩）无需改动。
+     * ⚠ 新虚函数一律追加在接口末尾：插件 DLL 与本库分开编译，
+     *   插在中间会挪动后面槽位的 vtable 偏移。
+     */
+    virtual bool canAsk() const { return true; }
 };
 
 #endif // IPLUGINHELPER_H

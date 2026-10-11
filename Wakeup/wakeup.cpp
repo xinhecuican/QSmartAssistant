@@ -306,6 +306,17 @@ void Wakeup::stopWakeup() {
 }
 
 void Wakeup::resume() {
+    // 这条路上有两种来路，都要处理：
+    //   1. 应答窗口正常结束（VAD 已经把自己的 isResponse 清掉了）—— 常规恢复；
+    //   2. 外部请求（网页）的反问被**网页作答**提前结束 —— 此时 VAD 还停在
+    //      应答模式、应答计时器（responseSlient，默认 30s）也还在跑。不收掉
+    //      它，窗口到期就会发一个空应答，把下一轮问答提前结束（插件于是拿到
+    //      一个莫名其妙的空答案）。
+    // 判定用 Wakeup 自己的 isResponse：它在情形 1 下已经是 false，是空操作。
+    if (isResponse) {
+        isResponse = false;
+        vadModel->stop();
+    }
     recorder->resume();
     if (enablePreVad)
         detectState = PREVAD;

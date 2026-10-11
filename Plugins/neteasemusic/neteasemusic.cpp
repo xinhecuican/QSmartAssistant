@@ -1,11 +1,13 @@
 #include "neteasemusic.h"
 #include "../../Recorder/player.h"
 #include "../../Utils/config.h"
+#include "captchaflow.h"
 #include "qrcode.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -246,11 +248,23 @@ NeteaseMusic::NeteaseMusic()
 }
 
 NeteaseMusic::~NeteaseMusic() {
+    // 兜底：正常退出路径上 PluginManager 已经调过 shutdown()（幂等）。
+    shutdown();
+}
+
+void NeteaseMusic::shutdown() {
 #ifdef NETEASE_USE_JS
     if (nodeReadyTimer != nullptr) {
         nodeReadyTimer->stop();
     }
-    process.kill();
+    if (process.state() != QProcess::NotRunning) {
+        process.kill();
+        // 等它真的退出，别把 node 留成孤儿：Windows 上还有 Job Object
+        // （kill-on-close）兜底，Linux 上就只有这里能收。
+        if (!process.waitForFinished(3000)) {
+            qWarning() << "netease: node 子进程未能在 3 秒内退出";
+        }
+    }
 #endif
 }
 
@@ -378,6 +392,14 @@ bool NeteaseMusic::ensureNodeStarted() {
     connect(&process, &QProcess::errorOccurred, this,
             [=](QProcess::ProcessError error) {
                 if (error == QProcess::FailedToStart) {
+                    // 进程压根没起来：立刻判定失败。旧行为会让就绪探测继续
+                    // 对一个不可能有响应的端口轮询满 30 秒（waitForNodeReady
+                    // 的空转），既拖住主线程，也让定时器 / 在途请求一直活到
+                    // 退出阶段（那正是退出时 abort 的温床）。
+                    nodeStartFailed = true;
+                    if (nodeReadyTimer != nullptr) {
+                        nodeReadyTimer->stop();
+                    }
                     qWarning() << "netease node api 启动失败（找不到可执行文件或工作目录）:"
                                << process.errorString()
                                << "\n  node :" << process.program()
@@ -496,7 +518,7 @@ bool NeteaseMusic::waitForNodeReady() {
 #endif
 }
 
-void NeteaseMusic::login() {
+void NeteaseMusic::login(int id) {
     // loggingIn 做重入保护：login() 内部会跑嵌套事件循环，其间可能再次被
     // handle() 或就绪探测调用，若不拦住会反复提交同一份登录请求。
     if (isLogin || loggingIn)
@@ -594,7 +616,7 @@ void NeteaseMusic::login() {
             } else {
                 // 语音交互获取验证码：先提示，再等用户说出验证码，
                 // 超时/格式不合法 -> 落到匿名登录。
-                QString captchaCode = requestCaptchaByVoice(neteaseConfig);
+                QString captchaCode = requestCaptchaByVoice(neteaseConfig, id);
                 if (!captchaCode.isEmpty()) {
                     // 使用验证码登录
                     params.clear();
@@ -681,86 +703,81 @@ void NeteaseMusic::login() {
     loggingIn = false;
 }
 
-QString NeteaseMusic::normalizeCaptcha(QString text) {
-    // 中文数字映射（含口语「两」与「幺」），ASR 结果里只保留数字。
-    // 用字符串索引而不是 QMap 初始化列表（MSVC 下 QChar 字面量不匹配）。
-    static const QString cnKeys = QStringLiteral("零〇一幺二两三四五六七八九");
-    static const QString cnVals = QStringLiteral("0011223456789");
-
-    text = text.toLower();
-    QString out;
-    out.reserve(text.size());
-    for (const QChar &ch : text) {
-        if (ch.isDigit()) {
-            out.append(ch);
-        } else {
-            const int idx = cnKeys.indexOf(ch);
-            if (idx >= 0) {
-                out.append(cnVals.at(idx));
-            }
-        }
-    }
-    return out;
-}
-
-bool NeteaseMusic::captchaFormatValid(const QString &code) {
-    // 网易云短信验证码为 4 或 6 位纯数字。
-    return (code.size() == 4 || code.size() == 6) &&
-           !code.contains(QRegularExpression("[^0-9]"));
-}
-
-QString NeteaseMusic::requestCaptchaByVoice(const QJsonObject &neteaseConfig) {
-    const int timeoutSec =
-        neteaseConfig.value("captchaTimeoutSec").toInt(180);
+// 验证码的归一化 / 格式校验 / 「下一步怎么走」判定都在 captchaflow.h 里，
+// 那是纯字符串逻辑，可以脱离插件环境单独单测（见 Test/tst_sherpa.h 的
+// neteaseCaptcha 用例）。这里只负责「说 / 问 / 记日志」。
+QString NeteaseMusic::requestCaptchaByVoice(const QJsonObject &neteaseConfig,
+                                            int id) {
+    const int timeoutSec = neteaseConfig.value("captchaTimeoutSec").toInt(180);
     const qint64 deadlineMs = qint64(timeoutSec) * 1000;
-    // 同一次验证码有效期内最多重问次数（每次失败后提示重新说）。
+    // 「说话了但只有 12345 这种非法格式」最多重问几次。
     const int maxAttempts = 3;
+    // 「压根没听到」单独计数：用户不在场时早点落到游客登录，而不是把同一句
+    // 提示反复念到超时。静默重问额度用完即放弃（合计最多问 2 次）。
+    const int maxSilent = 1;
 
-    // helper->question() 会一直阻塞到用户说完一句话，本身没有超时；
-    // 每次询问放到独立工作线程里执行，主流程用 QThread::wait(timeout)
-    // 施加超时上限。超时后不销毁线程（销毁运行中的 QThread 会崩溃），
-    // 任其自行结束后 deleteLater 回收，结果被丢弃即可。
-    class QuestionThread : public QThread {
-    public:
-        std::function<QString()> fn;
-        QString result;
-        void run() override { result = fn(); }
-    };
+    // ⚠ 先确认这次对话真的能把答案送回来。本地麦克风对话可以；网页
+    //   WebSocket 请求也可以（问题同时推给网页并念出来，两边先到先得）；
+    //   但一次性 HTTP 请求（/intent）没有任何回话通道，question() 只会把
+    //   问题当文本回给请求方并**立刻返回空串**。若照旧去问，每一轮都会被
+    //   判成「格式不正确」，用户一句话没说却连听几次 TTS 报错（实测反馈）。
+    if (helper != nullptr && !helper->canAsk()) {
+        helper->say("当前对话来自网页，无法输入短信验证码，"
+                    "本次使用游客模式登录。",
+                    id, false);
+        qWarning() << "netease captcha: 本次对话拿不到回答，跳过问答";
+        return QString();
+    }
 
     const qint64 startTime = QDateTime::currentMSecsSinceEpoch();
-    // 先语音提示验证码已发送（阻塞播完再开始收听）。
+    // id == 0（本地麦克风对话）才念出来并等它播完；外部请求走文本、不能阻塞。
+    const bool speak = (id == 0);
     helper->say(QString("验证码已发送到您的手机，请在%0分钟内告诉我验证码")
                     .arg(timeoutSec / 60 + (timeoutSec % 60 ? 1 : 0)),
-                0, true);
+                id, speak);
 
-    for (int attempts = 1; attempts <= maxAttempts; attempts++) {
-        const qint64 remainMs = deadlineMs -
-                                (QDateTime::currentMSecsSinceEpoch() -
-                                 startTime);
-        if (remainMs <= 0) {
+    int attempts = 0;
+    int silent = 0;
+    while (attempts < maxAttempts) {
+        if (QDateTime::currentMSecsSinceEpoch() - startTime >= deadlineMs) {
             break;
         }
-        auto *worker = new QuestionThread();
-        connect(worker, &QThread::finished, worker, &QObject::deleteLater);
-        worker->fn = [this]() {
-            return helper->question("请说出您收到的短信验证码");
-        };
-        worker->start();
-        if (!worker->wait(int(qMin<qint64>(remainMs, qint64(INT_MAX))))) {
-            // 达到总超时仍未回答，跳出（线程自行结束后释放）。
+        // ⚠ 必须在主线程直接问。Conversation 是主线程亲和对象，question()
+        //   内部会 say()（阻塞等 TTS 播完）再跑嵌套事件循环。旧实现把这一句
+        //   丢进 QThread 执行：主线程随即被 worker->wait() 硬阻塞（它不跑
+        //   事件循环），sayRawData / playEnd 这些队列调用永远送不到，于是
+        //   工作线程的 ttsEventLoop 也永远不退出 —— 双向死锁，直到超时
+        //   break；而那时遗留的线程仍在跑，退出阶段还会回调已经析构的
+        //   Conversation（表现为进程退出码 0xC0000409）。
+        const QString answer = helper->question("请说出您收到的短信验证码");
+
+        switch (qsa::captcha::classifyAnswer(answer, maxAttempts - attempts,
+                                             maxSilent - silent)) {
+        case qsa::captcha::Step::Accept:
+            qInfo() << "captcha from voice ok, attempts =" << (attempts + 1);
+            return qsa::captcha::normalize(answer);
+        case qsa::captcha::Step::RetrySilent:
+            // 没听到任何回答：不报「格式不正确」（那会误导用户，也会把重试
+            // 次数迅速耗光），只是再问一次。
+            ++silent;
+            qWarning() << "captcha: 没有听到回答，重新问一次 (" << silent << "/"
+                       << maxSilent << ")";
+            break;
+        case qsa::captcha::Step::RetryFormat:
+            ++attempts;
+            // 不要把 ASR 原文写进日志（可能含验证码本身）。
+            qWarning() << "captcha format invalid, answer length ="
+                       << answer.size() << ", ask again (" << attempts << "/"
+                       << maxAttempts << ")";
+            helper->say("验证码格式不正确，请重新说出您的短信验证码", id, speak);
+            break;
+        case qsa::captcha::Step::GiveUp:
+            attempts = maxAttempts; // 额度用尽，跳出
             break;
         }
-        const QString answer = worker->result;
-        const QString captcha = normalizeCaptcha(answer);
-        if (captchaFormatValid(captcha)) {
-            qInfo() << "captcha from voice ok, attempts =" << attempts;
-            return captcha;
-        }
-        qWarning() << "invalid captcha from voice:" << answer;
-        helper->say("验证码格式不正确，请重新说出您的短信验证码", 0, true);
     }
     qWarning() << "netease captcha timeout or invalid, fallback.";
-    helper->say("没有收到有效的验证码，将使用游客模式登录。", 0, true);
+    helper->say("没有收到有效的验证码，将使用游客模式登录。", id, speak);
     return QString();
 }
 
@@ -777,7 +794,9 @@ bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
             return false;
         }
         if (!isLogin) {
-            login();
+            // 带上本次对话 id：验证码语音问答要据此把提示回给请求方（网页
+            // 走文本推送，本地 id=0 才走扬声器）。
+            login(id);
             if (!isLogin)
                 return false;
         }

@@ -1,0 +1,505 @@
+/* QSmartAssistant 对话界面样式
+ * 设计目标：一套样式同时适配手机 / 平板 / 桌面，并跟随系统深浅色。 */
+
+:root {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f4f6fa;
+  --text: #1b1f27;
+  --text-muted: #6b7280;
+  --border: rgba(20, 24, 33, 0.09);
+  --bubble-bot: #ffffff;
+  --bubble-user: linear-gradient(135deg, #3b82f6, #2563eb);
+  --bubble-user-text: #ffffff;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.1);
+  --ok: #16a34a;
+  --warn: #d97706;
+  --err: #dc2626;
+  --shadow: 0 12px 40px rgba(17, 24, 39, 0.08);
+  --radius: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-2: #1e222b;
+    --text: #e8eaf0;
+    --text-muted: #9aa3b2;
+    --border: rgba(255, 255, 255, 0.1);
+    --bubble-bot: #1e222b;
+    --bubble-user: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    --bubble-user-text: #ffffff;
+    --accent: #60a5fa;
+    --accent-soft: rgba(96, 165, 250, 0.16);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 900px;
+  margin: 0 auto;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* ---------- 顶栏 ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex: 0 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bubble-user);
+  flex: 0 0 auto;
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn);
+  flex: 0 0 auto;
+}
+
+.status.ok .status-dot {
+  background: var(--ok);
+}
+.status.err .status-dot {
+  background: var(--err);
+}
+
+.ghost-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ghost-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ---------- 消息区 ---------- */
+.chat {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.chat::-webkit-scrollbar {
+  width: 8px;
+}
+.chat::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.welcome {
+  margin: auto;
+  max-width: 420px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.welcome-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+  margin-bottom: 12px;
+}
+
+.welcome h1 {
+  font-size: 18px;
+  color: var(--text);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.welcome p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  animation: rise 0.22s ease-out;
+}
+
+.msg.user {
+  flex-direction: row-reverse;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex: 0 0 auto;
+  user-select: none;
+}
+
+.bubble {
+  max-width: min(76%, 620px);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border-top-left-radius: 6px;
+  background: var(--bubble-bot);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.msg.user .bubble {
+  background: var(--bubble-user);
+  color: var(--bubble-user-text);
+  border: none;
+  border-radius: var(--radius);
+  border-top-right-radius: 6px;
+}
+
+.bubble .meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.msg.user .bubble .meta {
+  color: rgba(255, 255, 255, 0.78);
+  justify-content: flex-end;
+}
+
+.bubble .text {
+  white-space: pre-wrap;
+  font-size: 15px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 18px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge.core {
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.badge.plugin {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.badge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* 等待回复 */
+.typing .dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 20px;
+}
+
+.typing .dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: blink 1.2s infinite ease-in-out;
+}
+
+.typing .dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing .dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes blink {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+
+/* ---------- 输入区 ---------- */
+.composer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+#input {
+  flex: 1 1 auto;
+  min-height: 44px;
+  max-height: 40vh;
+  padding: 11px 14px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.send-btn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bubble-user);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s, opacity 0.15s;
+}
+
+.send-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.send-btn:active {
+  transform: scale(0.94);
+}
+
+.send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- 反问（服务端 ask）：需要用户再给一个输入 ---------- */
+.msg.bot.ask .bubble {
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.ask-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* 已经答过了（网页输入或语音都算）：把强调去掉，但保留痕迹 */
+.msg.bot.ask-done .bubble {
+  border-color: var(--border);
+}
+
+/* 反问作废（断线、清空） */
+.msg.bot.ask-expired .bubble {
+  opacity: 0.6;
+}
+
+/* ---------- 多端适配 ---------- */
+/* 平板及以上：留出背景、圆角卡片，视觉更像「应用」而不是铺满的网页 */
+@media (min-width: 640px) {
+  body {
+    padding: 0;
+  }
+
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    box-shadow: var(--shadow);
+  }
+}
+
+@media (min-width: 900px) {
+  body {
+    padding: 24px 0;
+  }
+
+  .app {
+    height: calc(100vh - 48px);
+    height: calc(100dvh - 48px);
+    border-radius: 22px;
+    border: 1px solid var(--border);
+  }
+
+  .app-header {
+    padding-top: 12px;
+  }
+
+  .chat {
+    padding: 22px 24px 10px;
+  }
+
+  .composer {
+    padding: 14px 24px;
+    padding-bottom: 14px;
+  }
+
+  .bubble {
+    max-width: 68%;
+  }
+}
+
+/* 横屏手机：压缩纵向留白 */
+@media (max-height: 460px) and (orientation: landscape) {
+  .app-header {
+    padding: 8px 14px;
+  }
+
+  .chat {
+    padding: 12px 14px 6px;
+    gap: 10px;
+  }
+
+  .welcome-avatar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg,
+  .typing .dots i {
+    animation: none;
+  }
+}

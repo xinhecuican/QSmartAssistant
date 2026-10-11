@@ -28,6 +28,12 @@ public:
     void setPluginHelper(IPluginHelper *helper) override;
     void recvMessage(const QString &text, const ParsedIntent &parsedIntent,
                      const PluginMessage &message) override;
+    // 应用退出时收摊：杀掉 node 子进程并停掉就绪探测定时器。
+    // ⚠ 不要只依赖析构函数 —— DLL 插件的析构时机由插件加载器决定，实测
+    //   可能晚到 QCoreApplication 已经被拆掉之后（那时再析构 QProcess /
+    //   QTimer 会崩，退出码 0xC0000409），而且可能压根不会被调用，
+    //   把 node 留成孤儿进程（Linux 上没有 Job Object 兜底）。
+    void shutdown() override;
 signals:
     void sendMessage(PluginMessage message) override;
 
@@ -52,7 +58,9 @@ private:
     void parseSongs(const QList<QVariant> &songs);
     bool parseUrl(MusicInfo& info);
     void searchDefault();
-    void login();
+    // 登录（node 模式：密码 -> 短信验证码 -> 匿名；official 模式：令牌）。
+    // id 是本次对话 id，验证码语音问答要按它回文本（0 = 本地麦克风对话）。
+    void login(int id = 0);
     // 懒启动：首次真正用到网易云功能时才拉起 node 进程 / 官方令牌鉴权。
     // 幂等，重复调用只复用已有状态。返回 false 表示后端不可用，调用方应
     // 直接放弃本次处理（不要重试，避免刷日志与风控）。
@@ -60,16 +68,18 @@ private:
     // 同步等待 node 就绪（嵌套事件循环，带总时限）。非 JS 模式恒为 true。
     bool waitForNodeReady();
     void likeCurrent(bool like);
-    // 短信验证码：语音交互获取。
-    // 流程：先 TTS 提示 -> 循环调用 helper->question() 等用户说出验证码 ->
-    // 归一化（中文数字/口语 -> 纯数字）并校验格式（4~6 位数字）。
+    // 短信验证码：语音 / 网页交互获取。
+    // 流程：先 TTS 提示 -> 循环调用 helper->question() 等用户说出（或从网页
+    // 输入）验证码 -> 归一化（中文数字/口语 -> 纯数字）并校验格式（4 / 6 位）。
     // 总等待时长受 netease_cloud.captchaTimeoutSec 限制（默认 180 秒），
     // 超时或多次格式不合法返回空串，由调用方落到匿名登录。
-    QString requestCaptchaByVoice(const QJsonObject &neteaseConfig);
-    // 把 ASR 结果归一化为纯数字验证码（处理中文数字、分隔符与口语）。
-    static QString normalizeCaptcha(QString text);
-    // 网易云短信验证码格式：4 或 6 位纯数字。
-    static bool captchaFormatValid(const QString &code);
+    //
+    // ⚠ 只有在 helper->canAsk() 为真时才会真的提问：本地麦克风对话、以及
+    //   支持网页作答的 WebSocket 请求都为真（回答先到先得）；一次性 HTTP
+    //   请求为假，直接返回空串，免得把「没人能回答」当成「答错」。
+    // ⚠ 必须在主线程调用：内部会阻塞等 TTS 播完并跑嵌套事件循环，
+    //   丢进工作线程会与主线程互相等待（见 .cpp 里的说明）。
+    QString requestCaptchaByVoice(const QJsonObject &neteaseConfig, int id);
 
 private:
     QList<QString> getAudio(QList<qint64> ids);

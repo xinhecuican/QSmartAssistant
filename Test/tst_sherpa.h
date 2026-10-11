@@ -32,13 +32,132 @@
 #if defined(VAD_SHERPA)
 #include "../Wakeup/Vad/sherpavad.h"
 #endif
+#include "../Plugins/neteasemusic/captchaflow.h"
 #include "../Plugins/neteasemusic/neteaseofficialclient.h"
 #include "../Plugins/neteasemusic/qrcode.h"
 #include "TestPluginHelper.h"
+#include "../Plugins/pluginmanager.h"
 #include <QLibrary>
 #include <QtTest/QtTest>
 #include <QRegularExpression>
+#if defined(SERVER)
+#include "../Server/server.h"
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QThread>
+#include <QTimer>
+#endif
+#if defined(NLU_ONNX)
+#include "../Conversation/NLU/onnxnlu.h"
+#endif
+#include "../Conversation/conversation.h"
 using namespace AC;
+
+/**
+ * @brief 假插件：用于在**没有插件产物**的环境里验证 PluginManager 的分发逻辑
+ *
+ * 真实插件都是独立 DLL，只有部署过才存在；而「回复来源怎么记」属于纯逻辑，
+ * 不该依赖部署形态。注意 moc 不支持匿名命名空间里的 Q_OBJECT，所以这个类
+ * 必须放在文件作用域。
+ */
+class FakePlugin : public QObject, public Plugin {
+    Q_OBJECT
+    Q_INTERFACES(Plugin)
+public:
+    FakePlugin(const QString &name, bool hit, QObject *parent = nullptr)
+        : QObject(parent), pluginName(name), hit(hit) {}
+
+    QString getName() override { return pluginName; }
+    void setPluginHelper(IPluginHelper *) override {}
+    bool handle(const QString &text, const ParsedIntent &parsedIntent, int id,
+                bool &isImmersive) override {
+        Q_UNUSED(text);
+        Q_UNUSED(parsedIntent);
+        Q_UNUSED(isImmersive);
+        lastId = id;
+        return hit;
+    }
+    void recvMessage(const QString &, const ParsedIntent &,
+                     const PluginMessage &message) override {
+        lastId = message.id;
+        gotMessage = true;
+    }
+
+    int lastId = -1;
+    bool gotMessage = false;
+
+signals:
+    void sendMessage(PluginMessage message) override;
+
+private:
+    QString pluginName;
+    bool hit;
+};
+
+#if defined(SERVER)
+namespace {
+// HTTP GET 小工具。用 QSignalSpy::wait 而不是 QNetworkReply::waitForFinished：
+// 后者只保证"等到了回复"，而我们需要的是一个**会转动事件循环**的等待 ——
+// 服务端和测试跑在同一个线程上，不转事件循环就永远不会 accept/回包。
+QByteArray qsaHttpGet(quint16 port, const QString &path, int *status) {
+    QNetworkAccessManager nam;
+    const QUrl url(QStringLiteral("http://127.0.0.1:%1%2").arg(port).arg(path));
+    QNetworkReply *reply = nam.get(QNetworkRequest(url));
+    QSignalSpy finished(reply, &QNetworkReply::finished);
+    if (!finished.wait(10000)) {
+        reply->abort();
+        reply->deleteLater();
+        if (status)
+            *status = -1;
+        return QByteArray();
+    }
+    const QByteArray body = reply->readAll();
+    if (status) {
+        *status = reply
+                      ->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+                      .toInt();
+    }
+    reply->deleteLater();
+    return body;
+}
+
+// WebSocket 收到的一帧 -> JSON 对象
+QJsonObject qsaJsonOf(const QVariant &frame) {
+    return QJsonDocument::fromJson(frame.toString().toUtf8()).object();
+}
+} // namespace
+#endif
+
+#if defined(NLU_ONNX)
+namespace {
+/**
+ * @brief 按 config.yaml 的 onnx_nlu 段填一份「显式路径」配置
+ *
+ * Conversation 内部也是这么填的。之所以在测试里重复一遍：本轮用例必须在
+ * **构造 Conversation 之前**就知道模型到底在不在 —— 否则模型缺失时
+ * Conversation 会静默回落到别的 NLU 后端（甚至 nlu == nullptr），
+ * 失败现场会变成一句莫名其妙的崩溃，而不是"环境没部署"。
+ */
+ONNXNLU::Settings qsaOnnxNluSettings() {
+    const QJsonObject oc = Config::instance()->getConfig("onnx_nlu");
+    ONNXNLU::Settings s;
+    s.model =
+        Config::getDataPath(oc.value("model").toString("onnx_nlu/nlu_int8.onnx"));
+    s.vocab =
+        Config::getDataPath(oc.value("vocab").toString("onnx_nlu/vocab.txt"));
+    s.rules =
+        Config::getDataPath(oc.value("rules").toString("onnx_nlu/rules.json"));
+    s.schema = Config::getDataPath(oc.value("schema").toString("nlu_schema.json"));
+    s.conf = static_cast<float>(oc.value("conf").toDouble(0.5));
+    s.maxLen = oc.value("max_len").toInt(64);
+    s.threads = oc.value("threads").toInt(0);
+    return s;
+}
+} // namespace
+#endif
 
 class tst_sherpa : public QObject {
     Q_OBJECT
@@ -645,5 +764,627 @@ private slots:
         QVERIFY(backend.complete("hello", "sys", 0, 16, 100).isEmpty());
     }
 #endif
+
+    // -----------------------------------------------------------------
+    // Server 传输层（HTTP 静态资源 + WebSocket 对话协议）
+    //
+    // Server 是网页与对话逻辑之间的"搬运工"，本身不该关心 ASR/NLU/插件：
+    // 问题怎么派发、回复从哪来都由外部注入，所以这里能脱离模型文件把**协议**
+    // 钉死。覆盖的都是真实踩过的坑：
+    //   * 回复由插件异步产生 -> 不能靠请求返回值回传，必须按会话 id 推送
+    //     （旧实现里走 LLM 的插件在网页上整段收不到回复）；
+    //   * 每条回复要带来源（插件名 / 主程序），否则网页无法标注；
+    //   * 多客户端并发提问时回复必须各回各家，不能串台；
+    //   * index.html 引用到的静态资源必须都在 qrc 里 —— 忘记加进
+    //     qt_add_resources 只会让页面白屏，且只在运行期暴露。
+    // -----------------------------------------------------------------
+#if defined(SERVER)
+    void serverHttp() {
+        // 端口 0 = 由系统分配空闲端口，免得和本机正在跑的 20214 冲突
+        Server server(nullptr, 0);
+        if (!server.isListening()) {
+            QSKIP("cannot bind a local TCP port in this environment");
+        }
+        const quint16 port = static_cast<quint16>(server.port());
+        QVERIFY(port != 0);
+
+        // 1) 首页内容必须和打进 qrc 的 index.html 完全一致
+        int status = 0;
+        const QByteArray index = qsaHttpGet(port, "/", &status);
+        QCOMPARE(status, 200);
+        QFile html(":/Web/index.html");
+        QVERIFY(html.open(QIODevice::ReadOnly));
+        QCOMPARE(index, html.readAll());
+        html.close();
+
+        // 2) index.html 引用到的每个本地资源都要真的能取到
+        const QRegularExpression ref(QStringLiteral("(?:src|href)\\s*=\\s*\"([^\"]+)\""));
+        QRegularExpressionMatchIterator it =
+            ref.globalMatch(QString::fromUtf8(index));
+        int checked = 0;
+        while (it.hasNext()) {
+            const QString path = it.next().captured(1);
+            if (path.startsWith("http") || path.startsWith("#") ||
+                path.startsWith("data:")) {
+                continue;
+            }
+            const QByteArray body = qsaHttpGet(port, "/" + path, &status);
+            QVERIFY2(status == 200,
+                     qPrintable(QStringLiteral("静态资源缺失: %1 (HTTP %2)")
+                                    .arg(path)
+                                    .arg(status)));
+            QVERIFY(!body.isEmpty());
+            ++checked;
+        }
+        QVERIFY2(checked >= 3, "index.html 至少应引用 css / js / 图标");
+
+        // 3) 不存在的路径返回 404（而不是 200 空内容或者崩掉）
+        qsaHttpGet(port, "/no/such/file.css", &status);
+        QCOMPARE(status, 404);
+
+        // 4) 同步接口：缺参数 400；带参数时把对话逻辑的返回值原样吐出来。
+        //    这条同时验证了"从线程池切回主线程"的那段跨线程调用没有死锁。
+        qsaHttpGet(port, "/intent", &status);
+        QCOMPARE(status, 400);
+        // 第三个参数是「这次请求能不能回答中途的反问」：HTTP 是一次性的，
+        // 服务端固定传 false，桩要照着签名接。
+        bool intentCanAnswer = true;
+        server.setQuestionHandler(
+            [&intentCanAnswer](const QString &text, int, bool canAnswer) {
+                intentCanAnswer = canAnswer;
+                return QList<QString>{text + "!"};
+            });
+        const QByteArray intent = qsaHttpGet(port, "/intent?text=hi", &status);
+        QCOMPARE(status, 200);
+        const QJsonArray arr = QJsonDocument::fromJson(intent).array();
+        QCOMPARE(arr.size(), 1);
+        QCOMPARE(arr.at(0).toString(), QStringLiteral("hi!"));
+        QVERIFY2(!intentCanAnswer, "/intent 没有回话通道，不能允许反问");
+    }
+
+    void serverWebSocket() {
+        Server server(nullptr, 0);
+        if (!server.isListening()) {
+            QSKIP("cannot bind a local TCP port in this environment");
+        }
+        const quint16 port = static_cast<quint16>(server.port());
+
+        // 假装自己是 Conversation：记下收到的提问
+        QList<QPair<QString, int>> asked;
+        bool lastCanAnswer = false;
+        server.setQuestionHandler([&asked, &lastCanAnswer](
+                                      const QString &text, int id,
+                                      bool canAnswer) {
+            asked.append({text, id});
+            lastCanAnswer = canAnswer;
+            return QList<QString>();
+        });
+
+        const QUrl url(QStringLiteral("ws://127.0.0.1:%1").arg(port));
+        QWebSocket a;
+        QWebSocket b;
+        QSignalSpy spyA(&a, &QWebSocket::textMessageReceived);
+        QSignalSpy spyB(&b, &QWebSocket::textMessageReceived);
+        a.open(url);
+        b.open(url);
+        QTRY_VERIFY_WITH_TIMEOUT(a.state() == QAbstractSocket::ConnectedState,
+                                 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(b.state() == QAbstractSocket::ConnectedState,
+                                 10000);
+
+        // 1) ping -> pong：timestamp 原样带回（前端靠它做保活）
+        a.sendTextMessage(QStringLiteral(R"({"op":"ping","timestamp":12345})"));
+        QTRY_VERIFY_WITH_TIMEOUT(spyA.count() >= 1, 5000);
+        const QJsonObject pong = qsaJsonOf(spyA.takeFirst().at(0));
+        QCOMPARE(pong.value("op").toString(), QStringLiteral("pong"));
+        QCOMPARE(pong.value("timestamp").toInt(), 12345);
+
+        // 2) 提问 -> 先回 accepted 带上本次会话 id，再把问题派发给对话逻辑
+        a.sendTextMessage(
+            QStringLiteral(R"({"op":"conversation","question":"你好"})"));
+        QTRY_VERIFY_WITH_TIMEOUT(spyA.count() >= 1, 5000);
+        const QJsonObject accepted = qsaJsonOf(spyA.takeFirst().at(0));
+        QCOMPARE(accepted.value("op").toString(), QStringLiteral("accepted"));
+        const int idA = accepted.value("id").toInt();
+        QVERIFY(idA > 0);
+        QCOMPARE(asked.size(), 1);
+        QCOMPARE(asked.at(0).first, QStringLiteral("你好"));
+        QCOMPARE(asked.at(0).second, idA);
+        // WebSocket 是双向的：对话逻辑可以中途反问
+        QVERIFY2(lastCanAnswer, "WebSocket 提问没有允许反问");
+
+        // 3) 异步回复按 id 回到发起方，并带上来源
+        server.pushResponse(QStringLiteral("今天晴"), idA,
+                            QStringLiteral("Weather"));
+        QTRY_VERIFY_WITH_TIMEOUT(spyA.count() >= 1, 5000);
+        const QJsonObject resp = qsaJsonOf(spyA.takeFirst().at(0));
+        QCOMPARE(resp.value("op").toString(), QStringLiteral("response"));
+        QCOMPARE(resp.value("id").toInt(), idA);
+        QCOMPARE(resp.value("text").toString(), QStringLiteral("今天晴"));
+        QCOMPARE(resp.value("source").toString(), QStringLiteral("Weather"));
+        QVERIFY2(spyB.isEmpty(), "回复串台到了另一个客户端");
+
+        // 空来源 = 主程序，必须原样透传（前端据此显示"主程序"）
+        server.pushResponse(QStringLiteral("我在"), idA, QString());
+        QTRY_VERIFY_WITH_TIMEOUT(spyA.count() >= 1, 5000);
+        const QJsonObject main = qsaJsonOf(spyA.takeFirst().at(0));
+        QCOMPARE(main.value("source").toString(), QString());
+        QCOMPARE(main.value("text").toString(), QStringLiteral("我在"));
+
+        // 4) 第二个客户端：会话 id 不同，回复各回各家
+        b.sendTextMessage(
+            QStringLiteral(R"({"op":"conversation","question":"现在几点"})"));
+        QTRY_VERIFY_WITH_TIMEOUT(spyB.count() >= 1, 5000);
+        const int idB = qsaJsonOf(spyB.takeFirst().at(0)).value("id").toInt();
+        QVERIFY(idB > 0);
+        QVERIFY(idA != idB);
+        QCOMPARE(asked.size(), 2);
+        QCOMPARE(asked.at(1).second, idB);
+
+        server.pushResponse(QStringLiteral("三点"), idB,
+                            QStringLiteral("Chat"));
+        QTRY_VERIFY_WITH_TIMEOUT(spyB.count() >= 1, 5000);
+        QCOMPARE(qsaJsonOf(spyB.takeFirst().at(0)).value("source").toString(),
+                 QStringLiteral("Chat"));
+        QVERIFY2(spyA.isEmpty(), "回复串台到了另一个客户端");
+
+        // 5) 客户端断开后照样可能收到（慢插件/LLM）：不能崩，也不能漏给别人。
+        //    这是真实场景 —— 用户问完就关页面，回复晚一步才回来。
+        a.close();
+        QTRY_VERIFY_WITH_TIMEOUT(a.state() == QAbstractSocket::UnconnectedState,
+                                 5000);
+        QTest::qWait(200); // 等服务端跑完 disconnected -> 清理会话映射
+        server.pushResponse(QStringLiteral("晚了"), idA,
+                            QStringLiteral("Weather"));
+        server.pushResponse(QStringLiteral("不存在的会话"), 999999, QString());
+        QTest::qWait(100);
+        QVERIFY2(spyB.isEmpty(), "已断开会话的回复落到了其他客户端");
+
+        // 6) 畸形 / 未知报文直接忽略，不能崩也不能回包
+        b.sendTextMessage(QStringLiteral("not json"));
+        b.sendTextMessage(QStringLiteral(R"({"op":"no_such_op"})"));
+        b.sendTextMessage(QStringLiteral(R"({"op":"conversation","question":"  "})"));
+        QTest::qWait(200);
+        QVERIFY(spyB.isEmpty());
+        QCOMPARE(asked.size(), 2); // 空白问题不派发
+
+        // 7) 反问（ask / answer）：插件处理到一半要用户再给一个输入
+        //    （网易云要短信验证码就是这条链路）。服务端只当搬运工：把问题
+        //    推给发起该会话的连接，把回答转给对话逻辑。三道闸门都要有 ——
+        //    这里正是「网页端能替服务端往对话逻辑里塞任意文本」的唯一入口。
+        QList<QPair<int, QString>> answers;
+        server.setAnswerHandler([&answers](int id, const QString &text) {
+            answers.append({id, text});
+        });
+
+        server.pushQuestion(QStringLiteral("请说出您收到的短信验证码"), idB,
+                            QStringLiteral("NeteaseMusic"));
+        QTRY_VERIFY_WITH_TIMEOUT(spyB.count() >= 1, 5000);
+        const QJsonObject ask = qsaJsonOf(spyB.takeFirst().at(0));
+        QCOMPARE(ask.value("op").toString(), QStringLiteral("ask"));
+        QCOMPARE(ask.value("id").toInt(), idB);
+        QCOMPARE(ask.value("text").toString(),
+                 QStringLiteral("请说出您收到的短信验证码"));
+        QCOMPARE(ask.value("source").toString(), QStringLiteral("NeteaseMusic"));
+
+        // (a) 没被反问过的会话 id：丢掉
+        b.sendTextMessage(
+            QStringLiteral(R"({"op":"answer","id":999999,"text":"123456"})"));
+        QTest::qWait(200);
+        QVERIFY2(answers.isEmpty(), "没有 ask 过的会话也能塞回答进去");
+
+        // (b) 别的连接替它答：也不行，而且**不能把这一轮反问作废**
+        QWebSocket other;
+        QSignalSpy spyOther(&other, &QWebSocket::textMessageReceived);
+        other.open(url);
+        QTRY_VERIFY_WITH_TIMEOUT(other.state() == QAbstractSocket::ConnectedState,
+                                 10000);
+        other.sendTextMessage(
+            QStringLiteral(R"({"op":"answer","id":%1,"text":"123456"})").arg(idB));
+        QTest::qWait(200);
+        QVERIFY2(answers.isEmpty(), "别的连接可以替会话作答");
+
+        // (c) 发起方自己答：转给对话逻辑
+        b.sendTextMessage(
+            QStringLiteral(R"({"op":"answer","id":%1,"text":"123456"})").arg(idB));
+        QTRY_COMPARE_WITH_TIMEOUT(answers.size(), 1, 5000);
+        QCOMPARE(answers.at(0).first, idB);
+        QCOMPARE(answers.at(0).second, QStringLiteral("123456"));
+
+        // (d) 一次性：同一条 ask 只认第一次作答
+        b.sendTextMessage(
+            QStringLiteral(R"({"op":"answer","id":%1,"text":"又答一次"})").arg(idB));
+        QTest::qWait(200);
+        QCOMPARE(answers.size(), 1);
+
+        // (e) 回复一到这一轮就结束了：之后的作答不再接受（通常是语音先答掉，
+        //     网页那边迟到的输入不能污染下一轮）
+        server.pushQuestion(QStringLiteral("再问一次"), idB, QString());
+        QTRY_VERIFY_WITH_TIMEOUT(spyB.count() >= 1, 5000);
+        QCOMPARE(qsaJsonOf(spyB.takeFirst().at(0)).value("op").toString(),
+                 QStringLiteral("ask"));
+        server.pushResponse(QStringLiteral("好了"), idB, QString());
+        QTRY_VERIFY_WITH_TIMEOUT(spyB.count() >= 1, 5000);
+        spyB.takeFirst();
+        b.sendTextMessage(QStringLiteral(
+                              R"({"op":"answer","id":%1,"text":"迟到的回答"})")
+                              .arg(idB));
+        QTest::qWait(200);
+        QCOMPARE(answers.size(), 1);
+
+        // (f) 会话已经不在（网页关了 / id 不存在）或根本没有内容：静默丢弃，
+        //     不崩也不串台
+        server.pushQuestion(QStringLiteral("无处可去"), 999999, QString());
+        server.pushQuestion(QString(), idB, QString());
+        QTest::qWait(200);
+        QVERIFY2(spyOther.isEmpty(), "反问串台到了别的连接");
+        QStringList leftovers;
+        for (const QVariant &one : spyB) {
+            leftovers.append(one.toList().at(0).toString());
+        }
+        QVERIFY2(spyB.isEmpty(), qPrintable(QStringLiteral("残留帧: ") +
+                                            leftovers.join(QStringLiteral(" || "))));
+
+        // 8) 对话逻辑「怎么被调用」的两条硬约束。它们是端到端实测踩出来的
+        //    （见 .buildtmp/ws_timeline.py 的时间线）：
+        //      ① 绝不能在「socket 可读通知」的回调栈上直接调 —— 插件反问会让
+        //         对话逻辑跑嵌套事件循环，而从那个栈上进入嵌套循环后，后续
+        //         到达的 WebSocket 帧就不再被派发：网页发的 answer 全部积压，
+        //         直到这一轮提问结束才一次性涌出，用户**根本没法作答**，
+        //         ping 保活也失效（主线程心跳与定时器都正常，卡的是 socket
+        //         通知这一路）。所以必须排到事件队列里执行。
+        //      ② 同一时刻只允许一条在跑 —— 否则第二条提问会在第一条的嵌套
+        //         循环里被处理，两条链路共用同一份「正在等回答」的状态，会
+        //         互相把对方的 eventLoop 解掉。
+        QWebSocket d;
+        QSignalSpy spyD(&d, &QWebSocket::textMessageReceived);
+        d.open(url);
+        QTRY_VERIFY_WITH_TIMEOUT(d.state() == QAbstractSocket::ConnectedState,
+                                 10000);
+
+        QStringList trace;
+        int inside = 0;
+        int overlap = 0;
+        int answeredDuringAsk = -1;
+        int askConv = -1;
+        bool ranOnSocketStack = false;
+        QList<QPair<int, QString>> answers2;
+        server.setAnswerHandler([&answers2](int id, const QString &text) {
+            answers2.append({id, text});
+        });
+        server.setQuestionHandler(
+            [&](const QString &text, int id, bool) {
+                ++inside;
+                overlap = qMax(overlap, inside);
+                // 排到事件队列里执行时 sender() 为 nullptr；如果被改回在 socket
+                // 通知回调栈上直接调，sender() 会是那个 QWebSocket。
+                if (sender() != nullptr) {
+                    ranOnSocketStack = true;
+                }
+                trace << QStringLiteral("enter:%1").arg(text);
+                if (text == QStringLiteral("会反问的问题")) {
+                    askConv = id;
+                    server.pushQuestion(QStringLiteral("请作答"), id, QString());
+                    // 模拟 Conversation::askExternal 的嵌套等待：真实实现是
+                    // QEventLoop::exec()，这里用等价的 processEvents 轮询。
+                    // 目的是验证「网页的作答能在这一步之内被送到」。
+                    QElapsedTimer timer;
+                    timer.start();
+                    while (answers2.isEmpty() && timer.elapsed() < 5000) {
+                        QCoreApplication::processEvents(QEventLoop::AllEvents,
+                                                        50);
+                        QThread::msleep(5);
+                    }
+                    answeredDuringAsk = answers2.size();
+                }
+                trace << QStringLiteral("exit:%1").arg(text);
+                --inside;
+                return QList<QString>();
+            });
+
+        // ⚠ 这一段不能用 QTRY_VERIFY 观察中间状态：第一条提问一进入反问，
+        //   主线程就堵在对话逻辑里（这正是真实行为），测试代码拿不到控制权。
+        //   所以由定时器从事件循环内部把「第二条提问」和「网页作答」送进去。
+        const QString conv2 = QStringLiteral(
+            R"({"op":"conversation","question":"第二句"})");
+        QTimer::singleShot(400, &d, [&]() { d.sendTextMessage(conv2); });
+        QTimer::singleShot(900, &b, [&]() {
+            b.sendTextMessage(
+                QStringLiteral(R"({"op":"answer","id":%1,"text":"是"})")
+                    .arg(askConv));
+        });
+        b.sendTextMessage(QStringLiteral(
+            R"({"op":"conversation","question":"会反问的问题"})"));
+
+        QElapsedTimer deadline;
+        deadline.start();
+        while (trace.size() < 4 && deadline.elapsed() < 20000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+            QThread::msleep(2);
+        }
+
+        QCOMPARE(trace.size(), 4);
+        QCOMPARE(overlap, 1);
+        QVERIFY2(!ranOnSocketStack,
+                 "对话逻辑被直接调用在 socket 通知回调栈上（反问期间会饿死 WebSocket）");
+        QCOMPARE(answeredDuringAsk, 1);
+        QCOMPARE(answers2.size(), 1);
+        QCOMPARE(answers2.at(0).first, askConv);
+        QCOMPARE(answers2.at(0).second, QStringLiteral("是"));
+        // 顺序：第一条必须整体跑完，第二条才开始（串行，不能重叠）
+        QCOMPARE(trace.at(0), QStringLiteral("enter:会反问的问题"));
+        QCOMPARE(trace.at(1), QStringLiteral("exit:会反问的问题"));
+        QCOMPARE(trace.at(2), QStringLiteral("enter:第二句"));
+        QCOMPARE(trace.at(3), QStringLiteral("exit:第二句"));
+    }
+#endif
+
+    // -----------------------------------------------------------------
+    // 对话来源标注（PluginManager）
+    //
+    // 网页上「这条回复是谁产生的」依据的就是这里记的来源。三条规则都是
+    // 踩过才知道的：
+    //   * 来源要在**进入 handle() 之前**写好 —— 天气/系统信息这类插件是在
+    //     handle() 内部同步 say() 的，事后写就晚了；
+    //   * 没有任何插件命中 -> 空串（主程序）；
+    //   * 插件之间转发（Fallback 判定是闲聊后转给 Chat）时，真正开口的是
+    //     目标插件，来源要跟着改。
+    // -----------------------------------------------------------------
+    void pluginReplySource() {
+        ParsedIntent intent;
+
+        // 1) 多个插件依次尝试：记住的是最终命中的那个
+        FakePlugin miss(QStringLiteral("Miss"), false);
+        FakePlugin weather(QStringLiteral("Weather"), true);
+        PluginManager manager(nullptr);
+        manager.addPlugin(&miss);
+        manager.addPlugin(&weather);
+        QCOMPARE(manager.handlePlugin(QStringLiteral("今天天气怎么样"), intent, 1),
+                 QStringLiteral("Weather"));
+        QCOMPARE(manager.source(1), QStringLiteral("Weather"));
+
+        // 2) 谁都没命中 -> 空串，网页据此显示「主程序」
+        FakePlugin lonely(QStringLiteral("Lonely"), false);
+        PluginManager none(nullptr);
+        none.addPlugin(&lonely);
+        QCOMPARE(none.handlePlugin(QStringLiteral("喂"), intent, 2), QString());
+        QCOMPARE(none.source(2), QString());
+
+        // 3) 没有记录的会话 id 也必须是空串，不能拿到别的会话的来源
+        QCOMPARE(none.source(9999), QString());
+
+        // 4) 插件间转发：Fallback -> Chat，来源要变成真正开口的那个插件
+        FakePlugin chat(QStringLiteral("Chat"), true);
+        PluginManager forward(nullptr);
+        forward.addPlugin(&chat);
+        forward.handleMessage(PluginMessage{7, QStringLiteral("Fallback"),
+                                            QStringLiteral("Chat"),
+                                            QStringLiteral("chat")});
+        QCOMPARE(forward.source(7), QStringLiteral("Chat"));
+        QVERIFY(chat.gotMessage);
+        QCOMPARE(chat.lastId, 7);
+    }
+
+    // -----------------------------------------------------------------
+    // 网易云短信验证码：一轮问答之后该怎么走
+    //
+    // 纯字符串逻辑（Plugins/neteasemusic/captchaflow.h），不依赖 node 后端，
+    // 因此能在 CI 上跑。回归的是一处用户实测反馈：
+    //
+    //   「一直重复『验证码已发出请在 5 分钟内说出你的验证码』，然后连续重复
+    //     多次『验证码格式不正确，请重新说出你的短信验证码』。但是我并没有
+    //     说话。」
+    //
+    // 成因：旧实现把「空回答」与「说了但格式不对」混为一谈，
+    // `captchaFormatValid("")` 为假 -> 立刻播报格式错误（这句还是阻塞等 TTS
+    // 播完的）-> 三下就把重试额度耗光。而空回答其实有三种完全合理的来源：
+    //   * 本地麦克风：VAD 应答窗口到期，ASR 拿到空输入；
+    //   * 网页请求：用户没在网页上作答，也没开口；
+    //   * 一次性 HTTP 请求：Conversation::question() 没有回话通道，只能把
+    //     问题当文本回给请求方并立刻返回空串（externalId != 0）。
+    // 所以空回答必须走 RetrySilent：只重问、不报错、不消耗重试额度。
+    // （插件入口还会先用 helper->canAsk() 判断：连回话通道都没有的请求
+    //   直接跳过问答，连提示都不念。）
+    // -----------------------------------------------------------------
+    void neteaseCaptcha() {
+        using qsa::captcha::classifyAnswer;
+        using qsa::captcha::normalize;
+        using qsa::captcha::formatValid;
+        const int accept = int(qsa::captcha::Step::Accept);
+        const int retryFormat = int(qsa::captcha::Step::RetryFormat);
+        const int retrySilent = int(qsa::captcha::Step::RetrySilent);
+        const int giveUp = int(qsa::captcha::Step::GiveUp);
+        auto stepOf = [](const QString &answer, int attemptsLeft,
+                         int silentLeft) {
+            return int(classifyAnswer(answer, attemptsLeft, silentLeft));
+        };
+
+        // 1) 没说话：绝不能是「格式不正确」，也不能直接放弃
+        QCOMPARE(stepOf(QString(), 3, 1), retrySilent);
+        QCOMPARE(stepOf(QStringLiteral("   "), 3, 1), retrySilent);
+        QCOMPARE(stepOf(QStringLiteral("\n"), 3, 2), retrySilent);
+        // 静默额度用尽才放弃
+        QCOMPARE(stepOf(QString(), 3, 0), giveUp);
+
+        // 2) 说了但格式不对：提示重说，额度用尽后放弃
+        QCOMPARE(stepOf(QStringLiteral("12345"), 2, 1), retryFormat);
+        QCOMPARE(stepOf(QStringLiteral("今天天气不错"), 2, 1), retryFormat);
+        QCOMPARE(stepOf(QStringLiteral("12"), 0, 1), giveUp);
+
+        // 3) 合法验证码：4 位或 6 位纯数字
+        QCOMPARE(stepOf(QStringLiteral("1234"), 0, 0), accept);
+        QCOMPARE(stepOf(QStringLiteral("123456"), 0, 0), accept);
+        QCOMPARE(stepOf(QStringLiteral("幺二三四五六"), 0, 0), accept);
+        QCOMPARE(stepOf(QStringLiteral("验证码是 123456"), 0, 0), accept);
+        QCOMPARE(stepOf(QStringLiteral("幺二三六"), 0, 0), accept);
+
+        // 4) 归一化：中文数字 / 口语（幺=1、两=2）与分隔符
+        QCOMPARE(normalize(QStringLiteral("零幺二两三四")), QStringLiteral("012234"));
+        QCOMPARE(normalize(QStringLiteral("1 2-3,4")), QStringLiteral("1234"));
+        QCOMPARE(normalize(QStringLiteral("两两两两")), QStringLiteral("2222"));
+        QCOMPARE(normalize(QStringLiteral("没有数字")), QString());
+
+        // 5) 格式校验的边界
+        QVERIFY(formatValid(QStringLiteral("1234")));
+        QVERIFY(formatValid(QStringLiteral("123456")));
+        QVERIFY(!formatValid(QString()));
+        QVERIFY(!formatValid(QStringLiteral("123")));
+        QVERIFY(!formatValid(QStringLiteral("12345")));
+        QVERIFY(!formatValid(QStringLiteral("1234567")));
+        QVERIFY(!formatValid(QStringLiteral("1234a")));
+        QVERIFY(!formatValid(QStringLiteral("１２３４"))); // 全角
+    }
+
+    // -----------------------------------------------------------------
+    // 端到端：一段话 -> NLU -> 插件 -> TTS 文本
+    //
+    // serverHttp / serverWebSocket 用桩 handler 验证的是**传输层**，这里补上
+    // 它们没覆盖的**对话层**（robot.cpp 里 Server 的 questionHandler 就是
+    // Conversation::intentRequest，两条用例合起来才是网页提问的完整链路）：
+    //   * 真实 ONNX NLU 把中文解析成意图；
+    //   * PluginManager 按配置顺序把意图分发给**真实插件**；
+    //   * 插件在 handle() 里同步 say() 出来的文本被 Conversation 缓存、
+    //     作为 intentRequest() 的返回值交给调用方（网页/HTTP）；
+    //   * 同一条回复还要带来源（SystemInfo）经 responseText 广播出去，
+    //     网页上「这条是谁说的」用的就是它。
+    //
+    // 依赖运行期产物（~/.config/QSmartAssistant 下的 nlu_int8.onnx 与
+    // plugins/lib/*.dll|so）。CI 上没有这些文件，所以和 asrSherpa / ttsSherpa /
+    // pluginSystemInfo 一样**只在本机跑**，缺产物时 QSKIP 而不是失败。
+    //
+    // 顺带覆盖**插件收摊**（曾经在这里以退出码 0xC0000409 暴露）：
+    //   * 插件顺序里排在前面的 NeteaseMusic 会走到懒启动（handle() ->
+    //     ensureNodeStarted/login），真的拉起 node 子进程并请求登录接口；
+    //   * 用例末尾的 RAII guard 调 Conversation::stop() -> PluginManager::
+    //     shutdownPlugins()，插件在这里收摊并在 Qt 还活着时被卸载。
+    //   在补上这条收摊路径之前，插件实例/插件库要拖到进程退出、Qt 已经拆掉
+    //   之后才被销毁，插件成员里的 QProcess / QTimer / QNetworkAccessManager
+    //   在那个时机析构 → ucrtbase 的 __fastfail → 退出码 0xC0000409，
+    //   而且那是**用例跑完之后**才发生，容易被误当成本用例的断言失败。
+    // -----------------------------------------------------------------
+#if defined(NLU_ONNX)
+    void conversationRoundTrip() {
+        // 0) 先决条件：NLU 后端必须是 onnx，且权重真的在本地。
+        //    任何一条不满足都只可能是"环境没部署"（CI 就是这样），直接跳过。
+        if (Config::instance()->getConfig("nlu").value("backend").toString("rasa") !=
+            QStringLiteral("onnx")) {
+            QSKIP("nlu.backend is not onnx");
+        }
+        const ONNXNLU::Settings settings = qsaOnnxNluSettings();
+        if (!QFile::exists(settings.model)) {
+            QSKIP("onnx nlu model not deployed (scripts/fetch_models.py)");
+        }
+
+        // 1) 先单独钉住 NLU 这一级。放进独立作用域是为了让 ONNXNLU 及时析构 ——
+        //    下面 Conversation 会再加载一份同样的模型，没必要同时占两份内存。
+        //    分开断言的好处：挂了能一眼看出是"模型/分词错了"还是"分发出了问题"。
+        const QString question = QStringLiteral("汇报系统信息");
+        {
+            ONNXNLU probe;
+            QVERIFY2(probe.load(settings), "onnx nlu model failed to load");
+            const ParsedIntent parsed = probe.parseIntent(question);
+            QVERIFY2(parsed.hasIntent("SYS_INFO"),
+                     qPrintable(QStringLiteral("NLU 没把「%1」解析成 SYS_INFO")
+                                    .arg(question)));
+        }
+
+        // 2) 真实对话层。用 initTestCase 里那个 Player，跟 Robot 里的接法一致。
+        Conversation conversation(mplayer);
+        // 中途任何一条 QVERIFY 失败都会直接 return，而那时 ASR/TTS 线程还在跑，
+        // 析构 Conversation 会变成 "QThread: Destroyed while thread is still
+        // running" 的 QFATAL —— 把真正的失败原因整个盖掉。用 RAII 保证无论从
+        // 哪条路退出都先 stop()（guard 声明在 conversation 之后，先析构）。
+        struct StopGuard {
+            Conversation *conversation;
+            ~StopGuard() { conversation->stop(); }
+        } stopGuard{&conversation};
+
+        const int id = 20261011;
+        QSignalSpy replied(&conversation, &Conversation::responseText);
+        QSignalSpy askedMore(&conversation, &Conversation::requestQuestion);
+
+        // ⚠ 第三个参数（canAnswer）必须是 false：这条用例里没有任何东西能
+        //   回答中途的反问 —— 没有网页前端，也没有接 Wakeup（测试环境里
+        //   requestResponse 没人听）。传 true 的后果是 question() 真的去等
+        //   回答，用例就会在这句里卡到超时。HTTP /intent 走的正是 false 这条。
+        const QList<QString> texts =
+            conversation.intentRequest(question, id, false);
+        QVERIFY2(!texts.isEmpty(),
+                 "SYS_INFO 命中后一条 TTS 文本都没有（插件没部署？）");
+
+        // SystemInfo 报的是运行期数字（剩余内存），只能校格式不能校值：
+        // Windows 只说一句内存；Linux 在报内存前还会先报内核温度。
+        //
+        // ⚠ 不能假设 texts 里"只有"系统信息那一句：插件顺序里排在 SystemInfo
+        //   之前的插件会先开口（例如 NeteaseMusic 的登录/验证码提示），而它们
+        //   说的也是正经回复。所以这里只挑出 SystemInfo 那条来断言。
+        int memoryIndex = -1;
+        for (int i = 0; i < texts.size(); ++i) {
+            QVERIFY2(!texts.at(i).isEmpty(), "产生了空的 TTS 文本");
+            if (memoryIndex < 0 &&
+                texts.at(i).contains(QStringLiteral("剩余内存为"))) {
+                memoryIndex = i;
+            }
+        }
+        QVERIFY2(memoryIndex >= 0,
+                 qPrintable(QStringLiteral("TTS 文本不符合 SystemInfo 的口径: %1")
+                                .arg(texts.join(QStringLiteral(" | ")))));
+
+        // 没人能作答的请求不该产生反问：否则网页/调用方会收到一个「请回答」
+        // 却永远没法回（这条用例走的正是 /intent 那条路）。
+        QVERIFY2(askedMore.isEmpty(),
+                 "canAnswer=false 的请求不应该产生 requestQuestion");
+
+        // 同一条回复要带着会话 id 与来源广播出去（网页上"这条是谁说的"靠它）
+        bool gotSource = false;
+        for (const QVariant &one : replied) {
+            const QList<QVariant> args = one.toList();
+            if (args.at(0).toString() != texts.at(memoryIndex)) {
+                continue;
+            }
+            QCOMPARE(args.at(1).toInt(), id);
+            QCOMPARE(args.at(2).toString(), QStringLiteral("SystemInfo"));
+            gotSource = true;
+        }
+        QVERIFY2(gotSource, "SystemInfo 的回复没有带着来源广播出去");
+
+        // 空问题不该派发、也不该产生文本
+        const int repliedBefore = replied.count();
+        QVERIFY2(conversation.intentRequest(QString(), id).isEmpty(),
+                 "空问题不应该产生文本");
+        QCOMPARE(replied.count(), repliedBefore);
+
+#if defined(SERVER)
+        // 3) 真正"发一段对话给接口"。HTTP 那条路会跨线程切回主线程再调
+        //    questionHandler（见 server.cpp 的 /intent），所以这里顺带验证了
+        //    这条跨线程调用在真实 NLU/插件（比桩慢得多）下也不会死锁。
+        Server server(nullptr, 0);
+        if (server.isListening()) {
+            server.setQuestionHandler(
+                [&conversation](const QString &text, int convId, bool canAnswer) {
+                    return conversation.intentRequest(text, convId, canAnswer);
+                });
+            int status = 0;
+            const QByteArray body = qsaHttpGet(
+                static_cast<quint16>(server.port()),
+                QStringLiteral("/intent?text=") +
+                    QString::fromUtf8(QUrl::toPercentEncoding(question)),
+                &status);
+            QCOMPARE(status, 200);
+            const QJsonArray array = QJsonDocument::fromJson(body).array();
+            // 内存数字两次调用之间可能变，只校"有没有那句"不校内容
+            bool httpHasMemory = false;
+            for (const QJsonValue &value : array) {
+                if (value.toString().contains(QStringLiteral("剩余内存为"))) {
+                    httpHasMemory = true;
+                }
+            }
+            QVERIFY2(httpHasMemory,
+                     qPrintable(QStringLiteral("/intent 没返回系统信息: %1")
+                                    .arg(QString::fromUtf8(body))));
+        }
+#endif
+    }
+#endif // NLU_ONNX
 };
 #endif // TST_SHERPA_H
