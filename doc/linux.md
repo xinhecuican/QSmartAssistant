@@ -117,8 +117,10 @@ HTTP 服务 / 端口**。实测对比 rasa：
 
 `Data/onnx_nlu/{vocab.txt, rules.json}` 与 `Data/nlu_schema.json` 很小，
 **随仓库提供**；int8 权重 `nlu_int8.onnx`（约 57MB）不适合进 git，挂在 GitHub
-Release 上，`scripts/setup.py --profile minimal` 会自动下载并把运行期那份补齐
-（仓库 / 运行期里已有那份则直接复用，也可用 `--nlu-url` 换源）。**无需任何额外安装**。
+Release（tag `onnx_nlu`）上：
+<https://github.com/xinhecuican/QSmartAssistant/releases/download/onnx_nlu/nlu_int8.onnx>。
+`scripts/setup.py --profile minimal` 会自动下载并把运行期那份补齐（仓库 / 运行期里
+已有那份则直接复用，也可用 `--nlu-url` 换源）。**无需任何额外安装**。
 
 ### 切回 rasa 兜底后端（可选）
 

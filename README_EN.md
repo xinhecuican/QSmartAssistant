@@ -88,9 +88,10 @@ bash scripts/check_runtime_linux.sh
 >
 > The **ONNX NLU int8 weights** (`nlu_int8.onnx`, ~57 MB) are too large for git, so
 > they are published on
-> [Releases](https://github.com/xinhecuican/QSmartAssistant/releases) and fetched by
-> `setup.py` from `.../releases/latest/download/nlu_int8.onnx` (override with
-> `--nlu-url`). To prepare them by hand, drop the file at `Data/onnx_nlu/nlu_int8.onnx`.
+> [Releases](https://github.com/xinhecuican/QSmartAssistant/releases/tag/onnx_nlu)
+> (tag `onnx_nlu`) and fetched by `setup.py` from
+> `.../releases/download/onnx_nlu/nlu_int8.onnx` (override with `--nlu-url`).
+> To prepare them by hand, drop the file at `Data/onnx_nlu/nlu_int8.onnx`.
 >
 > The config file has been **YAML** since 2026-10 (`Data/config.yaml`; the template
 > `Data/default_config.yaml` carries per-option inline comments). Legacy JSON is

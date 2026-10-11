@@ -79,9 +79,9 @@ ONNX NLU 的权重由 `setup.py` 自动获取：
 > ```
 
 > **ONNX NLU 的 int8 权重**（`nlu_int8.onnx`，约 57 MB）体积偏大，不随仓库提交，
-> 而是放在 [Releases](https://github.com/xinhecuican/QSmartAssistant/releases) 上；
-> `setup.py` 会自动从
-> `https://github.com/xinhecuican/QSmartAssistant/releases/latest/download/nlu_int8.onnx`
+> 而是放在 [Releases](https://github.com/xinhecuican/QSmartAssistant/releases/tag/onnx_nlu)
+> 上（tag `onnx_nlu`）；`setup.py` 会自动从
+> `https://github.com/xinhecuican/QSmartAssistant/releases/download/onnx_nlu/nlu_int8.onnx`
 > 拉取（可用 `--nlu-url` 换成镜像或本地文件）。想手动准备时，把文件放到
 > `Data/onnx_nlu/nlu_int8.onnx` 即可，安装器会优先复用仓库 / 运行期里已有的那份。
 

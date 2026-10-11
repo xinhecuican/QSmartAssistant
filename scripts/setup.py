@@ -445,9 +445,12 @@ def _build_sherpa_onnx() -> Component:
 # ---- ONNX NLU ------------------------------------------------------------
 # 三件套里 vocab.txt / rules.json 很小，随仓库 `Data/onnx_nlu/` 走；int8 权重
 # 约 57MB，不适合进 git（仓库体积 + GitHub 100MB 单文件上限），挂在 GitHub
-# Release 上。用 latest/download/<asset> 的形式，以后换版本只改 Release 即可。
-ONNX_NLU_URL = ("https://github.com/xinhecuican/QSmartAssistant"
-                "/releases/latest/download/nlu_int8.onnx")
+# Release 上（tag: onnx_nlu，资产名 nlu_int8.onnx）。
+# ⚠ 换 Release tag 或改资产名时必须同步改这里，否则下载会拿到 404 的 HTML。
+ONNX_NLU_RELEASE_TAG = "onnx_nlu"
+ONNX_NLU_ASSET = "nlu_int8.onnx"
+ONNX_NLU_URL = (f"https://github.com/xinhecuican/QSmartAssistant"
+                f"/releases/download/{ONNX_NLU_RELEASE_TAG}/{ONNX_NLU_ASSET}")
 
 
 def _build_onnx_nlu() -> Component:
