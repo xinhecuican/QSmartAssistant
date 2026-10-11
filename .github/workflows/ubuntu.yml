@@ -84,6 +84,10 @@ jobs:
       # 缓存第三方编译产物。onnxruntime / sherpa-onnx / yaml-cpp 都装在 lib/
       # 下，而 lib/ 在 .gitignore 里 —— runner 每次都是空白的，必须重装。
       # 缓存 key 带上安装脚本的 hash：脚本改了（换版本/换地址）就自动失效。
+      #
+      # ⚠ 这里缓存的是"安装脚本产出的东西"，所以仓库里**不能**再入库
+      #   lib/yaml-cpp 的任何文件（历史上误入库过一个 Windows 的 yaml-cpp.lib，
+      #   直接导致 build_linux.sh 误判"已安装"而跳过安装）—— 详见该脚本注释。
       # ---------------------------------------------------------------------
       - name: Cache onnxruntime
         uses: actions/cache@v4
@@ -96,6 +100,14 @@ jobs:
         with:
           path: lib/sherpa_onnx
           key: ${{ runner.os }}-sherpa-onnx-${{ hashFiles('scripts/install_sherpa_onnx.sh') }}
+
+      # yaml-cpp 是个小静态库（编译 ~40s），但它是 configure 阶段的硬依赖，
+      # 单独一个 key，便于单独失效/排查。
+      - name: Cache yaml-cpp
+        uses: actions/cache@v4
+        with:
+          path: lib/yaml-cpp
+          key: ${{ runner.os }}-yaml-cpp-${{ hashFiles('scripts/install_yaml_cpp.sh') }}
 
       # ---------------------------------------------------------------------
       # 构建：直接用文档里的"一键构建"入口（doc/linux.md §二），而不是在这里

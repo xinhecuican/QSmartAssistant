@@ -56,8 +56,12 @@ $env:PATH = (Join-Path $QtDir "bin") + ";" + $env:PATH
 #    lib/ is git-ignored, so a fresh clone has none of them. yaml-cpp is a
 #    hard configure-time requirement (find_package(yaml_cpp REQUIRED)).
 # ---------------------------------------------------------------------------
-$needYaml   = -not ((Test-Path (Join-Path $root "lib\yaml-cpp\lib\yaml-cpp.lib")) -or
-                    (Test-Path (Join-Path $root "lib\yaml-cpp\lib\libyaml-cpp.a")))
+# Require BOTH the import library and the headers (mirrors install_yaml_cpp.ps1,
+# which skips only when both are present). A half-present lib/yaml-cpp used to
+# make this check lie, and the build then died at configure time with a very
+# confusing "Could NOT find yaml_cpp (missing: yaml_cpp_LIBRARY)".
+$needYaml   = -not ((Test-Path (Join-Path $root "lib\yaml-cpp\lib\yaml-cpp.lib")) -and
+                    (Test-Path (Join-Path $root "lib\yaml-cpp\include\yaml-cpp\yaml.h")))
 $needOrt    = -not (Test-Path (Join-Path $root "lib\onnxruntime\include"))
 $needSherpa = -not (Test-Path (Join-Path $root "lib\sherpa_onnx\include"))
 

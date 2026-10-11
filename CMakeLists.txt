@@ -139,7 +139,10 @@ add_library(lpcommon SHARED ${COMMON_SOURCES} ${COMMON_HEADERS})
 target_compile_definitions(lpcommon PRIVATE LPCOMMON_LIBRARY)
 
 # ---------------------------------------------------------------------------
-# yaml-cpp：配置文件的 yaml 读写依赖（仓库自带静态库 lib/yaml-cpp）
+# yaml-cpp：配置文件的 yaml 读写依赖
+#   ⚠ lib/yaml-cpp **不在仓库里**（lib/ 被 .gitignore 忽略），由
+#     scripts/install_yaml_cpp.sh（Windows: .ps1）构建产出；缺失时 configure
+#     直接失败，所以 build_{linux.sh,windows.ps1} 会在 configure 前先装它。
 #   必须以静态库方式链接 → 由 Findyaml_cpp.cmake 附带
 #   INTERFACE_COMPILE_DEFINITIONS=YAML_CPP_STATIC_DEFINE，
 #   否则 yaml-cpp/dll.h 会把符号展开成 __declspec(dllimport) 并引发 LNK2019。

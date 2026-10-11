@@ -133,8 +133,16 @@ need_sherpa() { [ ! -d "${ROOT}/lib/sherpa_onnx/include" ]; }
 # yaml-cpp 是**configure 阶段**的硬依赖（find_package(yaml_cpp REQUIRED)）：
 # 缺了它连 cmake 都跑不完，报 "Could NOT find yaml_cpp"。lib/ 不入库，
 # 所以新 clone 的仓库必须装一次。
+#
+# ⚠⚠ 条件必须是「当前平台真正要用的文件缺任意一个」→ 用 ||，不是 &&。
+#   踩过的坑：仓库里曾误入库 Windows 的 lib/yaml-cpp/lib/yaml-cpp.lib
+#   （MSVC 静态库，Linux 上毫无用处），而原来的条件是
+#   "(! .a) && (! .lib)" —— Linux 上一看 .lib 存在就判定"已安装"直接跳过，
+#   紧接着 configure 报 "Could NOT find yaml_cpp (missing: yaml_cpp_LIBRARY)"，
+#   而这条报错完全指不出"其实根本没装"。改 || 后：库或头文件任一缺失都会重装。
+#   与 install_yaml_cpp.sh 的跳过条件（.a 与 yaml.h 都在才跳过）严格互补。
 need_yaml()   { [ ! -f "${ROOT}/lib/yaml-cpp/lib/libyaml-cpp.a" ] \
-                && [ ! -f "${ROOT}/lib/yaml-cpp/lib/yaml-cpp.lib" ]; }
+                || [ ! -f "${ROOT}/lib/yaml-cpp/include/yaml-cpp/yaml.h" ]; }
 
 if [ "${SKIP_DEPS}" -eq 0 ]; then
     if need_yaml; then
