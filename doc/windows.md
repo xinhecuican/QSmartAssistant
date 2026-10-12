@@ -310,14 +310,62 @@ Windows 下该插件默认以 `NETEASE_USE_JS` 模式构建：**不**链接 `QCl
    # homeDir: "/opt/QSmartAssistant/lib/NeteaseCloudMusicApi"           # Linux
    ```
 
+   登录是**懒启动**的，而且只在「这次请求确实归网易云插件处理」时才发生：
+   插件在启动阶段完全不碰网易云（不拉 node、不登录），只有当一句话命中音乐
+   意图（触发词 + `MUSICRANK`/`MUSICINFO`/`MUSICPROP`/`OPEN_MUSIC`，置信度
+   > 0.5）或已处在沉浸态时，才会拉起 node 后端并登录。⚠ 反过来说，说别的事情
+   （例如「汇报系统信息」）时它只是被调用一次 `handle()` 就返回，
+   **不会**启动后端、更不会突然开始问验证码。
+
    登录方式二选一：`email` 非空走邮箱登录（api-enhanced 的 `/login`，即
    `module/login.js`，参数 email+password）；否则走手机号登录
-   （`/login/cellphone`）。两者都失败时，手机号方式会自动发短信验证码
-   （`/captcha/sent`），随后语音提示用户说出验证码（总等待时长由
-   `netease_cloud.captchaTimeoutSec` 控制，默认 180 秒；ASR 结果会做
-   中文数字归一化，仅接受 4 或 6 位纯数字，格式不合法会重问，最多 3 次，
-   超时或失败回落匿名登录）；邮箱方式没有短信通道，失败后直接回落匿名登录。
-   验证码会写入 `Data\Tmp\netease_captcha.txt`（5 分钟内有效）。
+   （`/login/cellphone?phone=…&password=…`）。手机号这条的顺序是硬要求：
+
+   1. 先试密码登录；
+   2. **只有它失败**，才发短信验证码：先走**新版**接口 `/captcha/sent/v1`
+      （api-enhanced 的 `module/captcha_sent_v1.js`，eapi 加密打
+      `/api/middle/captcha/sent/v1`，比旧版多一个 `scene=0`，当前客户端用的就是它）；
+      **只有它明确回了非 200 业务码**才退到旧版 `/captcha/sent`
+      （weapi + `secrete=music_middleuser_pclogin`）。这样上游哪天把新版下线，
+      行为只是退回旧接口，而不会一次请求发两条短信；反过来若连业务码都读不到
+      （超时/后端异常），说明是链路问题，换接口也一样，直接失败更安全；
+   3. **只有**发送接口明确返回业务码 `200`，才提示「验证码已发送到您的手机」
+      并开始问答。总等待时长由 `netease_cloud.captchaTimeoutSec` 控制
+      （`default_config.yaml` 里配的是 300 秒，代码兜底 180 秒）；ASR 结果会做
+      中文数字归一化，仅接受 4 或 6 位纯数字，格式不合法会重问（最多 3 次），
+      没听到任何回答只重问一次、不会误报「格式不正确」；
+   4. 每拿到一个**格式合法**的验证码，先花一次只读的
+      `/captcha/verify?phone=…&captcha=…` 判断对错，再决定要不要登录 —— 官方文档
+      明确提醒「不要频繁调登录接口,不然可能会被风控」，用校验挡住明显写错的码，
+      比拿登录接口当试错器划算得多；
+   5. 校验通过（或校验本身说不清）后，用 `/login/cellphone?phone=…&captcha=…` 登录；
+   6. 超时、验证码发送失败、或多次不合法 → 回落匿名（游客）登录。
+
+   ⚠⚠ `/captcha/verify` 的结果要**和登录分开判**：本机实测（2026-10-12，故意传错码）
+   它回 HTTP 503 + `{"message":"验证码错误","code":503,"data":false}`，而
+   `/login/cellphone` 的 503 是「需要短信验证码」—— **同一个业务码 503，两个接口
+   含义相反**，混判就会把风控当成用户打错字。所以插件只认两件事：业务码 `200`
+   算通过；业务码 `503` 或 `message` 提到「验证码」算用户说错了（提示「验证码不正确」
+   重问）。其余情况（超时、风控 `-462`、读不出业务码）一律当作「判断不了」，
+   照旧往下走 —— 绝不能因为读不懂响应，就让用户把同一个正确的码念三遍。
+
+   邮箱方式没有短信通道，失败后直接回落匿名登录。
+   ⚠ 「这次对话能不能真的把验证码送回来」会先被检查：本地麦克风对话与可作答的
+   网页请求可以，一次性 HTTP `/intent` 不行 —— 拿不到回答就直接走游客登录，
+   免得为一条用不上的短信白跑一趟。
+
+   ⚠⚠ **api-enhanced 自带一层响应缓存**（`server.js` 的
+   `app.use(cache('2 minutes', (_, res) => res.statusCode === 200))`，键 =
+   hostname + originalUrl(**含 query**) + cookies）。`/captcha/sent` 与
+   `/captcha/sent/v1` 的 URL 每次都一模一样，2 分钟内重复调用会**直接命中缓存**
+   —— 返回 200，可短信根本发不出去，而插件照样念「验证码已发送到您的手机」。
+   因此插件对 `/captcha/sent`、`/captcha/sent/v1`、`/captcha/verify`、`/login`、
+   `/login/cellphone` 显式带上 apicache 的绕过头 `x-apicache-force-fetch`，
+   保证请求真的打到服务端（换个没有 apicache 的后端时该头被忽略，无副作用）。
+   日志里能看到成对的两行：`netease captcha: -> /captcha/sent/v1?phone=138****8000 …`
+   与 `netease captcha: /captcha/sent/v1 ok, business code = 200` —— 前者是「发了请求」，
+   后者是「服务端回了 200」，两者都在才说明短信真的被受理。
+
    注意：网易对密码登录风控很严，邮箱密码不匹配返回 code 501，
    手机号密码登录常返回 code -462（必须人机验证），此时短信验证码是
    唯一可靠的自动登录路径——即便配上 `randomCNIP`/`realIP` 也绕不过。

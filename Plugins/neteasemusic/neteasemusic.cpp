@@ -571,6 +571,15 @@ void NeteaseMusic::login(int id) {
         // 还会无谓增加被网易风控标记的概率。直接落到游客（匿名）登录。
         const bool hasCredential = useEmail || !loginPhone.isEmpty();
         if (hasCredential) {
+            // ⚠ 必须先清空：上面那句 login_status 是按 withCookie=true 调的，
+            //   invokeMethod 会往**调用方的 map** 里塞 args["cookie"]，而 params
+            //   是复用的 —— 不清就会把上一轮读出来的旧 cookie 一起发给
+            //   /login|/login/cellphone，而这里的调用点写的是 withCookie=false，
+            //   本意恰恰是「别带 cookie」。实测日志里能看到
+            //   `login/cellphone?cookie=MUSIC_A%3D…`，多带一个旧会话既可能
+            //   让网易按别的会话处理（白报一次失败 → 白发一条短信），
+            //   也把凭据一路带进了日志。
+            params.clear();
             if (useEmail) {
                 params["email"] = loginEmail;
             } else {
@@ -580,8 +589,13 @@ void NeteaseMusic::login(int id) {
         }
         bool success = false;
         for (int i = 0; i < (hasCredential ? 1 : 0); i++) {
-            result = invokeMethod(useEmail ? "login" : "login_cellphone", params, false);
-            if (result["status"] == 200) {
+            result = invokeMethod(useEmail ? "login" : "login_cellphone", params,
+                                  false, true);
+            // ⚠ 用业务码判定，不要用 result["status"]：{status, body} 信封下
+            //   status 只是外层 HTTP 码，「HTTP 200 + 业务 502（密码错误）」会被
+            //   读成登录成功 —— 于是**验证码兜底整段被跳过**，用户永远等不到
+            //   那条短信。（isSuccess 的说明见 captchaflow.h。）
+            if (qsa::captcha::isSuccess(result)) {
                 QString importCookie = QUrl::toPercentEncoding(
                     result["cookie"].toString().toLocal8Bit());
                 if (importCookie != "") {
@@ -604,30 +618,51 @@ void NeteaseMusic::login(int id) {
                 QThread::msleep(1000);
             }
         }
+        // 短信验证码兜底。⚠ 顺序是硬要求，不能提前：
+        //   1. 上面已经先试过 /login/cellphone（手机号+密码）—— 只有它**失败**了
+        //      （success == false 或没拿到 cookie）才走到这里；
+        //   2. 这里发 /captcha/sent?phone=…，并且**必须**拿到业务码 200；
+        //   3. 只有第 2 步真的有 200，才提示「验证码已发送」并开始问答，
+        //      最后用 /login/cellphone?phone=…&captcha=… 登录。
         // 邮箱登录没有短信验证码通道，失败直接落到匿名登录。
         // 没配凭据时同样跳过（hasCredential == false），直接匿名。
         if (hasCredential && !useEmail && (!success || cookie == "")) {
             qInfo() << "netease login fail, try to login by captcha.";
-            params.clear();
-            params["phone"] = neteaseConfig.value("phone").toString();
-            result = invokeMethod("captcha_sent", params, false);
-            if (result["status"] != 200) {
-                qWarning() << result["body"].toMap()["message"].toString();
+            const QString phone = neteaseConfig.value("phone").toString();
+            // ⚠ 三步顺序，一步都不能提前：
+            //   1. 先确认「这次对话真能把验证码送回来」（本地麦克风 / 可作答的
+            //      网页请求可以；一次性 HTTP 请求没有任何回话通道）——不然就是
+            //      白发一条短信、白多一次被风控标记；
+            //   2. 发 /captcha/sent，且**必须**拿到业务码 200
+            //      （判定见 captchaflow.h 的 isSuccess，{status,body} 信封与
+            //       字符串码都能正确处理）；
+            //   3. 只有第 2 步真的有 200 才开口提示、才开始问答。
+            //   旧实现在 captcha_sent 非 200 时只记一条 warning 就往下走，更早的
+            //   版本连状态都不看 —— 用户手机上什么都没有，助手却念「验证码已
+            //   发送到您的手机」，然后干等一整轮，最后说「没有收到有效的验证码」。
+            if (helper != nullptr && !helper->canAsk()) {
+                helper->say("当前对话无法输入短信验证码，本次使用游客模式登录。",
+                            id, false);
+                qWarning() << "netease captcha: 本次对话拿不到回答，跳过发短信";
+            } else if (!sendCaptcha(phone)) {
+                helper->say("短信验证码发送失败，将使用游客模式登录。", id,
+                            id == 0);
             } else {
                 // 语音交互获取验证码：先提示，再等用户说出验证码，
                 // 超时/格式不合法 -> 落到匿名登录。
-                QString captchaCode = requestCaptchaByVoice(neteaseConfig, id);
+                const QString captchaCode =
+                    requestCaptchaByVoice(neteaseConfig, id);
                 if (!captchaCode.isEmpty()) {
                     // 使用验证码登录
                     params.clear();
-                    params["phone"] = neteaseConfig.value("phone").toString();
+                    params["phone"] = phone;
                     params["captcha"] = captchaCode;
                     // 不要把验证码本身写进日志（同 password/cookie 一样敏感）。
                     qInfo() << "login cellphone by captcha (code length ="
                             << captchaCode.size() << ")";
-                    result = invokeMethod("login_cellphone", params, false);
+                    result = invokeMethod("login_cellphone", params, false, true);
 
-                    if (result["status"] == 200) {
+                    if (qsa::captcha::isSuccess(result)) {
                         QString importCookie = QUrl::toPercentEncoding(
                             result["cookie"].toString().toLocal8Bit());
                         if (importCookie != "") {
@@ -643,9 +678,17 @@ void NeteaseMusic::login(int id) {
                         success = true;
                         isLogin = true;
                     } else {
-                        qInfo() << "captcha login fail";
+                        bool known = false;
+                        const int code =
+                            qsa::captcha::businessCode(result, &known);
+                        // 不要把验证码/口令写进日志，只说状态码。
+                        qInfo() << "captcha login fail, code =" << code
+                                << "known =" << known;
                         qWarning() << result["body"].toMap()["message"].toString();
-                        helper->say("验证码登录失败，将使用游客模式。", 0, true);
+                        // ⚠ 不能再用 id=0/block=true：网页请求那样会把话说给
+                        //   本机扬声器，还会阻塞住发起请求的那条链路。
+                        helper->say("验证码登录失败，将使用游客模式。", id,
+                                    id == 0);
                     }
                 }
             }
@@ -703,9 +746,111 @@ void NeteaseMusic::login(int id) {
     loggingIn = false;
 }
 
+// 发送短信验证码。判定用的是 captchaflow.h 的 isSuccess()（只看业务码 200），
+// 这是「能不能开口提示用户」的唯一依据。
+//
+// 两个接口（api-enhanced 文档「发送验证码」/「新版发送验证码」）：
+//   /captcha/sent/v1  → module/captcha_sent_v1.js：eapi 打
+//                       /api/middle/captcha/sent/v1，参数多一个 scene=0，
+//                       是当前客户端在用的「新版」。
+//   /captcha/sent     → module/captcha_sent.js：weapi 打 /api/sms/captcha/sent，
+//                       带 secrete=music_middleuser_pclogin，旧版。
+// 实测（2026-10-12）：新版回 `{"code":200,"data":{}}`，旧版回 `{"code":200,"data":true}`，
+// 两者形状不同但都以业务码 200 为准 —— 所以判定只看 code，不看 data。
+// 顺序：新版优先，**只有读到确定的非 200 业务码**才退旧版；这样万一新版被
+// 下线，行为退回到旧接口，而不会一次请求发两条短信。
+bool NeteaseMusic::sendCaptcha(const QString &phone) {
+    if (phone.trimmed().isEmpty()) {
+        // 连手机号都没有就别发请求了：网易只会回一串噪音错误，
+        // 白白增加被风控标记的概率。
+        qWarning() << "netease captcha: 未配置 netease_cloud.phone，跳过发送";
+        return false;
+    }
+    struct Endpoint {
+        const char *method;  // invokeMethod 的名字，'_' 会被换成 '/'（apiPath）
+        const char *path;    // 日志里显示的路径
+    };
+    const Endpoint endpoints[2] = {
+        {"captcha_sent_v1", "/captcha/sent/v1"},
+        {"captcha_sent", "/captcha/sent"},
+    };
+    for (const Endpoint &endpoint : endpoints) {
+        QVariantMap params;
+        params["phone"] = phone;
+        // ⚠ 把「确实发了这条请求」写进日志。**成功的请求原本一行 URL 都没有**
+        //   （只有失败时那条 HTTP 错误分支才打 URL），于是「手机没收到短信」时
+        //   从日志上看会像是「压根没调用」。这里显式打一条，并带上脱敏后的
+        //   手机号，方便核对号码配得对不对。
+        qInfo().noquote()
+            << QStringLiteral("netease captcha: -> %1?phone=%2 "
+                              "(ctcode 默认 86，强制穿透 apicache)")
+                   .arg(QString::fromLatin1(endpoint.path),
+                        qsa::captcha::maskPhone(phone));
+        // ⚠ forceFetch=true 是关键：否则 2 分钟内重复调用会命中 api-enhanced 的
+        //   响应缓存，返回 200 但短信根本没发（见 invokeMethod 的说明）。
+        const QVariantMap result =
+            invokeMethod(QString::fromLatin1(endpoint.method), params, false, true);
+        bool known = false;
+        const int code = qsa::captcha::businessCode(result, &known);
+        if (known && code == 200) {
+            qInfo().noquote()
+                << QStringLiteral("netease captcha: %1 ok, business code = 200")
+                       .arg(QString::fromLatin1(endpoint.path));
+            return true;
+        }
+        // ⚠ 常见非 200：-462 需要人机验证、400/401 手机号或频率问题。
+        //   把这些如实记下来，才能在「用户说没收到短信」时一眼看出原因。
+        qWarning() << "netease captcha:" << endpoint.path << "未成功 code =" << code
+                   << "known =" << known
+                   << result["body"].toMap()["message"].toString()
+                   << result["body"].toMap()["msg"].toString();
+        // 只有「确定失败」才值得换下一个接口重试；读不到业务码（超时/后端异常）
+        // 说明是链路问题，换接口也一样，直接失败更安全（不会重复发短信）。
+        if (!known) {
+            break;
+        }
+    }
+    return false;
+}
+
+// 校验验证码：`/captcha/verify?phone=…&captcha=…`（module/captcha_verify.js，
+// weapi 打 /api/sms/captcha/verify）。
+// 实测（2026-10-12，故意传错码）：HTTP 503 + `{"message":"验证码错误","code":503,
+// "data":false}`；正确时业务码 200。
+// ⚠ 这个 503 与 /login/cellphone 的 503（= 需要短信验证码）**同码不同义**，
+//   所以判定放在 captchaflow.h 的 classifyVerify() 里，按接口区分。
+qsa::captcha::VerifyOutcome NeteaseMusic::verifyCaptcha(const QString &phone,
+                                                        const QString &code) {
+    QVariantMap params;
+    params["phone"] = phone;
+    params["captcha"] = code;
+    // ⚠ 不打印验证码本身，只打长度（同 password / cookie 的处理）。
+    qInfo().noquote()
+        << QStringLiteral("netease captcha: -> /captcha/verify?phone=%1 "
+                          "(code length = %2)")
+               .arg(qsa::captcha::maskPhone(phone))
+               .arg(code.size());
+    const QVariantMap result =
+        invokeMethod(QStringLiteral("captcha_verify"), params, false, true);
+    const qsa::captcha::VerifyOutcome outcome = qsa::captcha::classifyVerify(result);
+    bool known = false;
+    const int code2 = qsa::captcha::businessCode(result, &known);
+    const QString name =
+        outcome == qsa::captcha::VerifyOutcome::Ok
+            ? QStringLiteral("ok")
+            : (outcome == qsa::captcha::VerifyOutcome::WrongCode
+                   ? QStringLiteral("wrong code")
+                   : QStringLiteral("unknown"));
+    qInfo() << "netease captcha: /captcha/verify ->" << name << "business code ="
+            << code2 << "known =" << known;
+    return outcome;
+}
+
 // 验证码的归一化 / 格式校验 / 「下一步怎么走」判定都在 captchaflow.h 里，
 // 那是纯字符串逻辑，可以脱离插件环境单独单测（见 Test/tst_sherpa.h 的
 // neteaseCaptcha 用例）。这里只负责「说 / 问 / 记日志」。
+// ⚠ 调用方必须已经在 sendCaptcha() 里拿到业务码 200 才调本函数 —— 它进门
+//   第一件事就是念「验证码已发送到您的手机…」。
 QString NeteaseMusic::requestCaptchaByVoice(const QJsonObject &neteaseConfig,
                                             int id) {
     const int timeoutSec = neteaseConfig.value("captchaTimeoutSec").toInt(180);
@@ -753,9 +898,27 @@ QString NeteaseMusic::requestCaptchaByVoice(const QJsonObject &neteaseConfig,
 
         switch (qsa::captcha::classifyAnswer(answer, maxAttempts - attempts,
                                              maxSilent - silent)) {
-        case qsa::captcha::Step::Accept:
+        case qsa::captcha::Step::Accept: {
+            const QString code = qsa::captcha::normalize(answer);
+            // ⚠ 先拿 /captcha/verify 过一遍，再决定要不要去调登录接口：官网
+            //   文档明确写着「不要频繁调登录接口,不然可能会被风控」，用一个
+            //   只读校验挡住明显写错的验证码，比拿登录接口当试错器划算得多。
+            //   只有**明确**判出错码（业务码 503 / message 提到「验证码」）才
+            //   让用户重说；Unknown（超时、风控、读不出业务码）一律照旧往下走
+            //   —— 绝不让「校验读不懂响应」这种事把正常流程卡住。
+            const QString captchaPhone = neteaseConfig.value("phone").toString();
+            if (!captchaPhone.isEmpty() &&
+                verifyCaptcha(captchaPhone, code) ==
+                    qsa::captcha::VerifyOutcome::WrongCode) {
+                ++attempts;
+                qWarning() << "captcha wrong by /captcha/verify, ask again ("
+                           << attempts << "/" << maxAttempts << ")";
+                helper->say("验证码不正确，请重新说出您的短信验证码", id, speak);
+                break;
+            }
             qInfo() << "captcha from voice ok, attempts =" << (attempts + 1);
-            return qsa::captcha::normalize(answer);
+            return code;
+        }
         case qsa::captcha::Step::RetrySilent:
             // 没听到任何回答：不报「格式不正确」（那会误导用户，也会把重试
             // 次数迅速耗光），只是再问一次。
@@ -787,20 +950,15 @@ void NeteaseMusic::recvMessage(const QString &text,
 
 bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
                           int id, bool &isImmersive) {
-    if (!isLogin) {
-        // 懒启动：只有走到这里（确实匹配到音乐相关意图/沉浸态）才拉起
-        // node 后端并登录。启动阶段完全不碰网易云。
-        if (!ensureNodeStarted()) {
-            return false;
-        }
-        if (!isLogin) {
-            // 带上本次对话 id：验证码语音问答要据此把提示回给请求方（网页
-            // 走文本推送，本地 id=0 才走扬声器）。
-            login(id);
-            if (!isLogin)
-                return false;
-        }
-    }
+    // ⚠⚠ 先判断「这次请求到底归不归 netease 处理」，**再**决定要不要启动 node /
+    //   登录。PluginManager 对**每一个**请求都会按顺序调用所有插件的 handle()，
+    //   用户随便说什么（「汇报系统信息」）都会走进来一次。旧实现在函数最前面就
+    //      if (!isLogin) { ensureNodeStarted(); login(id); }
+    //   于是只要 NLU 解析完、请求传到 netease，登录流程就开跑：
+    //     * 无关请求也拉起 node 子进程、发登录请求，白白增加被风控的概率；
+    //     * 最要命的是会进短信验证码问答 —— 用户在说别的事，助手却突然开始
+    //       「请说出您收到的短信验证码」。
+    //   登录属于「netease 真的接下这次请求」之后的动作，必须放在判定之后。
     isSearchTrigger = false;
     for (auto &trigger : searchTrigger) {
         if (text.contains(trigger)) {
@@ -817,15 +975,27 @@ bool NeteaseMusic::handle(const QString &text, const ParsedIntent &parsedIntent,
             conf = intent.conf;
         }
     }
-    bool needHandle = isSearchTrigger && isSearch && conf > 0.5;
-    bool result = needHandle || isImmersive;
-    if (needHandle || isImmersive) {
-        if (needHandle && !isImmersive)
-            isImmersive = true;
-        bool success = doHandle(text, parsedIntent, id, isImmersive);
-        result = result & success;
+    const bool needHandle = isSearchTrigger && isSearch && conf > 0.5;
+    if (!needHandle && !isImmersive) {
+        // 不是给我的请求：不启动 node、不登录、更不会去问验证码。
+        return false;
     }
-    return result;
+    if (!isLogin) {
+        // 懒启动：只有确实要处理这次请求时才拉起 node 后端并登录。
+        if (!ensureNodeStarted()) {
+            return false;
+        }
+        if (!isLogin) {
+            // 带上本次对话 id：验证码语音问答要据此把提示回给请求方（网页
+            // 走文本推送，本地 id=0 才走扬声器）。
+            login(id);
+            if (!isLogin)
+                return false;
+        }
+    }
+    if (needHandle && !isImmersive)
+        isImmersive = true;
+    return doHandle(text, parsedIntent, id, isImmersive);
 }
 
 bool NeteaseMusic::doHandle(const QString &text,
@@ -987,7 +1157,8 @@ QString NeteaseMusic::apiPath(const QString &name) {
 }
 #endif
 
-QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool withCookie) {
+QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool withCookie,
+                                       bool forceFetch) {
     QVariantMap ret;
     if (officialMode) {
         // 官方模式下不做 cookie 注入：令牌由 NeteaseOfficialClient 统一携带。
@@ -1047,6 +1218,19 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
     // QNetworkAccessManager 请求，既跨平台又避免编解码问题。
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    if (forceFetch) {
+        // ⚠⚠ api-enhanced 的 server.js 里有一层响应缓存：
+        //     app.use(cache('2 minutes', (_, res) => res.statusCode === 200))
+        //   它的键是 hostname + originalUrl(**含 query**) + cookies
+        //   （见 lib/NeteaseCloudMusicApi/util/apicache.js:675-678）。
+        //   本插件全走 GET、captcha_sent 的 URL 每次都是
+        //   /captcha/sent?phone=…&randomCNIP=true、又从不带 Cookie 头
+        //   → 2 分钟内第二次调用**直接命中缓存**，请求压根不发给网易：
+        //   返回 200，插件念「验证码已发送到您的手机」，用户手机一点动静没有。
+        //   apicache 自带逃生口：带这个头就 bypass()，绕过缓存
+        //   （util/apicache.js:658-662）。换个没有 apicache 的后端也只是被忽略。
+        req.setRawHeader("x-apicache-force-fetch", "1");
+    }
     QNetworkReply *reply = manager.get(req);
     QEventLoop loop;
     QTimer timeout;
@@ -1067,9 +1251,19 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
         if (reply->error() != QNetworkReply::NoError) {
             const int httpStatus =
                 reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            qWarning() << "netease api http status" << httpStatus
-                       << reply->errorString() << redactQueryForLog(url)
-                       << "body:" << bodyRaw.left(200);
+            // ⚠⚠ errorString() 里带着**完整的请求 URL**，而我们的 query 里有
+            //   cookie / phone / captcha / password —— 直接打出去等于把凭据写进
+            //   日志。实测过：/login/cellphone 被风控拦下（HTTP 400）时，
+            //   这一行会把 MUSIC_A=… 的整串 cookie 明文打进日志文件。
+            //   redactQueryForLog(url) 只能保住下面那个自己拼的参数，救不了它，
+            //   所以这里把 errorString 的 query 也削掉。
+            QString error = reply->errorString();
+            const int queryStart = error.indexOf(QLatin1Char('?'));
+            if (queryStart >= 0) {
+                error = error.left(queryStart) + QStringLiteral("?***");
+            }
+            qWarning() << "netease api http status" << httpStatus << error
+                       << redactQueryForLog(url) << "body:" << bodyRaw.left(200);
         }
     }
     timeout.stop();
@@ -1087,8 +1281,16 @@ QVariantMap NeteaseMusic::invokeMethod(QString name, QVariantMap &args, bool wit
     //        }
     //    }
     if (bodyMap.contains("status")) {
+        // {status, body} 信封：真正的业务载荷在 body 里。
         ret["status"] = bodyMap["status"];
         ret["body"] = bodyMap["body"];
+        // ⚠ cookie 也要从信封里取出来。登录类接口的成功响应就是靠它把会话
+        //   交给调用方的；漏了这一步，「登录成功」会变成「没拿到 cookie」，
+        //   于是白走一遍短信验证码流程，最后落到游客登录。
+        const QVariantMap inner = bodyMap["body"].toMap();
+        if (inner.contains("cookie")) {
+            ret["cookie"] = inner["cookie"];
+        }
     } else {
         ret["body"] = bodyMap;
         // ⚠ 业务码必须优先取**顶层** code。网易把错误/风控码放在顶层：

@@ -4,6 +4,7 @@
 #include <QObject>
 
 #include "../Plugin.h"
+#include "captchaflow.h"
 #include "neteaseofficialclient.h"
 #ifndef NETEASE_USE_JS
 #include "apihelper.h"
@@ -54,12 +55,31 @@ private:
     void getCurrentTrack(int uid);
     void searchAlbum(const ParsedIntent &parsedIntent);
     void setPlaylist(const QList<QString> &singer, const QList<QString> &song);
-    QVariantMap invokeMethod(QString name, QVariantMap &args, bool withCookie=true);
+    // 调用 node 后端的一个接口。
+    // withCookie=false 时不注入会话 cookie。
+    // ⚠⚠ forceFetch=true 会带上 apicache 的绕过头（x-apicache-force-fetch），
+    //   让请求**真的打到服务端**。原因：api-enhanced 的 server.js 有一层
+    //   `app.use(cache('2 minutes', (_, res) => res.statusCode === 200))`，
+    //   缓存键 = hostname + originalUrl(**含 query**) + cookies；而本插件所有请求
+    //   都走 GET、URL 里只有 phone/randomCNIP 这类恒定参数、又从不带 Cookie 头
+    //   → 同一个接口在 2 分钟内第二次调用会**直接命中缓存**。
+    //   对 /captcha/sent、/captcha/sent/v1 的后果非常隐蔽：返回 200、插件照样
+    //   念「验证码已发送」，但网易根本没收到请求、一条短信都不会发
+    //   （用户实测：手机没动静）。
+    //   必需 forceFetch 的只有「每次都必须真的执行」的鉴权类接口：
+    //   /captcha/sent、/captcha/sent/v1、/captcha/verify、/login、/login/cellphone。
+    QVariantMap invokeMethod(QString name, QVariantMap &args, bool withCookie=true,
+                             bool forceFetch=false);
     void parseSongs(const QList<QVariant> &songs);
     bool parseUrl(MusicInfo& info);
     void searchDefault();
-    // 登录（node 模式：密码 -> 短信验证码 -> 匿名；official 模式：令牌）。
+    // 登录。node 模式：密码登录 -> （失败才）短信验证码 -> 匿名；
+    // official 模式：令牌。
     // id 是本次对话 id，验证码语音问答要按它回文本（0 = 本地麦克风对话）。
+    // ⚠ 只能由 handle() 在**确认这次请求归 netease 处理**之后调用，不能
+    //   放在 handle() 入口：PluginManager 对每个请求都会调用所有插件的
+    //   handle()，无条件下登录会让无关请求也拉起 node / 发登录请求，
+    //   甚至对着说别的事情的用户索要短信验证码。（见 handle() 里的说明。）
     void login(int id = 0);
     // 懒启动：首次真正用到网易云功能时才拉起 node 进程 / 官方令牌鉴权。
     // 幂等，重复调用只复用已有状态。返回 false 表示后端不可用，调用方应
@@ -68,7 +88,30 @@ private:
     // 同步等待 node 就绪（嵌套事件循环，带总时限）。非 JS 模式恒为 true。
     bool waitForNodeReady();
     void likeCurrent(bool like);
+    // 发送短信验证码。
+    // **只有**服务端明确返回业务码 200 才返回 true。调用方必须等到 true 之后
+    // 才提示「验证码已发送到您的手机」，否则就是在替网易许愿：短信没发出去，
+    // 用户却对着手机空等一整轮问答（实测反馈）。
+    // 接口顺序（docs：「发送验证码」与「新版发送验证码」）：
+    //   1) /captcha/sent/v1  —— 新版，module/captcha_sent_v1.js，eapi 加密，
+    //      打 /api/middle/captcha/sent/v1，多一个 scene=0；当前客户端走这条。
+    //   2) /captcha/sent     —— 旧版兜底，weapi + secrete=music_middleuser_pclogin。
+    // 新版明确失败（读到非 200 业务码）才退旧版，避免一次请求发两条短信。
+    // 判定逻辑在 captchaflow.h 的 isSuccess()，可单独单测。
+    bool sendCaptcha(const QString &phone);
+    // 校验验证码（`/captcha/verify?phone=…&captcha=…`）。
+    // 用途：在**真的去调登录接口之前**先判断这个码对不对 —— 官网文档明确
+    // 提醒「不要频繁调登录接口,不然可能会被风控」，所以没把握就先用这个只读
+    // 校验，别拿登录接口当试错器。
+    // ⚠ 返回值只有 Ok / WrongCode 是确定结论，Unknown 必须当作「没法判断」，
+    //   让调用方照旧去试登录（详见 captchaflow.h 的 classifyVerify）。
+    // ⚠ 绝不把验证码本身写进日志（同 password / cookie）。
+    qsa::captcha::VerifyOutcome verifyCaptcha(const QString &phone,
+                                              const QString &code);
     // 短信验证码：语音 / 网页交互获取。
+    // ⚠ 调用方**必须先确认验证码请求真的发出去了**（sendCaptcha() 返回 true）
+    //   才能调本函数 —— 它一进门就念「验证码已发送到您的手机，请在…分钟内
+    //   告诉我验证码」，然后才轮询 helper->question() 等答案。
     // 流程：先 TTS 提示 -> 循环调用 helper->question() 等用户说出（或从网页
     // 输入）验证码 -> 归一化（中文数字/口语 -> 纯数字）并校验格式（4 / 6 位）。
     // 总等待时长受 netease_cloud.captchaTimeoutSec 限制（默认 180 秒），
