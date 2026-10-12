@@ -94,9 +94,12 @@ Model comparison:
 | wekws           | -DWAKEUP_WEKWS      |           |              | |
 | azure kws       | -DWAKEUP_AZURE      |           |              | Microsoft custom keyword |
 
-> The default install combination (identical on all platforms since 2026-10-11) is:
-> **livekit-wakeword wakeup + silero VAD + sherpa ASR + sherpa TTS + ONNX NLU**.
+> The default install combination (identical on all platforms) is:
+> **livekit-wakeword wakeup + silero VAD + FunASR(Paraformer-q8) ASR + sherpa TTS
+> + ONNX NLU**.
 > Use the CMake options above to switch the wake-up engine.
+> The ASR backend became **fun asr** in 2026-10 (`ASR_FUN=ON`); switch back to
+> sherpa with `-DASR_SHERPA=ON -DASR_FUN=OFF`.
 
 General options: `wakeup`
 
@@ -238,7 +241,14 @@ Option: `sherpa_vad` — VAD implemented through sherpa-onnx. It can load the sa
 
 # asr
 
+The backend is chosen at compile time: **the default is fun asr** (`ASR_FUN=ON`).
+If several are enabled at once they resolve by priority
+`ASR_DUILITE > ASR_FUN > ASR_SHERPA` (see `Conversation/conversation.cpp`).
+Both sections may stay in `config.yaml`; only the active backend's section is read.
+
 ## sherpa asr
+
+**Not the default since 2026-10** — requires `-DASR_SHERPA=ON -DASR_FUN=OFF`.
 
 Option: `sherpa`
 
@@ -259,16 +269,28 @@ mv sherpa-onnx-paraformer-zh-2023-09-14 sherpa_paraformer
 
 ## fun asr
 
+**The default ASR backend** (`ASR_FUN=ON`).
+
 Option: `funasr`
+
+Install: `python scripts/setup.py --only funasr-asr` → `Data/paraformer-zh-q8/`
+(official FunASR ONNX export, `model_quant.onnx` = Paraformer-**q8**, ~230MB,
+plus `am.mvn` and `tokens.json`).
 
 | Option   | Default                           | Description                                                                             |
 | -------- | --------------------------------- | --------------------------------------------------------------------------------------- |
-| model    | paraformer-seaco/model.int8.onnx  | Model file, can find models to download in [ModelScope](https://www.modelscope.cn/models?page=1&tasks=auto-speech-recognition&type=audio) |
-| cmvn     | paraformer-seaco/am.mvn           | Located in the model folder                                                             |
-| token    | paraformer-seaco/tokens.json      | Token file                                                                              |
-| segdict  | paraformer-seaco/seg_dict         | This file does not exist in some models, can use files from paraformer-large-contextual |
-| hw_model | paraformer-seaco/model_eb.int8.onnx | Hotword model, generally contains `eb` in the file name                                 |
-| hotword  | paraformer-seaco/hotword.txt      | Hotword file, each hotword occupies one line, no extra lines                            |
+| model    | paraformer-zh-q8/model_quant.onnx | Model file. Official ONNX exports from [ModelScope](https://www.modelscope.cn/models?page=1&tasks=auto-speech-recognition&type=audio) work as-is |
+| cmvn     | paraformer-zh-q8/am.mvn           | Located in the model folder                                                             |
+| token    | paraformer-zh-q8/tokens.json      | Token file (JSON array; index = token id)                                               |
+| threads  | 2                                 | Inference threads (**default 2**, chosen for Raspberry Pi)                              |
+| segdict  | –                                 | Optional. Hotword models only; a plain export has no third input, so it degrades silently |
+| hw_model | –                                 | Optional. Hotword model (`model_eb*.onnx`), needs `segdict` + `hotword` too             |
+| hotword  | –                                 | Optional. Hotword file, one word per line                                               |
+
+Other optional frontend keys with official defaults: `language` (`zh-cn`),
+`sample_rate` (16000), `window` (hamming), `frame_length`/`frame_shift` (25/10),
+`n_mels` (80), `lfr_m`/`lfr_n` (7/6). See the `funasr` section of
+`Data/default_config.yaml` and `doc/funasr_cpu_edge_bench.md` §10.
 
 # tts
 

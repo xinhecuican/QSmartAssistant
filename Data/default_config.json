@@ -225,12 +225,10 @@
 		"password": "123"
 	},
 	"funasr": {
-		"model": "paraformer-seaco/model.int8.onnx",
-		"cmvn": "paraformer-seaco/am.mvn",
-		"token": "paraformer-seaco/tokens.json",
-		"segdict": "paraformer-seaco/seg_dict",
-		"hw_model": "paraformer-seaco/model_eb.int8.onnx",
-		"hotword": "paraformer-seaco/hotword.txt"
+		"model": "paraformer-zh-q8/model_quant.onnx",
+		"cmvn": "paraformer-zh-q8/am.mvn",
+		"token": "paraformer-zh-q8/tokens.json",
+		"threads": 2
 	},
 	"nlu": {
 		"backend": "onnx"

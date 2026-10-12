@@ -50,14 +50,16 @@ jobs:
 
       # 模块组合：与 scripts/build_linux.sh 的默认值、CMakePresets.json 的
       # linux-gcc preset 保持一致（见 doc/linux.md §二）——livekit 唤醒 +
-      # silero VAD + sherpa ASR/TTS + 进程内 ONNX NLU，无厂商私有 .so、无 Python。
+      # silero VAD + FunASR(Paraformer-q8) ASR + sherpa TTS + 进程内 ONNX NLU，
+      # 无厂商私有 .so、无 Python。（ASR 自 2026-10 起默认 funasr，
+      # 见 doc/funasr_cpu_edge_bench.md §10；CI 顺带验证这条新默认真的能编过。）
       #
       # NETEASE_USE_JS=ON 必须显式给：Linux 上该选项默认 OFF，会走 FetchContent
       # 拉 QCloudMusicApi C++ 源码参与构建（慢且依赖网络）。
       CMAKE_MODULES: >-
         -DWAKEUP_LIVEKIT=ON -DWAKEUP_SHERPA=OFF -DWAKEUP_DUILITE=OFF
         -DVAD_SILERO=ON -DVAD_DUILITE=OFF
-        -DASR_SHERPA=ON -DTTS_SHERPA=ON
+        -DASR_FUN=ON -DTTS_SHERPA=ON
         -DNLU_ONNX=ON -DNLU_RASA=OFF -DNLU_BAIDU=OFF
         -DNETEASE_USE_JS=ON
 
@@ -161,9 +163,10 @@ jobs:
       # 代码里抽成 ChunkReader、AudioRingBuffer、playlist 下标计算、amixer 音量解析
       # 这类纯函数，测试用自带的 FakeAudioDevice 喂数据（offscreen 下可跑）。
       # 在此之前它们只在本机跑，回归没人看住。
-      # asrSherpa / ttsSherpa / vad 需要先下载模型到运行期 Data 目录
-      # （python3 scripts/fetch_models.py），在 runner 上属于环境依赖而非代码
-      # 问题，所以只在本机跑。同理还有 conversationRoundTrip —— 它走的是
+      # asrFun（默认 ASR 的用例；切到 -DASR_SHERPA=ON 时是 asrSherpa）/ ttsSherpa /
+      # vad 需要先下载模型到运行期 Data 目录（funasr 是 230MB：
+      # python3 scripts/setup.py --only funasr-asr），在 runner 上属于环境依赖
+      # 而非代码问题，所以只在本机跑。同理还有 conversationRoundTrip —— 它走的是
       # 「一段话 -> ONNX NLU -> 真实插件 -> TTS 文本」的完整对话链路，
       # 少了 nlu_int8.onnx（在 Release tag 上，setup.py/fetch_models 才下）会 QSKIP。
       #

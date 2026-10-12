@@ -2,9 +2,23 @@
 set(CMAKE_AUTOMOC ON)
 
 # asr
-option(ASR_SHERPA "sherpa asr" ON)
+#
+# 默认后端是 **funasr**（FunASR 官方 ONNX 导出包 Paraformer-q8，进程内
+# onnxruntime + kaldi-native-fbank 前端，零 Python）：
+#   * AISHELL-1 抽样 999 条 micro-CER 1.98%（sherpa 的 paraformer-zh-small 2.90%）；
+#   * threads=2 时 RTF 0.0104（96x），比 sherpa 的 0.0148 还快。
+#   实测与落地细节见 doc/funasr_cpu_edge_bench.md §10，模型安装见
+#   `python scripts/setup.py --only funasr-asr`（→ Data/paraformer-zh-q8/）。
+#
+# 换回 sherpa：`-DASR_SHERPA=ON -DASR_FUN=OFF`，并把运行期 config.yaml 的
+# funasr 段换成 sherpa 段（两份模板里都还留着，未删）。
+#
+# ⚠ 同时开多个时**不是**报错，而是按「后写的覆盖先写的」取生效者，优先级
+#   ASR_DUILITE > ASR_FUN > ASR_SHERPA（见 conversation.cpp 里的构造顺序）。
+#   duilite 排最后是有意的：它是厂商私有库，历史上就用来覆盖其它后端。
+option(ASR_SHERPA "sherpa asr" OFF)
 option(ASR_DUILITE "duilite asr" OFF)
-option(ASR_FUN "fun asr" OFF)
+option(ASR_FUN "fun asr" ON)
 
 # tts
 option(TTS_SHERPA "sherpa tts" ON)
@@ -84,6 +98,9 @@ if(TTS_SHERPA)
     )
 endif()
 
+# sherpa-onnx 原生库：默认 ASR 已经是 funasr（不需要它），但 TTS 仍然是
+# sherpa TTS，所以这条判断在新默认下依旧成立。只有当 TTS/唤醒/VAD 全都不用
+# sherpa 时才跳过（此时 ASR 的 onnxruntime 由上面 ASR_FUN 分支自己 add_custom_lib）。
 if(TTS_SHERPA OR ASR_SHERPA OR WAKEUP_SHERPA OR VAD_SHERPA)
     add_custom_lib(sherpa_onnx)
     add_custom_lib(onnxruntime)

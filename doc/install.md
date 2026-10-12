@@ -67,9 +67,11 @@ Wakeup, Vad, ASR, TTS, NLU must ensure that only one component is enabled and ef
 | [duilite](#duilite) | x86 | WAKEUP_DUILITE |
 | [snowboy](#snowboy) | x86,arm | WAKEUP_SNOWBOY |
 
-> **Default combo (unified across platforms since 2026-10-11)**: livekit-wakeword
-> wake-up + silero VAD + sherpa ASR + sherpa TTS + ONNX NLU.
-> Passing no `-D` flags yields exactly this combo.
+> **Default combo (unified across platforms)**: livekit-wakeword
+> wake-up + silero VAD + FunASR(Paraformer-q8) ASR + sherpa TTS + ONNX NLU.
+> Passing no `-D` flags yields exactly this combo (the CMake defaults already
+> are this set). The ASR backend became **fun asr** in 2026-10; see
+> [fun asr](#fun-asr) to switch back to sherpa.
 
 ### livekit wakeword
 
@@ -138,12 +140,20 @@ Enter the `scripts` directory and run `install_snowboy.sh`
 
 ## ASR
 
-| Name | Platform | Definition |
-|-|-|-|
-| [sherpa asr](#sherpa-asr) | any | ASR_SHERPA |
-| [fun asr](#fun-asr) | any | ASR_FUN |
+The default backend is **fun asr** (`ASR_FUN=ON`). The backend is chosen at
+compile time; if several are enabled at once they are resolved by the priority
+`ASR_DUILITE > ASR_FUN > ASR_SHERPA` (see `Conversation/conversation.cpp`).
+
+| Name | Platform | Definition | Default |
+|-|-|-|-|
+| [fun asr](#fun-asr) | any | ASR_FUN | ✅ |
+| [sherpa asr](#sherpa-asr) | any | ASR_SHERPA | |
 
 ### sherpa asr
+
+⚠ No longer the default since 2026-10. To use it, build with
+`-DASR_SHERPA=ON -DASR_FUN=OFF` and install its model with
+`python scripts/setup.py --only sherpa-asr`.
 
 [Run the installation script](../scripts/install_sherpa_onnx.sh), [download the corresponding model according to the documentation](https://k2-fsa.github.io/sherpa/onnx/index.html), then change the model directory in config.yaml.
 
@@ -161,7 +171,44 @@ Need to note that the transducer model contains three modules, so the configurat
 
 ### fun asr
 
-Extract the paraformer asr part from [funasr](https://github.com/modelscope/FunASR), support custom hotwords, not support lm.
+**This is the default ASR backend** (`ASR_FUN=ON`, the CMake default since
+2026-10; switch back with `-DASR_SHERPA=ON -DASR_FUN=OFF`).
+
+In-process onnxruntime backend for FunASR's **official ONNX export** of
+Paraformer — no Python / PyTorch at runtime. The frontend (80-dim kaldi
+mel-fbank → LFR(7,6) → CMVN) is implemented in `Conversation/ASR/funasr.cpp`,
+so the ONNX file only receives already-computed features.
+
+Install the model (FunASR official export, `model_quant.onnx` = Paraformer-**q8**,
+int8 quantized, ~230 MB):
+
+```
+python scripts/setup.py --only funasr-asr        # -> Data/paraformer-zh-q8/
+```
+
+then point the `funasr` section of config.yaml at it:
+
+```
+	"funasr":{
+		"model": "paraformer-zh-q8/model_quant.onnx",
+		"cmvn": "paraformer-zh-q8/am.mvn",
+		"token": "paraformer-zh-q8/tokens.json",
+		"threads": 2
+	},
+```
+
+Measured on AISHELL-1 (999 utterances sampled by speaker, micro-CER): **1.98%**
+for this backend vs 2.90% for sherpa-onnx's `paraformer-zh-small`, and it is
+also faster at the same thread count (RTF 0.0104 vs 0.0148 with `threads: 2`).
+All other frontend hyper-parameters (`n_mels` / `lfr_m` / `lfr_n` / frame length
+& shift) are optional keys with the official defaults.
+**`threads` defaults to 2** — that is what suits the Raspberry Pi target; see the
+`funasr` section of `Data/default_config.yaml` for the full key list.
+
+Hotword models (paraformer-seaco) are still supported: add `segdict` /
+`hw_model` / `hotword`. An official plain export has no third input, so those
+keys are ignored and the backend silently runs in non-hotword mode. Language
+models (LM) are not supported.
 
 ## TTS
 

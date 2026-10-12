@@ -13,8 +13,13 @@
 用法：
     python scripts/fetch_models.py
 
-注意：本脚本选择的是体积较小的 "paraformer-zh-small" 而不是默认配置里的
-"sherpa-onnx-paraformer-zh-2024-03-09"（后者整包接近 1 GB）。
+注意：本脚本**只负责 sherpa-onnx 那一侧**的模型。项目默认 ASR 自 2026-10 起是
+FunASR 的 Paraformer-q8（`-DASR_FUN=ON`），模型不在 GitHub Release 上而是在
+ModelScope，请用 `python scripts/setup.py --only funasr-asr`
+（或直接 `--profile minimal`，一并装齐）。
+这里下 ASR 选的是体积较小的 "paraformer-zh-small" 而不是默认配置里写的
+"sherpa-onnx-paraformer-zh-2024-03-09"（后者整包接近 1 GB）；而且这份 ASR 模型
+现在只有用 `-DASR_SHERPA=ON -DASR_FUN=OFF` 编译时才用得上。
 """
 import json
 import os

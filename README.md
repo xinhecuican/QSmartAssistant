@@ -6,7 +6,7 @@
 
 - [x] 使用c++qt开发，深度学习模型大多选择onnxruntime，提高运行速度
 - [x] 前处理，唤醒，语音端点检测，ASR，TTS，NLU全模块化，可以非常简单的开发组件。拥有插件机制，可以定制自己的插件
-- [x] 默认安装：livekit-wakeword 唤醒 + silero VAD + sherpa ASR/TTS + ONNX NLU，全跨平台、纯 onnxruntime
+- [x] 默认安装：livekit-wakeword 唤醒 + silero VAD + FunASR(Paraformer-q8) ASR + sherpa TTS + ONNX NLU，全跨平台、纯 onnxruntime
 - [x] 支持livekit,porcupine,openwakeword,sherpa,duilite,snowboy唤醒模型，可以自由定制唤醒词。支持cobra,fvad,silero,duilite,sherpa模型。搭配webrtc和speex，可以精确唤醒并降低误唤醒率。
 - [x] 支持流式ASR和TTS
 - [x] 支持onnx/rasa/llm三种NLU后端，可以自己收集对话语料训练NLU
@@ -34,7 +34,7 @@
 支持 x86_64 Ubuntu 22.04 与树莓派 4b/5（64 位）。完整说明见
 [Linux 构建部署指南](doc/linux.md)。
 
-跑通 **livekit 唤醒 + silero VAD + sherpa ASR + sherpa TTS + ONNX NLU** 这条
+跑通 **livekit 唤醒 + silero VAD + FunASR(Paraformer-q8) ASR + sherpa TTS + ONNX NLU** 这条
 最小全流程只需要四步：
 
 ```bash
@@ -62,7 +62,7 @@ ONNX NLU 的权重由 `setup.py` 自动获取：
 | ---- | ---------- | ---- |
 | 唤醒 | `Data/livekit/{size_small,melspectrogram,embedding_model}.onnx` | **随仓库提交** |
 | VAD  | `Data/silero_vad.onnx` | **随仓库提交** |
-| ASR  | `sherpa-onnx-paraformer-zh-small` | `setup.py` 下载（~74 MB） |
+| ASR  | `paraformer-zh-q8`（FunASR 官方 ONNX 导出 / Paraformer-q8，**默认后端**） | `setup.py` 下载（~230 MB） |
 | NLU  | `Data/onnx_nlu/{vocab.txt,rules.json}` + `Data/nlu_schema.json` | **随仓库提交** |
 | NLU  | `Data/onnx_nlu/nlu_int8.onnx`（~57 MB，int8 权重） | **GitHub Release**，`setup.py` 下载 |
 | TTS  | `vits-zh-aishell3` | `setup.py` 下载（~140 MB） |
@@ -107,7 +107,7 @@ python scripts\setup.py --profile minimal
 
 | profile       | 组件                                                  | 体积      | 说明                            |
 | ------------- | --------------------------------------------------- | ------- | ----------------------------- |
-| `minimal`（默认） | livekit-wakeup → silero VAD → sherpa ASR → sherpa TTS → onnx NLU | ~290 MB | **最小全流程**，语音助手完整链路            |
+| `minimal`（默认） | livekit-wakeup → silero VAD → FunASR(Paraformer-q8) ASR → sherpa TTS → onnx NLU | ~450 MB | **最小全流程**，语音助手完整链路            |
 | `standard`    | minimal + llama.cpp                                 | ~1.4 GB | 加上本地 GGUF 大模型（chat / llm_nlu） |
 | `full`        | standard + 网易云 node 服务                              | ~1.5 GB | 全部组件                          |
 
@@ -148,14 +148,15 @@ cd scripts
 # 只有要切回 rasa 兜底后端时才跑：./install_rasa.sh
 cd ..
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWAKEUP_LIVEKIT=ON -DWAKEUP_DUILITE=OFF \
-      -DVAD_SILERO=ON -DVAD_DUILITE=OFF -DNLU_ONNX=ON -DNETEASE_USE_JS=ON -B build/
+      -DVAD_SILERO=ON -DVAD_DUILITE=OFF -DASR_FUN=ON -DNLU_ONNX=ON -DNETEASE_USE_JS=ON -B build/
 cmake --build build/ -j$(nproc)
 # config.yaml 中的配置需要按需进行更改
 ```
 
 > 上面这套 `-D` 其实就是 CMake 的默认值（默认安装 = livekit 唤醒 + silero VAD
-> + sherpa ASR/TTS + onnx NLU），显式写出来只是为了让命令自解释。
-> 想换回 rasa 时加 `-DNLU_RASA=ON` 并把 `config.yaml` 的 `nlu.backend` 改成 `"rasa"`。
+> + FunASR(Paraformer-q8) ASR + sherpa TTS + onnx NLU），显式写出来只是为了让命令自解释。
+> 想换回 rasa 时加 `-DNLU_RASA=ON` 并把 `config.yaml` 的 `nlu.backend` 改成 `"rasa"`；
+> 想换回 sherpa ASR 用 `-DASR_SHERPA=ON -DASR_FUN=OFF`（模型换 `setup.py --only sherpa-asr`）。
 >
 > 配置文件自 2026-10 起为 **YAML**（`Data/config.yaml`，模板 `Data/default_config.yaml`
 > 内嵌逐项注释），并**兼容老 json**：若目录里只有 `config.json`，程序启动时会

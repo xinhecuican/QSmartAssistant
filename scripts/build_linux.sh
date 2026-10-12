@@ -210,14 +210,19 @@ else
         # 这里显式给。若用 Ninja Multi-Config 则不该传。
         CMAKE_ARGS+=(-DCMAKE_BUILD_TYPE="${CONFIG}")
     fi
-    # 模块组合：默认安装 = livekit-wakeword 唤醒 + silero VAD + sherpa ASR/TTS
-    # + ONNX NLU（进程内，无需 rasa）。这一套全跨平台、纯 onnxruntime，
-    # 不依赖厂商私有 .so；duilite 需要时自己加 -DWAKEUP_DUILITE=ON。
+    # 模块组合：默认安装 = livekit-wakeword 唤醒 + silero VAD + FunASR
+    # (Paraformer-q8) ASR + sherpa TTS + ONNX NLU（进程内，无需 rasa）。
+    # ASR 自 2026-10 起默认 funasr：进程内 onnxruntime + kaldi-native-fbank 前端，
+    # 零 Python，模型用 `python3 scripts/setup.py --only funasr-asr` 装
+    # （实测 micro-CER 1.98% / RTF 0.0104，见 doc/funasr_cpu_edge_bench.md §10）。
+    # 换回 sherpa ASR：把下面改成 -DASR_SHERPA=ON -DASR_FUN=OFF。
+    # 这一套全跨平台、纯 onnxruntime，不依赖厂商私有 .so；duilite 需要时自己加
+    # -DWAKEUP_DUILITE=ON。
     # 这里仍显式写出，避免依赖 CMake 默认值（旧的默认值是 sherpa-kws + rasa）。
     CMAKE_ARGS+=(
         -DWAKEUP_LIVEKIT=ON -DWAKEUP_SHERPA=OFF -DWAKEUP_DUILITE=OFF
         -DVAD_SILERO=ON     -DVAD_DUILITE=OFF
-        -DASR_SHERPA=ON     -DTTS_SHERPA=ON
+        -DASR_FUN=ON        -DTTS_SHERPA=ON
         -DNLU_ONNX=ON       -DNLU_RASA=OFF      -DNLU_BAIDU=OFF
         -DUSE_OPENSSL=OFF
         # 网易云插件走 node 版 API（与 Windows 默认一致）。

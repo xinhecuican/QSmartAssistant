@@ -4,14 +4,18 @@
 #include <QDebug>
 #include <QRegularExpression>
 #include <QTimer>
+// ASR 后端（多选一，由 CMake 选项决定实际生效者）。默认是 **funasr**
+// （ASR_FUN=ON，见 Conversation/CMakeLists.txt 与 doc/funasr_cpu_edge_bench.md §10）。
+// 同时开多个时不报错，按下面构造顺序「后写的覆盖先写的」取生效者：
+//   ASR_DUILITE > ASR_FUN > ASR_SHERPA
 #if defined(ASR_SHERPA)
 #include "ASR/sherpaasr.h"
 #endif
-#if defined(ASR_DUILITE)
-#include "ASR/duiliteasr.h"
-#endif
 #if defined(ASR_FUN)
 #include "ASR/funasr.h"
+#endif
+#if defined(ASR_DUILITE)
+#include "ASR/duiliteasr.h"
 #endif
 #if defined(NLU_BAIDU)
 #include "NLU/baidunlu.h"
@@ -45,14 +49,16 @@ Conversation::Conversation(Player *player, QObject *parent)
     asr = nullptr;
     tts = nullptr;
     nlu = nullptr;
+    // ⚠ 顺序 = 优先级（后写的覆盖先写的）：ASR_DUILITE > ASR_FUN > ASR_SHERPA。
+    //   默认只开 ASR_FUN（funasr），所以默认路径上这里就是 new Funasr()。
 #if defined(ASR_SHERPA)
     asr = new SherpaASR();
 #endif
-#if defined(ASR_DUILITE)
-    asr = new DuiliteASR();
-#endif
 #if defined(ASR_FUN)
     asr = new Funasr();
+#endif
+#if defined(ASR_DUILITE)
+    asr = new DuiliteASR();
 #endif
 #if defined(NLU_BAIDU)
     nlu = new BaiduNLU(this);

@@ -21,15 +21,20 @@ r"""setup.py —— QSmartAssistant 统一安装入口（跨平台，单文件�
 ------------------------------------
     livekit-wakeup   唤醒   mel/emb 从 openWakeWord 官方 release 下载，
                             分类头需自备（见 --livekit-src / --livekit-head）
-    sherpa-asr       ASR    paraformer-zh-small（~74 MB）
+    funasr-asr       ASR    FunASR 官方 ONNX 导出包 = Paraformer-q8（~230 MB，
+                            **默认 ASR**：-DASR_FUN=ON）
     sherpa-tts       TTS    vits-zh-aishell3（~140 MB）
     onnx-nlu         NLU    进程内 ONNX 双头模型（vocab/rules 随仓库，
                             57MB int8 权重从 GitHub Release 下载）
-    onnxruntime      依赖   livekit / silero VAD / onnx-nlu 都要（编译产物）
-    sherpa-onnx      依赖   ASR/TTS 的 C API 共享库（编译产物）
+    onnxruntime      依赖   funasr / livekit / silero VAD / onnx-nlu 都要（编译产物）
+    sherpa-onnx      依赖   TTS 的 C API 共享库（编译产物；ASR 默认已不用它）
     yaml-cpp         依赖   config.yaml 的读写（编译产物；lib/ 不入库，
                             **新 clone 必须装**，否则 cmake configure
                             直接报 Could NOT find yaml_cpp）
+
+    sherpa-asr 自 2026-10 起**不再是默认 ASR**（默认换成 funasr，见
+    doc/funasr_cpu_edge_bench.md §10），不在任何 profile 里；只有用
+    `-DASR_SHERPA=ON -DASR_FUN=OFF` 编译时才需要 --only sherpa-asr。
 
     rasa-nlu 现在是**兜底后端**，不在任何默认 profile 里；只有把
     config.json 改成 "nlu": {"backend": "rasa"} 时才需要 --only rasa-nlu。
@@ -46,7 +51,10 @@ r"""setup.py —— QSmartAssistant 统一安装入口（跨平台，单文件�
     python3 scripts/setup.py --profile minimal --dry-run
 
     # 只装某几项
-    python3 scripts/setup.py --only onnx-nlu sherpa-asr
+    python3 scripts/setup.py --only onnx-nlu funasr-asr
+
+    # 切回 sherpa ASR 时（配合 -DASR_SHERPA=ON -DASR_FUN=OFF）
+    python3 scripts/setup.py --only sherpa-asr
 
     # 需要 rasa 兜底后端时
     python3 scripts/setup.py --only rasa-nlu
@@ -760,14 +768,69 @@ ASR_PKG = "sherpa-onnx-paraformer-zh-small-2024-03-09"
 TTS_PKG = "vits-zh-aishell3"
 
 
+# ⚠ 自 2026-10 起 sherpa-asr **不是默认 ASR** 了（默认是下面 funasr-asr 的
+#   Paraformer-q8），所以它不在任何 profile 里 —— 只有显式用
+#   `-DASR_SHERPA=ON -DASR_FUN=OFF` 编译时才需要 `--only sherpa-asr`。
+#   组件本身保留（且 probe/verify 照旧），切回去不用改脚本。
 def _build_asr() -> Component:
-    c = Component("sherpa-asr", "sherpa ASR（paraformer-zh-small）",
+    c = Component("sherpa-asr", "sherpa ASR（paraformer-zh-small，非默认后端）",
                   size="~74MB", minutes="2-6",
                   platforms="all",
                   probe=asr_installed)
     c.action = lambda ctx: install_sherpa_model(
         ctx, f"{SHERPA_GH}/asr-models/{ASR_PKG}.tar.bz2", ASR_PKG, flatten=False)
     c.verify = lambda: [] if asr_installed() else [f"缺 {ASR_PKG}"]
+    return c
+
+
+# ---------------------------------------------------------------------------
+# FunASR 官方 ONNX 导出包（Paraformer-q8）
+#
+# 这是 `-DASR_FUN=ON`（Conversation/ASR/funasr.cpp）用的模型，**自 2026-10 起
+# 是默认 ASR**（`Conversation/CMakeLists.txt` 里 option(ASR_FUN) 默认 ON），
+# 所以 minimal / standard / full 三个 profile 都装它。
+#
+# 相比 sherpa 那份 paraformer-zh-small，这个是 **large** 的 int8 量化版：
+# AISHELL-1 抽样 999 条上 micro-CER 1.98%（small 版 2.90%），
+# 见 doc/funasr_cpu_edge_bench.md §10。代价是模型大 3 倍（230MB vs 74MB）。
+#
+# ⚠ 这里**只要三件套**（model_quant.onnx / am.mvn / tokens.json）：
+#   前端（80 维 mel-fbank → LFR(7,6) → CMVN）是 funasr.cpp 自己算的，
+#   官方包里的 config.yaml 我们只当文档看，不下载也不用。
+# ---------------------------------------------------------------------------
+FUNASR_MS = "https://www.modelscope.cn/models"
+FUNASR_MODEL = ("iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-onnx")
+FUNASR_DIR = "paraformer-zh-q8"
+FUNASR_FILES = ["model_quant.onnx", "am.mvn", "tokens.json"]
+
+
+def funasr_installed() -> bool:
+    d = model_dir(FUNASR_DIR)
+    return all((d / f).exists() for f in FUNASR_FILES)
+
+
+def install_funasr_model(ctx: Ctx) -> None:
+    """从 ModelScope 拉官方 ONNX 导出包（4 个文件，只有 3 个是必需的）。"""
+    dst = model_dir(FUNASR_DIR)
+    dst.mkdir(parents=True, exist_ok=True)
+    for name in FUNASR_FILES:
+        url = f"{FUNASR_MS}/{FUNASR_MODEL}/resolve/master/{name}"
+        download(url, dst / name, ctx.dry, f"{FUNASR_DIR}/{name}")
+    if ctx.dry:
+        print(f"  [dry] install {FUNASR_DIR} -> {dst}")
+        return
+    size = sum(f.stat().st_size for f in dst.rglob("*") if f.is_file())
+    ok(f"{FUNASR_DIR} -> {dst} ({human(size)})")
+
+
+def _build_funasr_asr() -> Component:
+    c = Component("funasr-asr", "FunASR ASR（Paraformer-q8 / ONNX，默认后端 -DASR_FUN=ON）",
+                  size="~230MB", minutes="3-10",
+                  platforms="all",
+                  probe=funasr_installed)
+    c.action = lambda ctx: install_funasr_model(ctx)
+    c.verify = lambda: ([] if funasr_installed()
+                        else [f"缺 {FUNASR_DIR}/model_quant.onnx"])
     return c
 
 
@@ -845,19 +908,23 @@ def _build_netease() -> Component:
 PROFILES: Dict[str, Dict[str, object]] = {
     # 最小全流程：唤醒 → ASR → NLU → TTS。这是语音助手的完整链路。
     # NLU 用进程内 ONNX（无 Python/TF/torch/2GB 常驻），产物随仓库提供。
+    # ASR 自 2026-10 起默认 funasr（Paraformer-q8，230MB），与
+    # Conversation/CMakeLists.txt 的 option(ASR_FUN) 默认一致；
+    # 想省体积切回 sherpa：--skip funasr-asr --only sherpa-asr 并加
+    # -DASR_SHERPA=ON -DASR_FUN=OFF。
     "minimal": {
         "components": ["yaml-cpp", "onnxruntime", "sherpa-onnx", "livekit-wakeup",
-                      "sherpa-asr", "sherpa-tts", "onnx-nlu"],
-        "desc": "最小全流程：livekit 唤醒 + silero VAD + sherpa ASR + onnx NLU + sherpa TTS",
+                      "funasr-asr", "sherpa-tts", "onnx-nlu"],
+        "desc": "最小全流程：livekit 唤醒 + silero VAD + FunASR(Paraformer-q8) ASR + onnx NLU + sherpa TTS",
     },
     "standard": {
         "components": ["yaml-cpp", "onnxruntime", "sherpa-onnx", "livekit-wakeup",
-                      "sherpa-asr", "sherpa-tts", "onnx-nlu", "llama"],
+                      "funasr-asr", "sherpa-tts", "onnx-nlu", "llama"],
         "desc": "standard：minimal + llama.cpp 本地大模型（chat / llm_nlu）",
     },
     "full": {
         "components": ["yaml-cpp", "onnxruntime", "sherpa-onnx", "livekit-wakeup",
-                      "sherpa-asr", "sherpa-tts", "onnx-nlu", "llama", "netease-js"],
+                      "funasr-asr", "sherpa-tts", "onnx-nlu", "llama", "netease-js"],
         "desc": "full：standard + 网易云音乐 node 服务",
     },
 }
@@ -1098,7 +1165,7 @@ def run_verify(comps: List[Component]) -> int:
 if __name__ == "__main__":
     for _builder in (_build_yaml_cpp, _build_onnxruntime, _build_sherpa_onnx,
                      _build_livekit, _build_asr, _build_tts, _build_onnx_nlu,
-                     _build_rasa, _build_llama, _build_netease):
+                     _build_rasa, _build_llama, _build_netease, _build_funasr_asr):
         register(_builder())
     try:
         raise SystemExit(main())

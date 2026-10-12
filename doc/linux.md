@@ -93,11 +93,19 @@ cmake --preset linux-gcc && cmake --build --preset linux-gcc -j8
 | --- | --- | --- |
 | 唤醒 | `WAKEUP_LIVEKIT=ON` | livekit-wakeword 自训练唤醒词，纯 onnxruntime，跨平台 |
 | VAD | `VAD_SILERO=ON` | 纯 onnxruntime，跨平台 |
-| ASR / TTS | `ASR_SHERPA=ON` / `TTS_SHERPA=ON` | sherpa-onnx，跨平台 |
+| ASR | `ASR_FUN=ON` | FunASR 官方 ONNX 导出包 **Paraformer-q8**，进程内 onnxruntime + kaldi-native-fbank 前端，零 Python。AISHELL-1 抽样 999 条 micro-CER 1.98%、threads=2 RTF 0.0104（见 `doc/funasr_cpu_edge_bench.md` §10）；模型 `python3 scripts/setup.py --only funasr-asr` |
+| TTS | `TTS_SHERPA=ON` | sherpa-onnx VITS，跨平台 |
 | NLU | `NLU_ONNX=ON` | 进程内 onnxruntime 跑自训练双头模型，无 Python/HTTP |
 | 网易云插件 | `NETEASE_USE_JS=ON` | 走 node 版 API。**Linux 上该选项的 CMake 默认值是 OFF**，而 OFF 会在 configure 阶段 FetchContent 拉 `QCloudMusicApi` 源码（含 submodule）并编进工程；`build_linux.sh` 与 `CMakePresets.json` 都显式设成 ON，与 Windows 一致，也是 `doc/plugin.md` 推荐的用法。node 服务本身是**运行期**依赖：`bash scripts/install_neteasejs.sh` |
 
-CMake 默认值本身就是这套，且**全平台统一**（`Wakeup/CMakeLists.txt`）。
+CMake 默认值本身就是这套，且**全平台统一**（唤醒/VAD 在 `Wakeup/CMakeLists.txt`，
+ASR 在 `Conversation/CMakeLists.txt`，选项默认值在 `CMakePresets.json` /
+`scripts/build_linux.sh` 里又显式写了一遍）。
+
+**ASR 自 2026-10 起默认是 funasr**（`ASR_FUN=ON`），不再是 sherpa；
+换回 sherpa ASR：`-DASR_SHERPA=ON -DASR_FUN=OFF`
+（并 `python3 scripts/setup.py --only sherpa-asr`，config.yaml 里改读 `sherpa` 段）。
+
 `NLU_RASA` 默认关闭，已退居**兜底后端**；需要时用 `-DNLU_RASA=ON` 并把
 `config.yaml` 的 `nlu.backend` 改成 `"rasa"`。
 **`duilite`（厂商私有 `.so`）默认关闭** —— 需要时显式加 `-DWAKEUP_DUILITE=ON`
@@ -202,13 +210,23 @@ curl -s http://127.0.0.1:5005/model/parse \
 ## 四、模型文件
 
 ```bash
-python3 scripts/fetch_models.py
+python3 scripts/setup.py --profile minimal   # 推荐：一条命令装齐（含默认的 funasr ASR 模型）
+python3 scripts/setup.py --only funasr-asr   # 或者只补 ASR 模型
+python3 scripts/fetch_models.py              # 老入口，仍可用（sherpa 侧模型）
 ```
+
+**默认 ASR 自 2026-10 起是 funasr**（`-DASR_FUN=ON`）：模型是 FunASR 官方 ONNX
+导出包 **Paraformer-q8**（`Data/paraformer-zh-q8/model_quant.onnx` + `am.mvn` +
+`tokens.json`，~230MB，来自 ModelScope），由 `--profile minimal` 或
+`--only funasr-asr` 装好。选它的理由（micro-CER 1.98% vs sherpa small 版 2.90%、
+threads=2 时 RTF 0.0104）见 `doc/funasr_cpu_edge_bench.md` §10。
 
 `install_sherpa_onnx.sh` 顺带下载 ASR（`sherpa-onnx-paraformer-zh-small-2024-03-09`）
 与 TTS（`vits-zh-aishell3`）—— 这两个目录名与 `Data/default_config.yaml` 里的引用
 **逐字一致**；早期下的是非 small 的 paraformer（近 1GB）和 matcha 包，装完其实
 和配置对不上，已改掉。
+⚠ sherpa 那份 ASR 模型现在只在 `-DASR_SHERPA=ON -DASR_FUN=OFF` 编译时才用得上
+（对应 `setup.py --only sherpa-asr`），默认安装可以不下。
 `install_rasa.sh` 下载 `Data/rasa/data/chinese_rbtl3/`（config.yml 引用的中文 BERT）。
 
 NLU 模型本身在仓库里：`Data/rasa/models/default.tar.gz`。

@@ -61,8 +61,8 @@ cmake --build build --config RelWithDebInfo --target QSmartAssistant
 ```
 
 - `WAKEUP_LIVEKIT` 默认 **ON** —— 它是**默认唤醒引擎**（默认安装 =
-  livekit 唤醒 + silero VAD + sherpa ASR/TTS + ONNX NLU）。若要退回
-  sherpa-kws，需显式 `-DWAKEUP_LIVEKIT=OFF -DWAKEUP_SHERPA=ON`。
+  livekit 唤醒 + silero VAD + FunASR(Paraformer-q8) ASR + sherpa TTS + ONNX NLU）。
+  若要退回 sherpa-kws，需显式 `-DWAKEUP_LIVEKIT=OFF -DWAKEUP_SHERPA=ON`。
 - 与 `WAKEUP_SHERPA` 同时开启时 **livekit 优先生效**（见 `Wakeup/wakeup.cpp` 的 `#if` 顺序）。
 - 依赖 `lib/onnxruntime`（已随仓库提供，`add_custom_lib(onnxruntime)`）。
 

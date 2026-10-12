@@ -85,26 +85,56 @@ duilite:
 
 # -----------------------------------------------------------------------------
 # 语音识别 ASR
+#
+# **默认后端是 funasr**（见下面 funasr 段），由编译期选项决定实际生效者：
+#   ASR_FUN=ON（默认）                        → 读 funasr 段
+#   ASR_SHERPA=ON（要配 -DASR_FUN=OFF 一起用） → 读 sherpa 段
+# 两段可以同时留着，未生效的那段不会被读，只是为了切换方便。
+# ⚠ 同时开了多个编译期选项时不会报错，按 ASR_DUILITE > ASR_FUN > ASR_SHERPA
+#   的优先级取一个（见 Conversation/conversation.cpp）。
 # -----------------------------------------------------------------------------
 
 # sherpa-onnx ASR（Paraformer / SenseVoice 等）
+# 自 2026-10 起**不再是默认后端**，只有 -DASR_SHERPA=ON -DASR_FUN=OFF 编译时
+# 才生效；模型：python scripts/setup.py --only sherpa-asr
 sherpa:
   # ⚠ 这里必须与下载脚本产出的目录名一致，否则装完模型仍然"找不到模型"：
-  #   scripts/fetch_models.py / scripts/setup.py(--profile minimal) /
+  #   scripts/fetch_models.py / scripts/setup.py(--only sherpa-asr) /
   #   scripts/install_sherpa_onnx.sh 装的都是 paraformer-zh-**small**（~80MB）；
   #   非 small 的 sherpa-onnx-paraformer-zh-2024-03-09 整包近 1GB，已不再下载。
   model: sherpa-onnx-paraformer-zh-small-2024-03-09/model.int8.onnx # 模型路径
   tokens: sherpa-onnx-paraformer-zh-small-2024-03-09/tokens.txt     # 词表
   stream: false               # 是否流式识别
 
-# FunASR / paraformer-seaco（热词增强版）
+# FunASR ASR（**默认 ASR**：进程内 onnxruntime 跑官方 Paraformer-q8 导出包）
+#
+# 编译期开关是 Conversation/CMakeLists.txt 的 option(ASR_FUN)，**默认 ON**；
+# 实测 AISHELL-1 抽样 999 条 micro-CER 1.98%、threads=2 时 RTF 0.0104（sherpa 的
+# paraformer-zh-small 是 2.90% / 0.0148），见 doc/funasr_cpu_edge_bench.md §10。
+#
+# 模型 = ModelScope 上 FunASR 官方 ONNX 导出包
+#     iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-onnx
+#   的 model_quant.onnx，也就是通常说的 Paraformer-**q8**（int8 量化，~230MB）。
+#   安装：python scripts/setup.py --only funasr-asr  → Data/paraformer-zh-q8/
+#   前端（80 维 mel-fbank → LFR(7,6) → CMVN）由 funasr.cpp 自己算，模型只吃特征。
+#
+# 以下键**可选，不写就用缺省值**（缺省即官方 paraformer-large 导出配置）：
+#   threads                推理线程数，缺省 2
+#   language               解码语系，缺省 "zh-cn"（只有 "en-bpe" 才走 BPE 合词）
+#   sample_rate            采样率，缺省 16000
+#   window                 窗函数，缺省 hamming
+#   frame_length/frame_shift 帧长/帧移(ms)，缺省 25/10
+#   n_mels                 mel 维数，缺省 80
+#   lfr_m / lfr_n          LFR 拼帧窗口/步长，缺省 7/6（特征维度 = lfr_m*n_mels = 560）
+#   segdict / hw_model / hotword
+#                          热词（只有 paraformer-seaco 那类热词增强模型才需要）。
+#                          官方导出包只有 speech/speech_lengths 两个输入，配了这三项
+#                          也会自动退化成普通模式；缺任一或加载失败同样只降级不报错。
 funasr:
-  model: paraformer-seaco/model.int8.onnx # 主模型
-  cmvn: paraformer-seaco/am.mvn           # 归一化参数
-  token: paraformer-seaco/tokens.json     # 词表
-  segdict: paraformer-seaco/seg_dict      # 分词词典
-  hw_model: paraformer-seaco/model_eb.int8.onnx # 热词模型
-  hotword: paraformer-seaco/hotword.txt   # 热词表
+  model: paraformer-zh-q8/model_quant.onnx # 主模型（Paraformer-q8，int8 量化）
+  cmvn: paraformer-zh-q8/am.mvn            # LFR 之后的逐维 CMVN 参数（560 维）
+  token: paraformer-zh-q8/tokens.json      # 词表（JSON 字符串数组，下标即 token id）
+  threads: 2                               # 推理线程数（缺省 2）
 
 # -----------------------------------------------------------------------------
 # 语音合成 TTS —— sherpa-onnx VITS
