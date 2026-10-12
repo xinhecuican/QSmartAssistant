@@ -10,8 +10,10 @@
  *
  * 为什么要单独开一个头文件：neteasemusic 插件本体要链接 QtNetwork /
  * QProcess / 整个 node 后端，单测既没法也不该把它拉进来；而这里只有字符串
- * 处理，任何 QtCore 目标都能直接断言。回归目标见 Test/tst_sherpa.h 的
- * neteaseCaptcha 用例 ——
+ * 处理，任何 QtCore 目标都能直接断言。
+ * ⚠ 原来这里有一份对应的单测（`Test/tst_sherpa.h` 的 `neteaseCaptcha` 用例），
+ *   2026-10-12 因该用例里写了**真实手机号**（凭据泄露）被删除，判定逻辑本身
+ *   仍被 neteasemusic.cpp 使用，只是暂时没有单测守护。
  *
  *   ⚠ 「用户没说话（空回答）」必须与「说了但格式不对」区分开。
  *

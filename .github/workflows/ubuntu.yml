@@ -153,8 +153,10 @@ jobs:
             $CMAKE_MODULES
           cmake --build "$TEST_BUILD_PATH" -j"$(nproc)"
 
-      # hassRegex / mcpClient / serverHttp / serverWebSocket / pluginReplySource /
-      # neteaseCaptcha 是纯逻辑单测，不依赖 ASR/TTS/NLU 模型文件，适合放 CI。
+      # hassRegex / mcpClient / serverHttp / serverWebSocket / pluginReplySource
+      # 是纯逻辑单测，不依赖 ASR/TTS/NLU 模型文件，适合放 CI。
+      # （neteaseCaptcha 自 2026-10-12 起已删除：它的用例里把**真实手机号**写成了
+      #   maskPhone 的输入，属于凭据泄露，连带这个 CI step 一起去掉。）
       # 同理还有下面 6 个录音/播放用例（recorderChunk / recorderLifecycle /
       # audioRingBuffer / audioBufferRaw / playlistIndexLogic / playerVolumeParse）——
       # 它们守的是 Recorder/ 四模块的边界（切块延迟一块、停录丢尾块、resize 泄漏、
@@ -209,15 +211,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: bash scripts/run_test_case.sh pluginReplySource "$TEST_BUILD_PATH"
 
-      # 网易云短信验证码「一轮问答后怎么走」的纯逻辑（空回答 vs 格式错误）。
-      # 插件本体要 node 后端不能进 CI，但这段判定在 captchaflow.h 里，只依赖
-      # QtCore —— 它守的是那次「一句话没说却连听几次『格式不正确』」的回归。
-      - name: "Test: neteaseCaptcha"
-        env:
-          QSA_SOURCE_DIR: ${{ github.workspace }}
-          QSA_PYTHON: python3
-          QT_QPA_PLATFORM: offscreen
-        run: bash scripts/run_test_case.sh neteaseCaptcha "$TEST_BUILD_PATH"
+      # 网易云短信验证码的纯逻辑用例（neteaseCaptcha）已删除 —— 它的 maskPhone
+      # 断言里用了真实手机号，属于凭据泄露；判定逻辑本身仍在 captchaflow.h 里被
+      # 生产代码使用（neteasemusic.cpp），只是不再有单测守护。
 
       # ---------------------------------------------------------------------
       # Recorder / Player 的 6 个纯逻辑用例。全部只依赖 QtCore/QtMultimedia 的

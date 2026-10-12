@@ -847,8 +847,9 @@ qsa::captcha::VerifyOutcome NeteaseMusic::verifyCaptcha(const QString &phone,
 }
 
 // 验证码的归一化 / 格式校验 / 「下一步怎么走」判定都在 captchaflow.h 里，
-// 那是纯字符串逻辑，可以脱离插件环境单独单测（见 Test/tst_sherpa.h 的
-// neteaseCaptcha 用例）。这里只负责「说 / 问 / 记日志」。
+// 那是纯字符串逻辑，可以脱离插件环境单独单测。这里只负责「说 / 问 / 记日志」。
+// （原来对应 Test/tst_sherpa.h 的 neteaseCaptcha 用例，2026-10-12 因该用例里写了
+//   真实手机号而删除 —— 属于凭据泄露，判定逻辑本身未变。）
 // ⚠ 调用方必须已经在 sendCaptcha() 里拿到业务码 200 才调本函数 —— 它进门
 //   第一件事就是念「验证码已发送到您的手机…」。
 QString NeteaseMusic::requestCaptchaByVoice(const QJsonObject &neteaseConfig,
