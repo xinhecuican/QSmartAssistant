@@ -13,13 +13,13 @@ Player::Player(QObject *parent) : QObject(parent) {
             [=](QVariant meta) { emit playStart(meta); });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QAudioDevice device = QMediaDevices::defaultAudioOutput();
-#else
-    QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
-#endif
-    QAudioFormat decoderFormat = device.preferredFormat();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     playerOut = new QAudioOutput(device, this);
     player->setAudioOutput(playerOut);
+    volume = playerOut != nullptr ? qRound(playerOut->volume() * 100) : 100;
+#else
+    QAudioDeviceInfo device = QAudioDeviceInfo::defaultOutputDevice();
+    Q_UNUSED(device);
+    volume = 100;
 #endif
 
 #ifndef Q_OS_WIN
@@ -27,7 +27,6 @@ Player::Player(QObject *parent) : QObject(parent) {
     getVolumeProcess.setProgram("amixer");
     getVolumeProcess.setArguments({"get", "Master"});
 #endif
-    volume = 0;
 }
 
 void Player::play(const QString &fileName,
@@ -54,18 +53,22 @@ void Player::playSoundEffect(const QString &fileName, bool blockThread, bool cur
 }
 
 void Player::setVolume(int volume) {
+    // ⚠ 先夹到 0..100：旧实现直接透传，Windows 分支会把这个值除 100 交给
+    //   QAudioOutput（>100 表示放大），Linux 分支则拼成 "150%"。
+    const int level = qBound(0, volume, 100);
 #if defined(Q_OS_WIN)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (playerOut) {
-        playerOut->setVolume(qBound(0.0, volume / 100.0, 1.0));
+        playerOut->setVolume(level / 100.0);
     }
 #endif
-    this->volume = volume;
 #else
     QProcess::execute("amixer",
-                      {"set", "Master", QString::number(volume) + "%"});
-    // player->setVolume(volume);
+                      {"set", "Master", QString::number(level) + "%"});
 #endif
+    // ⚠ 两个分支都要缓存：旧实现的 Linux 分支不更新 volume，
+    //   于是 setVolume(30) 之后 getVolume() 还是旧值。
+    this->volume = level;
 }
 
 int Player::getVolume() {
@@ -75,17 +78,30 @@ int Player::getVolume() {
         volume = qRound(playerOut->volume() * 100);
     }
 #endif
-    return volume;
 #else
+    // ⚠ 上一次的进程可能还没退（waitForFinished 超时），直接 start() 会被
+    //   Qt 拒掉（"Process is already running"），于是读到的是上一轮输出。
+    if (getVolumeProcess.state() != QProcess::NotRunning) {
+        getVolumeProcess.kill();
+        getVolumeProcess.waitForFinished(500);
+    }
     getVolumeProcess.start();
-    getVolumeProcess.waitForFinished(1000);
-    QByteArray data = getVolumeProcess.readAllStandardOutput();
-    QString str = data;
-    int index = str.indexOf('[');
-    int index2 = str.indexOf(']');
-    volume = str.mid(index + 1, index2 - index - 2).toInt();
-    return volume;
+    if (getVolumeProcess.waitForFinished(1000)) {
+        const int parsed = qsa::volume::parseAmixerVolume(
+            QString::fromLocal8Bit(getVolumeProcess.readAllStandardOutput()));
+        if (parsed >= 0) {
+            volume = parsed;
+        } else {
+            // 解析不出来就保留上一次的值，绝不能当成 0（见 parseAmixerVolume）
+            qWarning() << "player: amixer volume parse failed, keep" << volume;
+        }
+    } else {
+        qWarning() << "player: amixer get Master timed out, keep" << volume;
+        getVolumeProcess.kill();
+        getVolumeProcess.waitForFinished(500);
+    }
 #endif
+    return volume;
 }
 
 void Player::modifyVolume(int value) {

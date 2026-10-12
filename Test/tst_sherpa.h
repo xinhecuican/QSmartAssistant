@@ -39,7 +39,9 @@
 #include "../Plugins/pluginmanager.h"
 #include <QLibrary>
 #include <QtTest/QtTest>
+#include <QMutex>
 #include <QRegularExpression>
+#include <cstring>
 #if defined(SERVER)
 #include "../Server/server.h"
 #include <QCoreApplication>
@@ -159,6 +161,95 @@ ONNXNLU::Settings qsaOnnxNluSettings() {
 } // namespace
 #endif
 
+#if defined(NLU_ONNX)
+/**
+ * 「对话期间 netease 插件有没有被唤醒」的日志捕获（conversationRoundTrip 用）。
+ *
+ * 为什么要绕这么一圈：旧实现把 ensureNodeStarted()/login() 放在
+ * NeteaseMusic::handle() 的入口，于是**任何**请求（哪怕「汇报系统信息」）都会去
+ * 启动 node 后端并尝试登录 —— 无论本机有没有 node、有没有配手机号，它都会打
+ * 日志。所以「整段对话里一条 netease 日志都没有」是这件事最稳的判据，
+ * 不受环境差异影响（只看 TTS 文本的那种断言在本机是"空过"的：这台机器上
+ * homeDir 是 Linux 路径，旧代码也会因为 node 起不来而提前 return）。
+ *
+ * ⚠ 用具名命名空间的 inline 函数，而不是匿名命名空间：本头文件会被主 TU 与
+ *   moc 生成的 TU 各包含一次，函数内静态量必须全局唯一，否则装上的 handler
+ *   写的是 A 那份、用例读的是 B 那份。
+ * ⚠ 消息可能来自 ASR/TTS 工作线程（它们也在 qDebug），所以要加锁；用递归锁，
+ *   免得被转发的旧 handler 再打日志时自锁。
+ */
+namespace qsa_test_log {
+inline QList<QString> &captured() {
+    static QList<QString> logs;
+    return logs;
+}
+inline QRecursiveMutex &mutex() {
+    static QRecursiveMutex m;
+    return m;
+}
+inline QtMessageHandler &previous() {
+    static QtMessageHandler handler = nullptr;
+    return handler;
+}
+inline void capture(QtMsgType type, const QMessageLogContext &context,
+                    const QString &message) {
+    {
+        QMutexLocker<QRecursiveMutex> locker(&mutex());
+        captured().append(message);
+    }
+    // 继续往原来的 handler 转发，别把 QtTest 自己的日志输出掐掉
+    QtMessageHandler previousHandler = previous();
+    if (previousHandler != nullptr) {
+        previousHandler(type, context, message);
+    }
+}
+} // namespace qsa_test_log
+#endif
+
+namespace qsa_test {
+/**
+ * 假录音设备：一个普通 QIODevice，喂多少读多少。
+ *
+ * 为什么需要它：Recorder 本体绑死 QAudioSource（要真麦克风），CI 上没有；
+ * 但「readyRead 到了怎么切块」这段逻辑才是真正出过错的地方，所以它被抽成了
+ * qsa::record::ChunkReader（见 Recorder/recorder.h），只依赖 QIODevice，
+ * 这里用它把边界压死。
+ */
+class FakeAudioDevice : public QIODevice {
+public:
+    FakeAudioDevice() { open(QIODevice::ReadWrite); }
+    qint64 readData(char *data, qint64 maxSize) override {
+        const qint64 n = qMin<qint64>(maxSize, m_incoming.size());
+        if (n > 0) {
+            memcpy(data, m_incoming.constData(), size_t(n));
+            m_incoming.remove(0, int(n));
+        }
+        return n;
+    }
+    qint64 writeData(const char *, qint64) override { return 0; }
+    /**
+     * 口径对齐 QAudioSource：Recorder 判「能不能凑出整块」用的是
+     * 「设备侧自己报的可读字节数」，所以这里也照这个口径。
+     * ⚠ 别用「我这份 QByteArray 还剩几个字节」当判据：Qt 对**顺序设备**的
+     *   QIODevice::read(n) 会先按大块（实测 16384）把数据吸进它自己的内部
+     *   缓冲再返回 n 字节，于是设备侧已经空了、内部缓冲里却还留着残渣，
+     *   这部分残渣连 bytesAvailable() 都不一定报得出来。
+     *   ⇒ 测试里每次喂的数据量都让它能被整块读走，避免这种内部缓冲出现。
+     */
+    qint64 bytesAvailable() const override {
+        return m_incoming.size() + QIODevice::bytesAvailable();
+    }
+    /** 模拟「设备侧攒了一批数据」并触发 readyRead */
+    void feed(const QByteArray &data) {
+        m_incoming.append(data);
+        emit readyRead();
+    }
+
+private:
+    QByteArray m_incoming;
+};
+} // namespace qsa_test
+
 class tst_sherpa : public QObject {
     Q_OBJECT
 private:
@@ -254,6 +345,379 @@ private slots:
         QFileInfo fileInfo(Config::getDataPath("short_test.wav"));
         mplayer->playSoundEffect(Config::getDataPath("start.wav"), false);
         QTest::qWait(4000);
+    }
+
+    // ==================================================================
+    // Recorder/ 的纯逻辑回归。
+    // 这几条都不需要麦克风/声卡，CI 上（offscreen、无声卡）也能跑，
+    // 守的是「修 bug 时改过的那几处边界」，不是"录音功能好不好"。
+    // ==================================================================
+
+    /**
+     * 分块边界：`available / chunkSize`，且 chunkSize <= 0 必须挡掉。
+     *
+     * ⚠ 旧实现是 `while (bytesReady > chunkSize)`：
+     *   - 攒满一整块（640/640）不发，得等下一块到达 → 恒定延迟一块；
+     *   - 停止录音时最后那一块直接丢。
+     *   用户感受就是「唤醒/打断慢半拍、末尾的字没听见」。
+     */
+    void recorderChunk() {
+        using qsa::record::completeChunks;
+        using qsa::record::ChunkReader;
+
+        QCOMPARE(completeChunks(0, 640), 0);
+        QCOMPARE(completeChunks(639, 640), 0);
+        QCOMPARE(completeChunks(640, 640), 1);   // ⚠ 旧语义这里是 0
+        QCOMPARE(completeChunks(641, 640), 1);
+        QCOMPARE(completeChunks(1279, 640), 1);
+        QCOMPARE(completeChunks(1280, 640), 2);
+        QCOMPARE(completeChunks(640, 0), 0);     // 不能除零
+        QCOMPARE(completeChunks(640, -1), 0);    // 也不能死循环
+        QCOMPARE(completeChunks(-5, 640), 0);
+
+        // 真对象 + 假设备：攒满一块就发、不足一块留着
+        qsa_test::FakeAudioDevice device;
+        ChunkReader reader(4);
+        QList<QByteArray> chunks;
+        reader.setCallback([&chunks](const QByteArray &chunk) { chunks.append(chunk); });
+        reader.attach(&device);
+        QVERIFY(reader.isAttached());
+        QCOMPARE(reader.chunkSize(), 4);
+
+        device.feed("abcd");            // 正好一整块
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.at(0), QByteArray("abcd"));
+
+        device.feed("efgh");            // 又是一整块
+        QCOMPARE(chunks.size(), 2);
+        QCOMPARE(chunks.at(1), QByteArray("efgh"));
+
+        // 不足一整块的残渣必须留着（旧实现是 `> chunkSize`，凑满也不发）
+        device.feed("ij");
+        QCOMPARE(chunks.size(), 2);
+        QVERIFY(device.bytesAvailable() > 0); // 数据还在设备里，没被吞掉
+
+        device.feed("kl");              // 残渣 + 新数据 = 又一整块
+        QCOMPARE(chunks.size(), 3);
+        QCOMPARE(chunks.at(2), QByteArray("ijkl"));
+        QCOMPARE(device.bytesAvailable(), 0);
+        reader.detach();
+        QVERIFY(!reader.isAttached());
+
+        // 重复 attach 必须只留一条连接（旧实现每次 startRecord 都新增一个：
+        // QAudioSource::start() 返回的是同一个 QIODevice，于是 start/stop
+        // 反复几轮后 readyRead 上会挂着 N 个回调）
+        qsa_test::FakeAudioDevice device2;
+        ChunkReader twice(2);
+        QList<QByteArray> twiceChunks;
+        twice.setCallback([&twiceChunks](const QByteArray &chunk) {
+            twiceChunks.append(chunk);
+        });
+        twice.attach(&device2);
+        twice.attach(&device2);         // 旧的先被断掉
+        device2.feed("abcd");
+        QCOMPARE(twiceChunks.size(), 2); // 同一份数据只被取走一次
+        QCOMPARE(device2.bytesAvailable(), 0);
+        twice.detach();
+        device2.feed("xy");
+        QCOMPARE(twiceChunks.size(), 2); // detach 之后不再跟随
+        QCOMPARE(device2.bytesAvailable(), 2);
+
+        // 暂停期间不产出（原逻辑是在切块循环里判 SuspendedState）
+        qsa_test::FakeAudioDevice device3;
+        ChunkReader paused(2);
+        QList<QByteArray> pausedChunks;
+        paused.setCallback([&pausedChunks](const QByteArray &chunk) {
+            pausedChunks.append(chunk);
+        });
+        paused.setPaused(true);
+        paused.attach(&device3);
+        device3.feed("mm");
+        QCOMPARE(pausedChunks.size(), 0);
+        QCOMPARE(device3.bytesAvailable(), 2); // 数据留在设备里，没被吞掉
+        paused.setPaused(false);
+        QCOMPARE(paused.drain(), 1);           // 恢复后一笔取回
+        QCOMPARE(pausedChunks.at(0), QByteArray("mm"));
+    }
+
+    /**
+     * Recorder 的生命周期：没有输入设备时（CI）所有方法都必须安全空转，
+     * 非法 chunkSize 必须被挡住。
+     *
+     * ⚠ 旧实现在 devInfo.isNull() 时只打一条 warning 就接着 new
+     *   QAudioSource，于是 buffer 是 nullptr，clearCache() 一调就解引用空指针；
+     * ⚠ setChunkSize(0) 会让切块循环里 `-= 0` 变成死循环（配置写错即卡死）。
+     */
+    void recorderLifecycle() {
+        Recorder recorder(640);
+        QCOMPARE(recorder.getChunkSize(), 640);
+        recorder.setChunkSize(0);
+        QCOMPARE(recorder.getChunkSize(), 1);
+        recorder.setChunkSize(-100);
+        QCOMPARE(recorder.getChunkSize(), 1);
+        recorder.setChunkSize(1280);
+        QCOMPARE(recorder.getChunkSize(), 1280);
+
+        // 没开始录音就调这些：旧实现里 clearCache() 会崩
+        recorder.clearCache();
+        recorder.stopRecord();
+        recorder.pause();
+        recorder.resume();
+
+        // 反复启停（真实使用里每次唤醒一轮）：不能崩、不能留下悬空指针
+        for (int i = 0; i < 3; i++) {
+            recorder.startRecord();
+            QTest::qWait(50);
+            recorder.clearCache();
+            recorder.stopRecord();
+        }
+        QVERIFY(!recorder.isRecording());
+
+        const QAudioFormat format = recorder.getFormat();
+        QVERIFY(format.isValid());
+        QCOMPARE(format.sampleRate(), 16000);
+        QCOMPARE(format.channelCount(), 1);
+    }
+
+    /**
+     * 环形缓冲的读写/回绕/溢出（AudioRingBuffer）。
+     *
+     * ⚠ 旧实现（AudioBuffer::Buffer）的问题：
+     *   - resize() 只 new 不 delete → setBufferSize() 每次泄漏一整块；
+     *   - 允许 size == 0 → 读写下标用 `% size` 求，直接除零崩；
+     *   - 写不下时静默截断，调用方拿不到「丢了多少」。
+     */
+    void audioRingBuffer() {
+        AudioRingBuffer buffer(8);
+        QCOMPARE(buffer.capacity(), 8);
+        QVERIFY(buffer.empty());
+        QVERIFY(!buffer.full());
+        QCOMPARE(buffer.available(), 0);
+
+        char out[32];
+        QCOMPARE(buffer.write("abcd", 4), 4);
+        QCOMPARE(buffer.available(), 4);
+        QCOMPARE(buffer.freeSpace(), 4);
+        memset(out, 0, sizeof(out));
+        QCOMPARE(buffer.read(out, 2), 2);
+        QCOMPARE(QByteArray(out, 2), QByteArray("ab"));
+        QCOMPARE(buffer.available(), 2);
+
+        // 写位置绕过容量末尾（两段式写入）
+        QCOMPARE(buffer.write("efgh", 4), 4);
+        QCOMPARE(buffer.available(), 6);
+        QCOMPARE(buffer.write("ijkl", 4), 2); // 只剩 2 字节：如实报告只写了 2
+        QCOMPARE(buffer.available(), 8);
+        QVERIFY(buffer.full());
+        QCOMPARE(buffer.write("m", 1), 0);    // 满了一字节也写不进
+        memset(out, 0, sizeof(out));
+        QCOMPARE(buffer.read(out, 16), 8);    // 读位置也绕过末尾（两段式读出）
+        QCOMPARE(QByteArray(out, 8), QByteArray("cdefghij"));
+        QVERIFY(buffer.empty());
+        QCOMPARE(buffer.read(out, 1), 0);     // 空读返回 0，不是 -1/垃圾
+
+        // 非法参数不能崩、不能除零
+        AudioRingBuffer degenerate(0);
+        QCOMPARE(degenerate.capacity(), 1);
+        QCOMPARE(degenerate.write("x", 1), 1);
+        QCOMPARE(degenerate.write(nullptr, 4), 0);
+        QCOMPARE(degenerate.read(nullptr, 4), 0);
+        QCOMPARE(degenerate.write("x", -1), 0);
+        QCOMPARE(degenerate.read(out, -1), 0);
+
+        // resize 之后内容作废、容量生效（内存由 ASan/valgrind 兜泄漏）
+        buffer.resize(4);
+        QCOMPARE(buffer.capacity(), 4);
+        QVERIFY(buffer.empty());
+        QCOMPARE(buffer.write("1234", 4), 4);
+        QVERIFY(buffer.full());
+        memset(out, 0, sizeof(out));
+        QCOMPARE(buffer.read(out, 3), 3);
+        QCOMPARE(QByteArray(out, 3), QByteArray("123"));
+        QCOMPARE(buffer.write("XYZ", 3), 3);
+        memset(out, 0, sizeof(out));
+        QCOMPARE(buffer.read(out, 4), 4);
+        QCOMPARE(QByteArray(out, 4), QByteArray("4XYZ"));
+        buffer.resize(0);
+        QCOMPARE(buffer.capacity(), 1);
+    }
+
+    /**
+     * AudioBuffer 的「原始数据」通路：喂一段 PCM，按 QAudioSink 的方式读走。
+     *
+     * ⚠ 旧实现 start(QByteArray) 里没把 isFinish 置真：atEnd() 永远为假，
+     *   播完之后 state 永远停在 Playing，stateChange(Stopped) 一个都不发 ——
+     *   等它的调用方会一直等；并且超出缓冲的那段数据被静默截断。
+     */
+    void audioBufferRaw() {
+        AudioBuffer buffer;
+        int stateChanges = 0;
+        int lastState = -1;
+        connect(&buffer, &AudioBuffer::stateChange, this,
+                [&stateChanges, &lastState](AudioBuffer::State state) {
+                    stateChanges++;
+                    lastState = int(state);
+                });
+
+        QVERIFY(!buffer.atEnd());
+        QCOMPARE(int(buffer.getState()), int(AudioBuffer::Idle));
+
+        QByteArray raw;
+        raw.resize(1000);
+        for (int i = 0; i < raw.size(); i++) {
+            raw[i] = char(i % 251);
+        }
+        buffer.start(raw);
+        QCOMPARE(stateChanges, 1);
+        QCOMPARE(lastState, int(AudioBuffer::Playing));
+        QVERIFY(!buffer.atEnd()); // 还有数据没读完，不能算结束
+
+        // 走公开的 QIODevice 接口读（QAudioSink 就是这么消费它的）
+        const QByteArray got = buffer.read(4096);
+        QCOMPARE(got.size(), raw.size());
+        QCOMPARE(got, raw);
+        QVERIFY(buffer.atEnd());
+        QCOMPARE(stateChanges, 2);
+        QCOMPARE(lastState, int(AudioBuffer::Stopped));
+        QVERIFY(buffer.read(16).isEmpty()); // 已经停了，再读是空的
+
+        // 超过默认容量的原始数据必须原样全收（旧实现静默截断）
+        AudioBuffer big;
+        const QByteArray bigData(AudioBuffer::DefaultCapacity + 500, char(7));
+        big.start(bigData);
+        const QByteArray bigGot = big.read(bigData.size() + 1024);
+        QCOMPARE(bigGot.size(), bigData.size());
+        QCOMPARE(bigGot, bigData);
+
+        // 非法缓冲区尺寸不能崩（旧实现会 new char[0] 然后除零）
+        AudioBuffer guarded;
+        guarded.setBufferSize(0);
+        guarded.setBufferSize(-16);
+        guarded.start(QByteArray("abcd"));
+        QCOMPARE(guarded.read(16), QByteArray("abcd"));
+    }
+
+    /**
+     * 播放列表的两个「下标/删除」纯逻辑 + 越界防护。
+     *
+     * ⚠ 旧实现的两处「改副本」：
+     *   - playPrevious()：`Playlist current = audiolist[p];` 之后 index--，
+     *     改的是副本；而且 index-- 之后播的还是 list[index-1]（当前这首）
+     *     → 用户按「上一曲」听到的是当前这首重播，连按也没用；
+     *   - clearType()：同样在副本上 erase，真列表一个元素都没少
+     *     → 「退出对话后那段话还在念」。
+     */
+    void playlistIndexLogic() {
+        using qsa::playlist::previousPosition;
+        using qsa::playlist::eraseUnplayedById;
+
+        // 1) 「上一首」的下标：index 是「下一条待播」，当前曲目是 list[index-1]
+        QCOMPARE(previousPosition(0, 3), -1);
+        QCOMPARE(previousPosition(1, 3), -1); // 正在播 list[0]，没有上一首
+        QCOMPARE(previousPosition(2, 3), 0);
+        QCOMPARE(previousPosition(3, 3), 1);
+        QCOMPARE(previousPosition(2, 0), -1); // 空列表
+        QCOMPARE(previousPosition(5, 2), -1); // 脏 index 也不能给出越界下标
+
+        // 2) 按 id 删「还没播到」的那一段
+        struct Item {
+            QVariant meta;
+        };
+        auto makeItem = [](const QString &id) {
+            Item item;
+            item.meta = QVariantMap{{QStringLiteral("id"), id}};
+            return item;
+        };
+        QList<Item> items{makeItem("a"), makeItem("b"), makeItem("a"),
+                          makeItem("c"), makeItem("a")};
+        // from = 2：前两条是已播过的历史，不能删
+        QCOMPARE(eraseUnplayedById(items, 2, QStringLiteral("a")), 2);
+        QCOMPARE(items.size(), 3);
+        QCOMPARE(items.at(0).meta.toMap().value("id").toString(), QStringLiteral("a"));
+        QCOMPARE(items.at(1).meta.toMap().value("id").toString(), QStringLiteral("b"));
+        QCOMPARE(items.at(2).meta.toMap().value("id").toString(), QStringLiteral("c"));
+
+        // from 越界不能崩（旧实现用 iter++ 跳前缀，index > size 时迭代器越过 end）
+        QList<Item> over{makeItem("a"), makeItem("a")};
+        QCOMPARE(eraseUnplayedById(over, 99, QStringLiteral("a")), 0);
+        QCOMPARE(over.size(), 2);
+        QCOMPARE(eraseUnplayedById(over, -5, QStringLiteral("a")), 2);
+        QCOMPARE(over.size(), 0);
+
+        // 没有 meta / 没有 id 的条目：跳过，不能崩
+        QList<Item> bare;
+        bare.append(Item());      // meta 是无效 QVariant
+        bare.append(makeItem("x"));
+        QCOMPARE(eraseUnplayedById(bare, 0, QStringLiteral("x")), 1);
+        QCOMPARE(bare.size(), 1);
+
+        // 歌曲的 id 是 qint64，也要能按字符串匹配上
+        QList<Item> numeric;
+        Item song;
+        song.meta = QVariantMap{{QStringLiteral("id"), qint64(12345)}};
+        numeric.append(song);
+        QCOMPARE(eraseUnplayedById(numeric, 0, QStringLiteral("12345")), 1);
+        QCOMPARE(numeric.size(), 0);
+
+        // 3) 真对象上的越界防护（这几条旧代码是越界读 QList）
+        QMediaPlayer media;
+        AudioPlaylist playlist(&media);
+        QCOMPARE(playlist.getAudioNumber(AudioPlaylist::NORMAL), 0);
+        QCOMPARE(playlist.getAudioNumber(AudioPlaylist::PriorityNum), 0);
+        QCOMPARE(playlist.getCurrentIndex(AudioPlaylist::PriorityNum), 0);
+        playlist.play(-1, AudioPlaylist::NOTIFY);  // 负下标
+        playlist.play(7, AudioPlaylist::NOTIFY);   // 越界下标
+        playlist.playPrevious();                   // 没有上一首
+        playlist.playNext(true);                    // 空列表
+        QCOMPARE(playlist.getAudioNumber(AudioPlaylist::NOTIFY), 0);
+
+        playlist.addAudio(Config::getDataPath("start.wav"), AudioPlaylist::NOTIFY,
+                          QVariantMap{{QStringLiteral("id"), QStringLiteral("chat")}});
+        QCOMPARE(playlist.getAudioNumber(AudioPlaylist::NOTIFY), 1);
+        playlist.clearType(QString(), AudioPlaylist::NOTIFY); // 清空整条
+        QCOMPARE(playlist.getAudioNumber(AudioPlaylist::NOTIFY), 0);
+        playlist.clearType(QStringLiteral("chat"), AudioPlaylist::NOTIFY);
+    }
+
+    /**
+     * `amixer get Master` 输出解析。
+     *
+     * ⚠ 旧实现找不到 '[' 时 mid(0, -2) 会返回整段字符串、toInt() 得 0 ——
+     *   「amixer 没装 / 控件名不是 Master」全被当成「音量是 0」，
+     *   接着 modifyVolume 从这个假 0 往上加，用户说「音量大一点」反而接近静音。
+     */
+    void playerVolumeParse() {
+        using qsa::volume::parseAmixerVolume;
+
+        const QString amixerOutput = QStringLiteral(
+            "Simple mixer control 'Master',0\n"
+            "  Capabilities: pvolume pswitch pswitch-joined\n"
+            "  Playback channels: Front Left - Front Right\n"
+            "  Limits: Playback 0 - 65536\n"
+            "  Mono:\n"
+            "  Front Left: Playback 65536 [100%] [on]\n"
+            "  Front Right: Playback 65536 [100%] [on]\n");
+        QCOMPARE(parseAmixerVolume(amixerOutput), 100);
+
+        QCOMPARE(parseAmixerVolume(
+                     QStringLiteral("  Front Left: Playback 0 [0%] [on]")), 0);
+        QCOMPARE(parseAmixerVolume(
+                     QStringLiteral("Front Left: Playback 32768 [50%] [off]")), 50);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("[ 42 %]")), 42);
+
+        // 解析不出来一律 -1（= 保留原值），绝不能是 0
+        QCOMPARE(parseAmixerVolume(QString()), -1);
+        QCOMPARE(parseAmixerVolume(QStringLiteral(
+                     "amixer: Unable to find simple control 'Master',0")), -1);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("Front Left: Playback 65536 100%")), -1);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("[]")), -1);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("[  ]")), -1);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("[abc]")), -1);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("Front Left: Playback [on]")), -1);
+
+        // 脏数据夹到 0..100（setVolume 也不该把它放出去）
+        QCOMPARE(parseAmixerVolume(QStringLiteral("[150%]")), 100);
+        QCOMPARE(parseAmixerVolume(QStringLiteral("[-20%]")), 0);
     }
 #if defined(TTS_SHERPA)
     void ttsSherpa() {
@@ -1233,6 +1697,126 @@ private slots:
         QVERIFY(!formatValid(QStringLiteral("1234567")));
         QVERIFY(!formatValid(QStringLiteral("1234a")));
         QVERIFY(!formatValid(QStringLiteral("１２３４"))); // 全角
+
+        // 5b) 手机号脱敏：排障日志里既要能核对「发到哪个号了」，又不能漏出完整号码
+        QCOMPARE(qsa::captcha::maskPhone(QStringLiteral("13800138000")),
+                 QStringLiteral("138****8000"));
+        QCOMPARE(qsa::captcha::maskPhone(QStringLiteral(" 13800138000 ")),
+                 QStringLiteral("138****8000"));
+        QCOMPARE(qsa::captcha::maskPhone(QStringLiteral("123456")),
+                 QStringLiteral("***")); // 位数不足一律打码
+        QCOMPARE(qsa::captcha::maskPhone(QString()), QStringLiteral("***"));
+
+        // 6) 业务码判定：「验证码到底发出去没有」「登录到底成没成」只能由它回答。
+        //    invokeMethod 会把两种响应形状都归一化成 {status, body}：
+        //      A. 顶层就是网易的业务响应 —— status 已是业务码，body 是整个响应；
+        //      B. {status, body} 信封 —— status 只是**外层 HTTP 码**，
+        //         业务码在 body.code 里。
+        using qsa::captcha::businessCode;
+        using qsa::captcha::isSuccess;
+
+        // 6.1 发送成功（code 200）
+        QVERIFY(isSuccess(
+            QVariantMap{{QStringLiteral("status"), 200},
+                        {QStringLiteral("body"),
+                         QVariantMap{{QStringLiteral("code"), 200},
+                                     {QStringLiteral("data"), true}}}}));
+
+        // 6.2 ⚠ 本轮核心回归：信封形状下「外层 HTTP 200 + 业务 400」不是成功。
+        //     旧代码只看 result["status"]（= 外层 200），于是短信根本没发出去，
+        //     助手却念了「验证码已发送到您的手机」，用户对着手机空等一整轮。
+        QVERIFY(!isSuccess(
+            QVariantMap{{QStringLiteral("status"), 200},
+                        {QStringLiteral("body"),
+                         QVariantMap{{QStringLiteral("code"), 400},
+                                     {QStringLiteral("msg"),
+                                      QStringLiteral("发送频繁，请稍后再试")}}}}));
+
+        // 6.3 风控码 -462（需要人机验证，短信同样没发出去）
+        QVERIFY(!isSuccess(
+            QVariantMap{{QStringLiteral("status"), 200},
+                        {QStringLiteral("body"),
+                         QVariantMap{{QStringLiteral("code"), -462}}}}));
+
+        // 6.4 字符串码：网易在部分接口上把 code 返回成字符串
+        //     （/register/anonimous 的 "400" 就是这个形状，用 == 200 比较永远为假）
+        QVERIFY(isSuccess(
+            QVariantMap{{QStringLiteral("status"), QStringLiteral("200")},
+                        {QStringLiteral("body"),
+                         QVariantMap{{QStringLiteral("code"),
+                                      QStringLiteral("200")}}}}));
+        QVERIFY(!isSuccess(
+            QVariantMap{{QStringLiteral("status"), QStringLiteral("400")},
+                        {QStringLiteral("body"),
+                         QVariantMap{{QStringLiteral("code"),
+                                      QStringLiteral("400")}}}}));
+
+        // 6.5 响应里压根没有业务码：一律不算成功。
+        //     这条专治「拿 invokeMethod 的 200 兜底当成功」——验证码这类动作
+        //     宁可不做，也不能嘴上说做成了。
+        bool known = false;
+        QCOMPARE(businessCode(QVariantMap{{QStringLiteral("status"), 200}}, &known),
+                 200);
+        QVERIFY2(!known, "没有 code 字段时不能声称读到了业务码");
+        QVERIFY(!isSuccess(QVariantMap{{QStringLiteral("status"), 200}}));
+
+        // 6.6 业务码要能从 body 里读出来（形状 B），不是只看外层
+        known = false;
+        QCOMPARE(businessCode(
+                     QVariantMap{{QStringLiteral("status"), 200},
+                                 {QStringLiteral("body"),
+                                  QVariantMap{{QStringLiteral("code"), 503}}}},
+                     &known),
+                 503);
+        QVERIFY(known);
+
+        // 7. /captcha/verify 的判定 —— **必须和登录分开判**
+        //    本机实测（2026-10-12，故意传 0000）：
+        //      正确 → {"code":200,…}
+        //      错误 → HTTP 503 + {"message":"验证码错误","code":503,"data":false}
+        //    ⚠⚠ 同一个业务码 503 在 /login/cellphone 上是「需要短信验证码」，
+        //      在 /captcha/verify 上却是「验证码错误」。混判会把风控当用户打错字，
+        //      让用户把同一个正确的码念三遍才落到游客登录。
+        using qsa::captcha::classifyVerify;
+        using qsa::captcha::VerifyOutcome;
+        QVERIFY2(classifyVerify(QVariantMap{{QStringLiteral("code"), 200},
+                                            {QStringLiteral("data"), true}}) ==
+                     VerifyOutcome::Ok,
+                 "业务码 200 应当判为校验通过");
+        // 7.1 错误码：顶层形状与 {status, body} 信封形状都要认
+        QVERIFY2(classifyVerify(QVariantMap{{QStringLiteral("code"), 503}}) ==
+                     VerifyOutcome::WrongCode,
+                 "顶层 code 503 应当判为验证码错误");
+        QVERIFY2(classifyVerify(
+                     QVariantMap{{QStringLiteral("status"), 503},
+                                 {QStringLiteral("body"),
+                                  QVariantMap{{QStringLiteral("code"), 503},
+                                              {QStringLiteral("data"), false},
+                                              {QStringLiteral("message"),
+                                               QStringLiteral("验证码错误")}}}}) ==
+                     VerifyOutcome::WrongCode,
+                 "信封形状下的 503 也要判为验证码错误");
+        // 7.2 光凭 message 也要认：网易有时把码写成别的值，原话才是准的
+        QVERIFY2(classifyVerify(
+                     QVariantMap{{QStringLiteral("code"), 400},
+                                 {QStringLiteral("message"),
+                                  QStringLiteral("验证码错误")}}) ==
+                     VerifyOutcome::WrongCode,
+                 "message 提到验证码错误时应当判为验证码错误");
+        // 7.3 ⚠ 读不出业务码 / 风控码 / 其它码：一律 Unknown。
+        //     这一条是这次改动的安全阀 —— 校验读不懂响应时必须**保持原行为**
+        //     （照旧去试登录），而不是把用户的验证码判成错的、反复重问。
+        QVERIFY2(classifyVerify(QVariantMap{{QStringLiteral("status"), 200}}) ==
+                     VerifyOutcome::Unknown,
+                 "没有业务码时不能表态");
+        QVERIFY2(classifyVerify(QVariantMap{}) == VerifyOutcome::Unknown,
+                 "空响应不能表态");
+        QVERIFY2(classifyVerify(QVariantMap{{QStringLiteral("code"), -462}}) ==
+                     VerifyOutcome::Unknown,
+                 "风控码 -462 不是「验证码错误」");
+        QVERIFY2(classifyVerify(QVariantMap{{QStringLiteral("code"), 502}}) ==
+                     VerifyOutcome::Unknown,
+                 "其它业务码不是「验证码错误」");
     }
 
     // -----------------------------------------------------------------
@@ -1307,17 +1891,61 @@ private slots:
         //   回答中途的反问 —— 没有网页前端，也没有接 Wakeup（测试环境里
         //   requestResponse 没人听）。传 true 的后果是 question() 真的去等
         //   回答，用例就会在这句里卡到超时。HTTP /intent 走的正是 false 这条。
+        //
+        // ⚠⚠ 顺手把这段对话期间的日志抓下来，用来判定「netease 有没有被唤醒」
+        //   （判据为什么选日志见 qsa_test_log 的说明）。handler 里会把消息继续
+        //   转发给原 handler，所以 QtTest 的日志输出不受影响。
+        {
+            QMutexLocker<QRecursiveMutex> locker(&qsa_test_log::mutex());
+            qsa_test_log::captured().clear();
+        }
+        qsa_test_log::previous() = qInstallMessageHandler(qsa_test_log::capture);
         const QList<QString> texts =
             conversation.intentRequest(question, id, false);
+        qInstallMessageHandler(qsa_test_log::previous());
+        qsa_test_log::previous() = nullptr;
+
         QVERIFY2(!texts.isEmpty(),
                  "SYS_INFO 命中后一条 TTS 文本都没有（插件没部署？）");
+
+        // ⚠⚠ 「汇报系统信息」跟音乐毫无关系，NeteaseMusic 只是被 PluginManager
+        //   顺手调用了一次 handle()，它**不该**因此启动 node 后端、登录、更不
+        //   该进短信验证码问答。旧实现把 ensureNodeStarted()/login() 放在
+        //   handle() 的最前面，于是这条请求也会拉起 node 并索要短信验证码
+        //   （用户实测反馈：说别的事，助手却开始问验证码）。
+        //   断言「整段对话里一条 netease 日志都没有」：本机缺 NeteaseCloudMusicApi
+        //   目录时旧代码会打 qWarning「未找到 … 目录」，node 真在时则是一串
+        //   login / captcha 日志 —— 两种情况都带 "netease"，与手机号配没配无关。
+        QStringList neteaseLogs;
+        {
+            QMutexLocker<QRecursiveMutex> locker(&qsa_test_log::mutex());
+            for (const QString &message : qsa_test_log::captured()) {
+                if (message.contains(QStringLiteral("netease"),
+                                     Qt::CaseInsensitive)) {
+                    neteaseLogs << message;
+                }
+            }
+        }
+        QVERIFY2(neteaseLogs.isEmpty(),
+                 qPrintable(QStringLiteral("无关请求唤醒了网易云插件"
+                                           "（旧行为：handle() 入口就登录）: %1")
+                                .arg(neteaseLogs.join(QStringLiteral(" | ")))));
 
         // SystemInfo 报的是运行期数字（剩余内存），只能校格式不能校值：
         // Windows 只说一句内存；Linux 在报内存前还会先报内核温度。
         //
         // ⚠ 不能假设 texts 里"只有"系统信息那一句：插件顺序里排在 SystemInfo
-        //   之前的插件会先开口（例如 NeteaseMusic 的登录/验证码提示），而它们
-        //   说的也是正经回复。所以这里只挑出 SystemInfo 那条来断言。
+        //   之前的插件也可能开口（它们说的同样是正经回复）。所以这里只挑出
+        //   SystemInfo 那条来断言。
+        //
+        // 另外补一条廉价的文本侧检查（上面的日志断言才是主判据）：netease 一旦
+        // 真的开始登录/要验证码，它的提示语一定会出现在 texts 里。
+        for (const QString &one : texts) {
+            QVERIFY2(!one.contains(QStringLiteral("验证码")) &&
+                         !one.contains(QStringLiteral("登录")),
+                     qPrintable(QStringLiteral("无关请求触发了网易云登录流程: %1")
+                                    .arg(one)));
+        }
         int memoryIndex = -1;
         for (int i = 0; i < texts.size(); ++i) {
             QVERIFY2(!texts.at(i).isEmpty(), "产生了空的 TTS 文本");

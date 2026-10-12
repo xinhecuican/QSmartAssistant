@@ -6,14 +6,18 @@
 #include <QFileInfo>
 #include <QMediaMetaData>
 
+// 「已播过」的历史保留多少条（normalEnd 分支会删掉更早的）。
+// 它同时决定「上一曲」最多能往回退多少条 —— 想退得更远就调大，
+// 代价很小（每条只有一个 QUrl 加一份 meta）。
+static const int kMaxPlayedHistory = 30;
+
 AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
     this->player = player;
-    currentPriority = NORMAL;
     for (int i = 0; i < PriorityNum; i++) {
         audiolist.append(Playlist());
     }
     player->connect(player, &QMediaPlayer::mediaStatusChanged, player,
-                    [=](QMediaPlayer::MediaStatus status) {
+                    [this, player](QMediaPlayer::MediaStatus status) {
                         if (status == QMediaPlayer::EndOfMedia) {
                             if (isSound) {
                                 isSound = false;
@@ -41,27 +45,53 @@ AudioPlaylist::AudioPlaylist(QMediaPlayer *player) : QObject(player) {
                             // 请求，表现就是「说了暂停，音乐照放」。
                             enforceUserPause();
                         }
-                        // else if(status == QMediaPlayer::LoadingMedia){
-                        //     player->play();
-                        // }
                     });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     player->connect(player, &QMediaPlayer::errorOccurred, this,
-                    [=](QMediaPlayer::Error error, const QString &errorString) {
-                        if (error != QMediaPlayer::NoError) {
-                            qWarning() << "media player error" << error;
-                            emit playEnd(getCurrentMeta());
-                            playNext();
+                    [this](QMediaPlayer::Error error, const QString &errorString) {
+                        if (error == QMediaPlayer::NoError) {
+                            return;
                         }
+                        qWarning() << "media player error" << error << errorString;
+                        if (isSound) {
+                            // ⚠ 播提示音（playSound(blockThread = true)）时出错，
+                            //   必须和 EndOfMedia 走同样的收尾：错误状态下
+                            //   mediaStatus 会变成 InvalidMedia 而不是 EndOfMedia，
+                            //   原来的处理只 emit playEnd + playNext，永远不去
+                            //   quit 那个嵌套事件循环 —— 调用方（Wakeup）就卡在
+                            //   playSoundEffect() 里再也出不来。
+                            isSound = false;
+                            if (isBlock)
+                                eventLoop.quit();
+                            if (isPlaying) {
+                                isPlaying = false;
+                                playNext();
+                            }
+                            return;
+                        }
+                        emit playEnd(getCurrentMeta());
+                        playNext();
                     });
 #else
     player->connect(player,
                     QOverload<QMediaPlayer::Error>::of(&QMediaPlayer::error),
-                    player, [=](QMediaPlayer::Error error) {
-                        if (error != QMediaPlayer::NoError) {
-                            emit playEnd(getCurrentMeta());
-                            playNext();
+                    player, [this](QMediaPlayer::Error error) {
+                        if (error == QMediaPlayer::NoError) {
+                            return;
                         }
+                        qWarning() << "media player error" << error;
+                        if (isSound) {
+                            isSound = false;
+                            if (isBlock)
+                                eventLoop.quit();
+                            if (isPlaying) {
+                                isPlaying = false;
+                                playNext();
+                            }
+                            return;
+                        }
+                        emit playEnd(getCurrentMeta());
+                        playNext();
                     });
 #endif
 }
@@ -87,8 +117,10 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
                 return;
             }
             current.block = false;
-            if (current.index >= 0 && current.index <= current.list.size()) {
-                setMedia(current.list[current.index - 1]);
+            // ⚠ index 是「下一条待播」的位置，所以当前曲目是 list[index - 1]。
+            //   旧实现的条件是 `index >= 0`，index == 0 时会取 list[-1]（越界读）。
+            if (current.index > 0 && current.index <= current.list.size()) {
+                setMedia(current.list.at(current.index - 1));
                 isPosition = true;
                 position = current.position;
             }
@@ -97,7 +129,7 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
                 if (currentPriority != NORMAL) {
                     audiolist[currentPriority].clear();
                 } else {
-                    int deleteSize = current.list.size() - 30;
+                    int deleteSize = current.list.size() - kMaxPlayedHistory;
                     if (deleteSize > 0) {
                         for (int i = 0; i < deleteSize; i++) {
                             current.list.removeFirst();
@@ -114,7 +146,7 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
                     playNext();
                 }
             } else {
-                setMedia(current.list[current.index]);
+                setMedia(current.list.at(current.index));
                 current.index++;
             }
         }
@@ -122,17 +154,32 @@ void AudioPlaylist::playNext(bool abandonCurrent) {
 }
 
 void AudioPlaylist::playPrevious() {
-    if (currentPriority == NORMAL) {
-        Playlist current = audiolist[currentPriority];
-        if (current.index > 0) {
-            current.index--;
-            setMedia(current.list[current.index]);
-        }
+    if (currentPriority != NORMAL) {
+        return;
     }
+    Playlist &current = audiolist[currentPriority]; // ⚠ 必须是引用
+    const int pos =
+        qsa::playlist::previousPosition(current.index, current.list.size());
+    if (pos < 0) {
+        qDebug() << "playlist: no previous track";
+        return;
+    }
+    // 显式点歌 = 用户要求出声，与 play() 一致：解除用户暂停
+    userPaused = false;
+    current.block = false;
+    isPosition = false;
+    current.index = pos;
+    setMedia(current.list.at(current.index));
+    current.index++;
 }
 
 void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
                              const QVariant &meta) {
+    if (!validPriority(priority)) {
+        qWarning() << "AudioPlaylist::addAudio invalid priority"
+                   << int(priority);
+        return;
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaPlayer::PlaybackState state = player->playbackState();
 #else
@@ -163,6 +210,10 @@ void AudioPlaylist::addAudio(const QString &fileName, AudioPriority priority,
 
 void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
                            AudioPriority priority, const QVariant &meta) {
+    if (!validPriority(priority)) {
+        qWarning() << "AudioPlaylist::addRaw invalid priority" << int(priority);
+        return;
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaPlayer::PlaybackState state = player->playbackState();
 #else
@@ -186,16 +237,21 @@ void AudioPlaylist::addRaw(const QByteArray &data, int sampleRate,
 }
 
 void AudioPlaylist::play(int index, AudioPriority priority) {
-    if (priority != currentPriority)
-        return;
-    // 显式指定播放某条 = 用户要求出声 → 解除用户暂停
-    userPaused = false;
-    Playlist &list = audiolist[priority];
-    if (list.list.size() <= index) {
+    if (!validPriority(priority) || priority != currentPriority) {
         return;
     }
+    Playlist &list = audiolist[priority];
+    // ⚠ index < 0 也挡掉：旧实现只判上界，负数会写进 list.index，
+    //   之后 list[index - 1] 一路越界。
+    if (index < 0 || index >= list.list.size()) {
+        return;
+    }
+    // 显式指定播放某条 = 用户要求出声 → 解除用户暂停
+    userPaused = false;
+    list.block = false;
+    isPosition = false;
     list.index = index;
-    setMedia(list.list[list.index]);
+    setMedia(list.list.at(list.index));
     list.index++;
 }
 
@@ -205,6 +261,15 @@ void AudioPlaylist::clear() {
     }
     currentPriority = NORMAL;
     userPaused = false;
+    // ⚠ 这几个「播提示音时的临时状态」也必须一起复位。旧实现只管列表，
+    //   残留的 isSound == true 会让下一次 EndOfMedia 走错分支：把整条曲目
+    //   的结束当成提示音播完，静默吞掉 playEnd（调用方一直在等它）。
+    //   isBlock 故意不复位：它可能正被 playSound() 的嵌套事件循环等着的
+    //   quit 用到。
+    isSound = false;
+    isPlaying = false;
+    isPosition = false;
+    position = 0;
 }
 
 QUrl AudioPlaylist::getUrl(const QString &fileName) {
@@ -237,34 +302,36 @@ bool AudioPlaylist::normalEnd() {
 }
 
 void AudioPlaylist::clearType(const QString &id, AudioPriority priority) {
-    Playlist list = audiolist[priority];
-    if (id == "") {
-        audiolist[priority].clear();
+    if (!validPriority(priority)) {
+        qWarning() << "AudioPlaylist::clearType invalid priority"
+                   << int(priority);
+        return;
     }
-    auto iter = list.list.begin();
-    int i = 0;
-    while (i < list.index) {
-        iter++;
-        i++;
+    Playlist &list = audiolist[priority]; // ⚠ 必须是引用，删除要落在真列表上
+    if (id.isEmpty()) {
+        list.clear();
+    } else {
+        // 只删「还没播到」的那一段：list[index - 1] 是正在播/正在加载的曲目，
+        // 它和更早的历史都不动。
+        const int from = qBound(0, list.index, list.list.size());
+        qsa::playlist::eraseUnplayedById(list.list, from, id);
     }
-    while (iter != list.list.end()) {
-        QVariantMap metaMap = iter->meta.toMap();
-        if (metaMap.contains("id") && metaMap["id"] == id) {
-            iter = list.list.erase(iter);
-        } else {
-            iter++;
-        }
-    }
+    // 正在播的那条正好是它 → 跳到下一条（旧行为，保留）
     if (currentPriority == priority) {
-        QVariantMap metaMap = currentMeta.toMap();
-        if (metaMap.contains("id") && metaMap["id"] == id) {
+        const QVariantMap metaMap = currentMeta.toMap();
+        if (metaMap.contains(QStringLiteral("id")) &&
+            metaMap.value(QStringLiteral("id")).toString() == id) {
             playNext();
         }
     }
 }
 
 int AudioPlaylist::getCurrentIndex(AudioPriority priority) const {
-    return audiolist[currentPriority].getCurrentIndex();
+    // ⚠ 旧实现忽略了传进来的 priority，永远返回 currentPriority 那条
+    if (!validPriority(priority)) {
+        return 0;
+    }
+    return audiolist.at(priority).getCurrentIndex();
 }
 
 AudioPlaylist::AudioPriority AudioPlaylist::getCurrentPriority() const {
@@ -272,16 +339,14 @@ AudioPlaylist::AudioPriority AudioPlaylist::getCurrentPriority() const {
 }
 
 int AudioPlaylist::getAudioNumber(AudioPriority priority) const {
-    return audiolist[priority].list.size();
+    if (!validPriority(priority)) {
+        return 0;
+    }
+    return audiolist.at(priority).list.size();
 }
 
 void AudioPlaylist::playSound(const QString &fileName, bool blockThread,
                               bool currentPlaying) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    QMediaPlayer::PlaybackState state = player->playbackState();
-#else
-    QMediaPlayer::State state = player->state();
-#endif
     isPlaying = currentPlaying;
     isBlock = blockThread;
     isSound = true;
