@@ -153,6 +153,14 @@ jobs:
 
       # hassRegex / mcpClient / serverHttp / serverWebSocket / pluginReplySource /
       # neteaseCaptcha 是纯逻辑单测，不依赖 ASR/TTS/NLU 模型文件，适合放 CI。
+      # 同理还有下面 6 个录音/播放用例（recorderChunk / recorderLifecycle /
+      # audioRingBuffer / audioBufferRaw / playlistIndexLogic / playerVolumeParse）——
+      # 它们守的是 Recorder/ 四模块的边界（切块延迟一块、停录丢尾块、resize 泄漏、
+      # 环形缓冲除零、上一曲变重播当前、amixer 解析失败被当成静音……），
+      # 且**不需要麦克风或声卡**：这些判定已从绑死 QAudioSource / QMediaPlayer 的
+      # 代码里抽成 ChunkReader、AudioRingBuffer、playlist 下标计算、amixer 音量解析
+      # 这类纯函数，测试用自带的 FakeAudioDevice 喂数据（offscreen 下可跑）。
+      # 在此之前它们只在本机跑，回归没人看住。
       # asrSherpa / ttsSherpa / vad 需要先下载模型到运行期 Data 目录
       # （python3 scripts/fetch_models.py），在 runner 上属于环境依赖而非代码
       # 问题，所以只在本机跑。同理还有 conversationRoundTrip —— 它走的是
@@ -207,6 +215,66 @@ jobs:
           QSA_PYTHON: python3
           QT_QPA_PLATFORM: offscreen
         run: bash scripts/run_test_case.sh neteaseCaptcha "$TEST_BUILD_PATH"
+
+      # ---------------------------------------------------------------------
+      # Recorder / Player 的 6 个纯逻辑用例。全部只依赖 QtCore/QtMultimedia 的
+      # 类型定义，不打开任何真实音频设备，因此可以放心放进 CI。
+      # ---------------------------------------------------------------------
+      # 切块边界：`bytesAvailable >= chunkSize` 才算够一块。写成 `>` 会让
+      # "刚好一块"永远不发（恒定延迟一块），停录时还会丢掉不足一块的尾巴。
+      - name: "Test: recorderChunk"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh recorderChunk "$TEST_BUILD_PATH"
+
+      # Recorder 生命周期：反复 startRecord() 不能累积 readyRead 连接
+      # （否则启停 N 次，同一块数据就被回调 N 次）；chunkSize<=0 不得死循环；
+      # 没有输入设备时构造阶段就要收手，不能留一个空指针等着后面解引用。
+      - name: "Test: recorderLifecycle"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh recorderLifecycle "$TEST_BUILD_PATH"
+
+      # 环形缓冲：resize 必须先释放旧块（旧实现只 new[] 不 delete[]，每次泄漏）；
+      # size==0 不得取模除零；写不下时返回实际写入量而不是静默截断。
+      - name: "Test: audioRingBuffer"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh audioRingBuffer "$TEST_BUILD_PATH"
+
+      # AudioBuffer 的内存播放：构造必须真的 open()（只 setOpenMode 时
+      # isOpen() 为假，一个字节都读不出）；start(QByteArray) 必须置 isFinish，
+      # 否则 atEnd() 永假、状态永远停在 Playing。
+      - name: "Test: audioBufferRaw"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh audioBufferRaw "$TEST_BUILD_PATH"
+
+      # 播放列表下标：playPrevious 曾经操作的是列表元素副本 ——
+      # "上一曲"实际会把当前这首重播一遍；index==0 时还会取到 list[-1]。
+      - name: "Test: playlistIndexLogic"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh playlistIndexLogic "$TEST_BUILD_PATH"
+
+      # amixer 音量解析：解析失败原本会静默变成 0，把"读不出来"误判成
+      # "用户把音量调到静音"；方括号里的 `46%` 还要剥掉 %。
+      - name: "Test: playerVolumeParse"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh playerVolumeParse "$TEST_BUILD_PATH"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
