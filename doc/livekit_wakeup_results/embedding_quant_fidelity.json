@@ -1,0 +1,21 @@
+{
+  "int8_pc": {
+    "per_channel": true,
+    "size_kb": 416.7,
+    "cosine_mean": 0.996299,
+    "cosine_p01": 0.974094,
+    "cosine_min": 0.966475,
+    "rel_l2_err": 0.085132
+  },
+  "int8": {
+    "per_channel": false,
+    "size_kb": 398.9,
+    "cosine_mean": 0.994899,
+    "cosine_p01": 0.981134,
+    "cosine_min": 0.961948,
+    "rel_l2_err": 0.100728
+  },
+  "fp32": {
+    "size_kb": 1295.5
+  }
+}

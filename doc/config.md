@@ -184,16 +184,18 @@ This is a three-model pipeline: a mel-spectrogram front end, a shared embedding 
 | Option          | Default              | Description |
 | --------------- | -------------------- | ----------- |
 | dir             | livekit              | Model directory, relative to `Data/` |
-| model           | size_small.onnx      | Classifier head |
+| model           | size_med_hnx3_ca_mw50.onnx | Classifier head (medium + conv_attention + 3x hard negatives; 153 KB alternative = `size_small_hnx2_ca_mw50.onnx`) |
 | mel             | melspectrogram.onnx  | Mel front end |
-| emb             | embedding_model.onnx | Shared embedding model |
-| threshold       | 0.55                 | Wake score threshold; raise it to reduce false triggers |
+| emb             | embedding_model_int8_pc.onnx | Shared embedding model (int8 quantized; fp32 original = `embedding_model.onnx`) |
+| threshold       | 0.48                 | Wake score threshold; raise it to reduce false triggers (0.46 for the small head) |
 | trigger_level   | 2                    | Consecutive frames above threshold before triggering (de-bounce) |
 | refractory      | 25                   | Cooldown frames after a trigger, prevents re-triggering on the same utterance |
 | chunk_bytes     | 2560                 | Bytes fed per inference call |
 | window_samples  | 32000                | Sliding window length in samples (2 s @ 16 kHz) |
 | threads         | 1                    | ONNX Runtime thread count |
-| incremental     | true                 | Incremental inference (saves compute; keep `true` unless debugging) |
+| incremental     | true                 | Incremental embedding inference (saves compute; keep `true` unless debugging) |
+| incremental_mel | true                 | Incremental mel: only the new 8 frames per step (~1.6x faster); see [livekit_wakeup.md](livekit_wakeup.md) §9.5 |
+| mel_top_db      | 80                   | `top_db` inside `melspectrogram.onnx`'s `power_to_db` (measured = 80) |
 
 # vad
 

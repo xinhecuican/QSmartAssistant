@@ -275,6 +275,23 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: bash scripts/run_test_case.sh playerVolumeParse "$TEST_BUILD_PATH"
 
+      # livekit 唤醒的增量 mel：每步只把新出现的 8 帧音频过 mel 模型，再对环形缓冲
+      # 重贴一次全局 top_db 底。等价性靠 max(max(x,a),b)==max(x,a,b)，前提是每段都
+      # 落在整个滑动窗口内部（段底 ≤ 窗口底）。用例用「1 s 白噪 / 1 s 静音」交替的
+      # 确定性信号——窗口最大值剧烈起伏、大量梅尔格被顶在截断底上，最容易暴露分帧
+      # 错位或贴底顺序错误——再与「每步整窗重算 mel + 重算 16 个窗嵌入」逐值比对。
+      # 断言只针对「纯增量 mel」路径（嵌入保持逐位精确）；叠加增量嵌入的路径只断言
+      # 不跨阈值——那部分偏差随分类头变（实测 6 s burst 3.2e-3、60 s 8.0e-3），
+      # 不是本用例的被测对象。
+      # 模型（Data/livekit/*.onnx，共约 3.8 MB）随仓库入库，不需要额外下载；
+      # 万一缺失用例自己 QSKIP，不会把 CI 拖红。
+      - name: "Test: livekitIncrementalMel"
+        env:
+          QSA_SOURCE_DIR: ${{ github.workspace }}
+          QSA_PYTHON: python3
+          QT_QPA_PLATFORM: offscreen
+        run: bash scripts/run_test_case.sh livekitIncrementalMel "$TEST_BUILD_PATH"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

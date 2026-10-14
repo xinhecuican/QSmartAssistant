@@ -192,16 +192,18 @@ sherpa_vad:
 # livekit-wakeword 唤醒（默认组合）
 livekit_wakeup:
   dir: livekit                # 模型目录（Data/ 下）
-  model: size_small.onnx      # 分类模型
+  model: size_med_hnx3_ca_mw50.onnx  # 分类模型（medium + conv_attention + 硬负样本×3，2026-10-14 起默认；最省的小模型 = size_small_hnx2_ca_mw50.onnx）
   mel: melspectrogram.onnx    # mel 特征提取模型
-  emb: embedding_model.onnx   # 嵌入模型
-  threshold: 0.55             # 唤醒阈值
+  emb: embedding_model_int8_pc.onnx   # 嵌入模型（int8 量化版，1.37x/体积 1/3；fp32 原版 = embedding_model.onnx）
+  threshold: 0.48             # 唤醒阈值（size_med_hnx3_ca_mw50 的 FPPH<=1 最优点：recall 0.8443 / FPPH 0.922）
   trigger_level: 2            # 连续命中帧数才触发（抗抖动）
   refractory: 25              # 触发后冷却帧数，避免重复唤醒
   chunk_bytes: 2560           # 每次送入的字节数
   window_samples: 32000       # 滑动窗口采样点数（2 秒 @16k）
   threads: 1                  # ONNX 推理线程数
   incremental: true           # 是否增量推理（省算力）
+  incremental_mel: true       # mel 谱也增量（每步只算新增 8 帧，约 1.6x）
+  mel_top_db: 80              # melspectrogram.onnx 内部 power_to_db 的 top_db
 
 # wekws 唤醒
 wekws_wakeup:

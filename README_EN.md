@@ -73,18 +73,21 @@ bash scripts/check_runtime_linux.sh
 
 | Stage | Model / files | Source |
 | ----- | ------------- | ------ |
-| wakeup | `Data/livekit/{size_small,melspectrogram,embedding_model}.onnx` | **committed to the repo** |
+| wakeup | `Data/livekit/{size_med_hnx3_ca_mw50,melspectrogram,embedding_model_int8_pc}.onnx` | **committed to the repo** |
 | VAD | `Data/silero_vad.onnx` | **committed to the repo** |
-| ASR | `sherpa-onnx-paraformer-zh-small` | downloaded by `setup.py` (~74 MB) |
+| ASR | `paraformer-zh-q8` (FunASR official ONNX export / Paraformer-q8, **default backend**) | downloaded by `setup.py` (~230 MB) |
 | NLU | `Data/onnx_nlu/{vocab.txt,rules.json}` + `Data/nlu_schema.json` | **committed to the repo** |
 | NLU | `Data/onnx_nlu/nlu_int8.onnx` (~57 MB int8 weights) | **GitHub Release**, fetched by `setup.py` |
 | TTS | `vits-zh-aishell3` | downloaded by `setup.py` (~140 MB) |
 
-> The **wakeword classification head** (`Data/livekit/size_small.onnx`) is a
+> The **wakeword classification head** (`Data/livekit/size_med_hnx3_ca_mw50.onnx`,
+> medium + conv_attention + 3x near-homophone hard negatives) is a
 > self-trained model that is not part of the openWakeWord release, so it is
 > **committed to this repo** together with mel/emb — no `--livekit-src` /
-> `--livekit-head` needed after a clone. Use those flags only to install a
-> different self-trained wakeword.
+> `--livekit-head` needed after a clone. A 153 KB low-cost alternative,
+> `size_small_hnx2_ca_mw50.onnx`, also ships with the repo (switch the
+> `livekit_wakeup.model` line, and set the threshold to 0.46). Use those flags
+> only to install a different self-trained wakeword.
 >
 > The **ONNX NLU int8 weights** (`nlu_int8.onnx`, ~57 MB) are too large for git, so
 > they are published on

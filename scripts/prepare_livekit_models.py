@@ -17,7 +17,7 @@ Usage:
     python scripts/prepare_livekit_models.py \
         --src  C:/Users/26864/WorkBuddy/Worktrees/livekit-wakeword/main-d751d36b \
         --dst  Data/livekit \
-        --wakeword nihao_xiaozhi
+        --wakeword g_medium_hnx3_mw50_hnx3m2
 """
 
 from __future__ import annotations
@@ -76,7 +76,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True, help="livekit-wakeword repo/worktree root")
     ap.add_argument("--dst", required=True, help="output directory (e.g. Data/livekit)")
-    ap.add_argument("--wakeword", default="nihao_xiaozhi", help="wake word model name")
+    ap.add_argument("--wakeword", default="g_medium_hnx3_mw50_hnx3m2",
+                    help="wake word model name (output/<name>/<name>.onnx in the training repo)")
     ap.add_argument("--ir-version", type=int, default=9, help="max supported IR version")
     ap.add_argument(
         "--stock-mel-emb",

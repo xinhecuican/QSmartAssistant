@@ -1,7 +1,15 @@
+// windows.h 会定义 min/max 宏, 会和 <algorithm> 的 std::min/std::max 打架
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#endif
+
 #include "livekitwakeword.h"
 
 #include <onnxruntime_cxx_api.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -62,6 +70,98 @@ struct LivekitWakeWord::Impl {
 
     std::vector<float> melScratch;  // F * kMelBins
 
+    // ---- 增量梅尔谱状态 ----
+    // melRows 是「分段调用 mel 模型得到的、已按该段自己截过底」的帧环形缓冲。
+    // 关键不变量: 每一段都是整个滑动窗口的子集 ⇒ 段底 (M_seg - topDb) 恒不高于
+    // 窗口底 (M_win - topDb), 于是 max(max(x, 段底), 窗口底) == max(x, 窗口底),
+    // 与「整窗一次算」逐值等价。
+    bool incrementalMel = true;
+    float melTopDb = 80.0f;
+    std::vector<float> melRows;     // 环形: melRowCap * kMelBins
+    int melRowCap = 0;
+    int melRowHead = 0;             // 最旧一行
+    int melRowCount = 0;
+    int melRowTarget = 0;           // 窗口应有的帧数 (≈197), 满则环形稳定
+    long long absSamples = 0;       // 已送入 streamAudio 的样本总数
+    long long nextFrame = 0;        // 下一个待计算的全局帧号
+
+    // 窗口 samples 对应的帧数: (n - 512) / 160 + 1
+    static int framesOf(int nSamples) {
+        if (nSamples < kMelKernel) return 0;
+        return (nSamples - kMelKernel) / kMelHop + 1;
+    }
+
+    void pushMelRow(const float *row) {
+        const std::size_t per = kMelBins;
+        if (melRowCount < melRowCap) {
+            const int idx = (melRowHead + melRowCount) % melRowCap;
+            std::memcpy(melRows.data() + static_cast<std::size_t>(idx) * per, row,
+                        per * sizeof(float));
+            ++melRowCount;
+        } else {
+            std::memcpy(melRows.data() + static_cast<std::size_t>(melRowHead) * per, row,
+                        per * sizeof(float));
+            melRowHead = (melRowHead + 1) % melRowCap;
+        }
+    }
+
+    // 把「已经变得可算」的帧按 kMelFramesPerStep 一批批补进 melRows。
+    void updateMelIncremental() {
+        const long long lastComputable =
+            (absSamples - kMelKernel) / kMelHop; // 需要该帧那 512 个采样都到齐
+        const long long winStart = absSamples - static_cast<long long>(streamAudio.size());
+
+        while (nextFrame <= lastComputable) {
+            const long long f0 = nextFrame;
+            const long long f1 =
+                std::min<long long>(lastComputable, f0 + kMelFramesPerStep - 1);
+            const long long s0 = f0 * kMelHop;
+            const long long s1 = f1 * kMelHop + kMelKernel;
+            if (s0 < winStart) { // 理论不可达: 帧随窗口一起出环
+                nextFrame = f1 + 1;
+                continue;
+            }
+            const std::size_t off = static_cast<std::size_t>(s0 - winStart);
+            const std::size_t len = static_cast<std::size_t>(s1 - s0);
+            if (off + len > streamAudio.size()) break;
+
+            std::vector<float> rows;
+            runMelRaw(streamAudio.data() + off, len, rows);
+            const int got = static_cast<int>(rows.size() / kMelBins);
+            for (int i = 0; i < got; ++i)
+                pushMelRow(rows.data() + static_cast<std::size_t>(i) * kMelBins);
+            while (melRowCount > melRowTarget) { // 旧帧出窗即弃
+                melRowHead = (melRowHead + 1) % melRowCap;
+                --melRowCount;
+            }
+            nextFrame = f0 + got;
+            if (got < static_cast<int>(f1 - f0 + 1)) break;
+        }
+    }
+
+    // 用 melRows 重建整窗梅尔谱: 先求滑窗最大值, 再重贴全局底 x/10 + 2。
+    // 与「整窗调用 mel 模型后做 data/10 + 2」逐值等价 (浮点噪声量级 1e-6 dB)。
+    void buildMelFromRing(int &frames) {
+        frames = melRowCount;
+        const std::size_t total =
+            static_cast<std::size_t>(melRowCount) * kMelBins;
+        float lo = -3.0e38f;
+        for (std::size_t i = 0; i < total; ++i) {
+            const int idx = melRowHead + static_cast<int>(i / kMelBins);
+            const float v = melRows[static_cast<std::size_t>(idx % melRowCap) * kMelBins +
+                                    (i % kMelBins)];
+            if (v > lo) lo = v;
+        }
+        const float floorDb = lo - melTopDb;
+        melScratch.resize(total);
+        for (std::size_t i = 0; i < total; ++i) {
+            const int idx = melRowHead + static_cast<int>(i / kMelBins);
+            const float v = melRows[static_cast<std::size_t>(idx % melRowCap) * kMelBins +
+                                    (i % kMelBins)];
+            melScratch[i] = std::max(v, floorDb) / 10.0f + 2.0f;
+        }
+    }
+
     // 从当前 mel 中收集最近 kMinEmbeddings 个窗
     void collectWindows(std::vector<float> &winBuf, int frames) {
         const std::size_t per = static_cast<std::size_t>(kEmbWindow) * kMelBins;
@@ -77,10 +177,11 @@ struct LivekitWakeWord::Impl {
     }
 
     // -----------------------------------------------------------------
-    // mel: (1, n) -> (F * 32), 归一化 x/10 + 2
+    // mel: (1, n) -> (F * 32), 未经 x/10 + 2 的原始模型输出。
+    // 注意这里已经带上了模型内部的 top_db 截底 (以本次输入的最大值为基准),
+    // 所以分段调用时每段各自截底; 增量路径靠 buildMelFromRing() 重新贴全局底。
     // -----------------------------------------------------------------
-    void runMel(const float *pcm, std::size_t n, std::vector<float> &outMel,
-                int &frames) {
+    void runMelRaw(const float *pcm, std::size_t n, std::vector<float> &out) {
         int64_t shape[2] = {1, static_cast<int64_t>(n)};
         Ort::Value in = Ort::Value::CreateTensor<float>(
             memInfo, const_cast<float *>(pcm), n, shape, 2);
@@ -91,14 +192,22 @@ struct LivekitWakeWord::Impl {
                                     outNames, 1);
 
         auto info = outs[0].GetTensorTypeAndShapeInfo();
-        auto dims = info.GetShape();
         std::size_t total = 1;
-        for (auto d : dims) total *= static_cast<std::size_t>(d);
+        for (auto d : info.GetShape()) total *= static_cast<std::size_t>(d);
 
         const float *data = outs[0].GetTensorData<float>();
-        outMel.resize(total);
+        out.assign(data, data + total);
+    }
+
+    // -----------------------------------------------------------------
+    // mel: (1, n) -> (F * 32), 归一化 x/10 + 2
+    // -----------------------------------------------------------------
+    void runMel(const float *pcm, std::size_t n, std::vector<float> &outMel,
+                int &frames) {
+        runMelRaw(pcm, n, outMel);
+        const std::size_t total = outMel.size();
         for (std::size_t i = 0; i < total; ++i)
-            outMel[i] = data[i] / 10.0f + 2.0f; // 对齐 Google 嵌入模型的输入范围
+            outMel[i] = outMel[i] / 10.0f + 2.0f; // 对齐 Google 嵌入模型的输入范围
         frames = static_cast<int>(total / kMelBins);
     }
 
@@ -163,6 +272,8 @@ bool LivekitWakeWord::init(const Params &params) {
     error.clear();
     window_samples = params.windowSamples > 0 ? params.windowSamples : 32000;
     impl->incremental = params.incremental;
+    impl->incrementalMel = params.incrementalMel;
+    incremental_mel = params.incrementalMel;
 
     try {
         impl->options.SetIntraOpNumThreads(params.numThreads > 0
@@ -189,6 +300,13 @@ bool LivekitWakeWord::init(const Params &params) {
 
     impl->embRing.assign(static_cast<std::size_t>(kMinEmbeddings) * kEmbDim,
                          0.0f);
+
+    impl->incrementalMel = params.incrementalMel;
+    impl->melTopDb = params.melTopDb > 0.0f ? params.melTopDb : 80.0f;
+    impl->melRowTarget = Impl::framesOf(window_samples);
+    impl->melRowCap = impl->melRowTarget + kMelFramesPerStep;
+    impl->melRows.assign(static_cast<std::size_t>(impl->melRowCap) * kMelBins, 0.0f);
+
     resetStream();
     ready = true;
     return true;
@@ -359,10 +477,24 @@ void LivekitWakeWord::resetStream() {
     impl->embCount = 0;
     impl->primed = false;
     std::fill(impl->embRing.begin(), impl->embRing.end(), 0.0f);
+
+    // 增量 mel: 环形帧缓冲与绝对样本/帧计数一并归零, 下次从第 0 帧重建。
+    impl->melRowHead = 0;
+    impl->melRowCount = 0;
+    impl->absSamples = 0;
+    impl->nextFrame = 0;
+    std::fill(impl->melRows.begin(), impl->melRows.end(), 0.0f);
 }
 
 void LivekitWakeWord::setIncremental(bool on) {
     if (impl) impl->incremental = on;
+}
+
+void LivekitWakeWord::setIncrementalMel(bool on) {
+    if (!impl) return;
+    impl->incrementalMel = on;
+    incremental_mel = on;
+    resetStream(); // 两模式的帧缓冲语义不同, 切换必须重新攒窗口
 }
 
 bool LivekitWakeWord::pushFloat(const float *pcm, std::size_t nSamples,
@@ -387,14 +519,22 @@ bool LivekitWakeWord::pushFloat(const float *pcm, std::size_t nSamples,
             impl->streamAudio.erase(impl->streamAudio.begin(),
                                     impl->streamAudio.begin() + drop);
         }
+        impl->absSamples += kStreamStep;
 
-        // 关键: mel 模型的 power_to_db 用整段最大值归一化, 窗口不满时输出退化,
-        // 因此必须等到攒满一个完整窗口才开始推理。
-        if (impl->streamAudio.size() < cap) continue;
-
+        // 关键: mel 模型的 power_to_db 用整段最大值做 top_db 截底, 窗口不满时
+        // 输出退化, 因此必须等到攒满一个完整窗口才开始推理。
         int frames = 0;
-        impl->runMel(impl->streamAudio.data(), impl->streamAudio.size(),
-                     impl->melScratch, frames);
+        if (impl->incrementalMel) {
+            // 每步只把新出现的 8 帧音频喂给 mel 模型, 再对环形缓冲重贴全局底。
+            // 等价性证明见 doc §9.5 (每段都是窗口子集 ⇒ 段底 ≤ 窗口底)。
+            impl->updateMelIncremental();
+            if (impl->melRowCount < impl->melRowTarget) continue;
+            impl->buildMelFromRing(frames);
+        } else {
+            if (impl->streamAudio.size() < cap) continue;
+            impl->runMel(impl->streamAudio.data(), impl->streamAudio.size(),
+                         impl->melScratch, frames);
+        }
         if (frames < kEmbWindow) continue;
         if ((frames - kEmbWindow) / kEmbStride + 1 < kMinEmbeddings) continue;
 

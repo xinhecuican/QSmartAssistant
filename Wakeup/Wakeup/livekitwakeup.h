@@ -6,7 +6,7 @@
 // WakeupModel 抽象上（配置节 `livekit_wakeup`）。
 //
 // 模型目录默认 Data/livekit/，包含三个 ONNX:
-//   melspectrogram.onnx, embedding_model.onnx, <model>（分类头，如 nihao_xiaozhi.onnx）
+//   melspectrogram.onnx, embedding_model.onnx, <model>（分类头，默认 size_med_hnx3_ca_mw50.onnx）
 // 用 scripts/prepare_livekit_models.py 从 livekit-wakeword 仓库生成。
 // ---------------------------------------------------------------------------
 

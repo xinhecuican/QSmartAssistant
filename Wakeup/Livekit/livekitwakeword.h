@@ -13,9 +13,15 @@
 //
 // 梅尔窗: 76 帧窗, 步长 8 帧; 分类器输入 = 最近 16 个嵌入。
 //
-// 空间换性能: 流式模式下维护滚动缓冲 + 嵌入环形队列, 每个 80 ms 步长
-// (1280 samples == 8 个梅尔帧 == 1 个嵌入步) 只做 1 次嵌入推理, 而参考实现
-// 每个窗口要跑 16 次嵌入; 代价是常驻 ~130 KB 缓冲。
+// 空间换性能(两级, 互相正交):
+//   1) incremental(默认 on): 嵌入环形队列。每个 80 ms 步长只做 1 次嵌入推理,
+//      而参考实现每个窗口要跑 16 次嵌入。
+//   2) incrementalMel(默认 on): 梅尔谱也只算增量。mel 模型的分帧是
+//      `Conv(kernel=512, stride=160)` 且无 padding, 所以第 k 帧只由样本
+//      [160k, 160k+512) 决定 —— 与整段输入的长度无关, 只有末尾的 top_db
+//      截底是全局的。于是每步只把新出现的 8 帧音频喂给模型, 再对环形缓冲
+//      重新贴一次全局底, 结果与「整窗重算」等价(证明见 doc §9.5)。
+//      每步 mel 从 197 帧降到 8 帧, 约省 0.44 ms。
 // ---------------------------------------------------------------------------
 
 #include <cstddef>
@@ -35,15 +41,27 @@ public:
     static constexpr int kEmbDim = 96;          // 嵌入维度
     static constexpr int kStreamStep = 1280;    // 80 ms @16 kHz = 8 个梅尔帧
 
+    // 梅尔分帧参数。必须与 melspectrogram.onnx 图内的
+    // Conv(kernel_shape=512, strides=160, pads=0) 一致, 否则增量分帧会错位。
+    static constexpr int kMelHop = 160;         // 帧移
+    static constexpr int kMelKernel = 512;      // 帧窗长
+    static constexpr int kMelFramesPerStep = 8; // 每个 80 ms 步长新增的帧数
+
     struct Params {
         std::string melModel;        // melspectrogram.onnx
         std::string embeddingModel;  // embedding_model.onnx
-        std::string classifierModel; // 唤醒词分类头 (如 nihao_xiaozhi.onnx)
+        std::string classifierModel; // 唤醒词分类头 (默认 size_med_hnx3_ca_mw50.onnx)
         int numThreads = 1;          // ORT intra-op 线程数
         int windowSamples = 32000;   // 滑动窗口长度 (2.0 s @16 kHz), 必须恒定
         // true  : 流式增量 (缓存嵌入环形队列, 每步只跑 1 次嵌入) —— 空间换性能
         // false : 每步重算全部 16 个嵌入, 与无状态参考逐位一致
         bool incremental = true;
+        // true  : 梅尔谱也只算新增的 8 帧 (mei 模型分段调用 + 重贴全局底)
+        // false : 每步把整个 2 s 窗口重新过一遍 mel 模型 (与参考逐位一致)
+        bool incrementalMel = true;
+        // melspectrogram.onnx 内 power_to_db 的 top_db (dB)。实测 = 80。
+        // 只影响低于「窗口最大值 - topDb」的静音底, 取值见 doc §9.5。
+        float melTopDb = 80.0f;
     };
 
     // mel 模型内部用整段谱最大值做 power_to_db 归一化(ReduceMax), 输入长度改变会
@@ -90,6 +108,9 @@ public:
     void resetStream();
     // 切换流式模式: true=增量缓存(空间换性能), false=每步重算(与参考逐位一致)
     void setIncremental(bool on);
+    // 切换梅尔谱增量模式。**会复位流式状态**(两模式的分帧缓冲不通用)。
+    void setIncrementalMel(bool on);
+    bool incrementalMel() const { return incremental_mel; }
     // 送入 int16 单声道 16 kHz。凑够一个 80 ms 步长并产出新分数时返回 true。
     bool pushInt16(const int16_t *pcm, std::size_t nSamples, float &outScore);
     bool pushFloat(const float *pcm, std::size_t nSamples, float &outScore);
@@ -101,6 +122,7 @@ private:
     Impl *impl = nullptr;
     bool ready = false;
     int window_samples = 32000;
+    bool incremental_mel = true;
     std::string error;
 };
 

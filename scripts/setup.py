@@ -338,6 +338,15 @@ OWW_SHA = {
         "70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f",
 }
 
+# 唤醒分类头（自训练、随仓库提交）。仓库里可能同时放多个，默认用第一个。
+# ⚠ 必须显式白名单：光靠 "排除 OWW_SHA" 不够 —— 我们自己的
+#   embedding_model_int8_pc.onnx 不在 OWW_SHA 里，会被误当成分类头装进去。
+LIVEKIT_HEAD_DEFAULT = "size_med_hnx3_ca_mw50.onnx"
+LIVEKIT_HEADS = (
+    "size_med_hnx3_ca_mw50.onnx",       # medium + conv_attention + 硬负×3（默认）
+    "size_small_hnx2_ca_mw50.onnx",     # small + conv_attention + 硬负×2（最省：153 KB）
+)
+
 
 # ---- 组件探测函数 --------------------------------------------------------
 def have(path: Path) -> bool:
@@ -397,13 +406,24 @@ def livekit_installed() -> bool:
                ("melspectrogram.onnx", "embedding_model.onnx"))
 
 
+def _is_livekit_head(p: Path) -> bool:
+    """分类头判定：`.onnx` 且既不是官方 mel/emb，也不是我们自产的 int8 emb。
+
+    ⚠ 只排除 `OWW_SHA` 里的两个官方名字是不够的 —— `embedding_model_int8_pc.onnx`
+    是本项目自己量化出来的，不在那张表里，按老判据会被当成分类头装进去
+    （2026-10-14 修：上一代默认 `size_small.onnx` 被移除后就真的会踩到，因为选头逻辑按文件名排序）。
+    """
+    return (p.suffix == ".onnx"
+            and p.name not in OWW_SHA
+            and not p.name.startswith(("melspectrogram", "embedding")))
+
+
 def livekit_head_installed() -> bool:
     """分类头 = livekit 目录里除 mel/emb 之外的任意 .onnx。"""
     d = RUNTIME_DATA / "livekit"
     if not d.is_dir():
         return False
-    reserved = set(OWW_SHA)
-    return any(p.suffix == ".onnx" and p.name not in reserved for p in d.iterdir())
+    return any(_is_livekit_head(p) for p in d.iterdir())
 
 
 def bert_installed() -> bool:
@@ -635,7 +655,7 @@ def _build_livekit() -> Component:
 def install_livekit(ctx: Ctx) -> None:
     """livekit 三件套：mel + emb（可下载）+ 分类头（随仓库提交）。
 
-    分类头 size_small.onnx 是**本项目自训练**的产物，openWakeWord 官方 release
+    分类头（默认 size_med_hnx3_ca_mw50.onnx）是**本项目自训练**的产物，openWakeWord 官方 release
     里没有，因此**已经连 mel/emb 一起提交进仓库** Data/livekit/，正常 clone 就
     有了，不需要任何参数。仍保留另外两种来源以便替换成别的自训练唤醒词，
     按优先级依次尝试：
@@ -688,10 +708,12 @@ def install_livekit(ctx: Ctx) -> None:
             info(f"使用 --livekit-head: {cand}")
         elif ctx.livekit_src:
             src = Path(ctx.livekit_src)
-            # 与 scripts/prepare_livekit_models.py 相同的查找顺序
-            for rel in ("output/size_small/size_small.onnx",
-                        "output/nihao_xiaozhi/nihao_xiaozhi.onnx",
-                        "output/nihao_xiaozhi_clean/nihao_xiaozhi_clean.onnx"):
+            # 与 scripts/prepare_livekit_models.py 相同的查找顺序：先找当前部署的
+            # 两个（硬负样本治理后的 conv_attention 产物），再退回同族另一颗种子的产物。
+            for rel in ("output/g_medium_hnx3_mw50_hnx3m2/g_medium_hnx3_mw50_hnx3m2.onnx",
+                        "output/g_medium_hnx3_mw50_hnx3m/g_medium_hnx3_mw50_hnx3m.onnx",
+                        "output/g_small_hnx2_mw50_sca_m2b/g_small_hnx2_mw50_sca_m2b.onnx",
+                        "output/g_small_hnx2_mw50_sca_m2a/g_small_hnx2_mw50_sca_m2a.onnx"):
                 cand = src / rel
                 if cand.exists():
                     head = cand
@@ -703,23 +725,21 @@ def install_livekit(ctx: Ctx) -> None:
                     head = matches[0]
                     info(f"从 --livekit-src 找到分类头: {head}")
         else:
-            # 仓库里可能同时有多个自训练分类头（size_small / nihao_xiaozhi …）。
-            # 优先选 config.yaml 默认的那个（size_small.onnx），否则按名字排序取
-            # 第一个 —— 不能直接用 sorted()[0]，否则装了 nihao_xiaozhi 却指望
-            # 默认唤醒词是 size_small 的人会踩空。
-            cands = [p for p in sorted((REPO_DATA / "livekit").glob("*.onnx"))
-                     if p.name not in OWW_SHA]
-            cands.sort(key=lambda p: (p.name != "size_small.onnx", p.name))
+            # 仓库里可能同时放多个自训练分类头。显式按 LIVEKIT_HEADS 的顺序挑
+            # （第一个即部署默认），名单外的按文件名排序兜底 —— 保证行为确定。
+            order = {n: i for i, n in enumerate(LIVEKIT_HEADS)}
+            cands = [p for p in (REPO_DATA / "livekit").glob("*.onnx") if _is_livekit_head(p)]
+            cands.sort(key=lambda p: (order.get(p.name, len(order)), p.name))
             if cands:
                 head = cands[0]
                 info(f"复用仓库 Data/livekit/{head.name}")
 
         if head is None:
             raise RuntimeError(
-                "缺少 wakeword 分类头（size_small.onnx）。\n"
+                f"缺少 wakeword 分类头（默认 {LIVEKIT_HEAD_DEFAULT}）。\n"
                 "  它随仓库 Data/livekit/ 一起提交；这里是空说明 checkout 不完整，\n"
                 "  或者你清理过该目录。三种提供方式任选其一：\n"
-                "    a) --livekit-head /path/to/size_small.onnx\n"
+                "    a) --livekit-head /path/to/<head>.onnx\n"
                 "    b) --livekit-src /path/to/livekit-wakeword   （含 output/<name>/）\n"
                 "    c) 把文件放回仓库 Data/livekit/ 下\n"
                 "  没有它唤醒不会工作，但其余组件不受影响，可先 --only 跳过本项。")

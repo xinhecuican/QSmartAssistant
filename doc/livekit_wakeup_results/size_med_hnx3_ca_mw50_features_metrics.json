@@ -1,0 +1,18 @@
+{
+  "aut": 0.003448552514905,
+  "fpph": 0.758944705457174,
+  "recall": 0.834426229508197,
+  "accuracy": 0.917002296780360,
+  "threshold": 0.500000000000000,
+  "optimal_threshold": 0.480000000000000,
+  "optimal_recall": 0.844262295081967,
+  "optimal_fpph": 0.921575713769425,
+  "optimal_accuracy": 0.921875154287159,
+  "n_positive": 1830,
+  "n_negative": 33204,
+  "validation_hours": 18.4467,
+  "confusion_at_0.5": {"tp": 1527, "fn": 303, "fp": 14, "tn": 33190},
+  "classifier_ms": 1745.87,
+  "batch": 512,
+  "mode": "features"
+}

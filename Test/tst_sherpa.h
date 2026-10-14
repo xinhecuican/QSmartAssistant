@@ -32,6 +32,11 @@
 #if defined(VAD_SHERPA)
 #include "../Wakeup/Vad/sherpavad.h"
 #endif
+#if defined(WAKEUP_LIVEKIT)
+#include "../Wakeup/Livekit/livekitwakeword.h"
+#include <algorithm>
+#include <cmath>
+#endif
 #include "../Plugins/neteasemusic/neteaseofficialclient.h"
 #include "../Plugins/neteasemusic/qrcode.h"
 #include "TestPluginHelper.h"
@@ -287,6 +292,94 @@ private slots:
         }
         printf("\n");
         QCOMPARE(detected, true);
+    }
+#endif
+#if defined(WAKEUP_LIVEKIT)
+    // livekit 唤醒的增量 mel（原理见 doc/livekit_wakeup.md §9.5）：
+    // 每步只把新出现的 8 帧音频过 mel 模型，再对环形缓冲重贴一次全局 top_db 底。
+    // 等价性靠 max(max(x,a),b) == max(x,a,b) 成立 —— 前提是每一段都落在整个滑动
+    // 窗口内部（段底 ≤ 窗口底）。这里用「1 s 白噪 / 1 s 静音」交替的确定性信号，
+    // 让窗口最大值剧烈起伏、大量梅尔格被顶在截断底上 —— 正是最容易暴露分帧错位
+    // 或贴底顺序错误的路子 —— 再与「每步整窗重算 mel + 重算 16 个窗嵌入」逐值比对。
+    void livekitIncrementalMel() {
+        using qsa::LivekitWakeWord;
+        const QJsonObject cfg = Config::instance()->getConfig("livekit_wakeup");
+        const QString dir = cfg.value("dir").toString("livekit");
+        const QString melName = cfg.value("mel").toString("melspectrogram.onnx");
+        const QString embName = cfg.value("emb").toString("embedding_model_int8_pc.onnx");
+        const QString clfName = cfg.value("model").toString("size_med_hnx3_ca_mw50.onnx");
+
+        if (!QFileInfo::exists(Config::getDataPath(dir + "/" + melName))) {
+            QSKIP("livekit 模型未安装（python3 scripts/setup.py 或 prepare_livekit_models.py）");
+        }
+
+        // 确定性信号：1 s 白噪（0.6 幅度）+ 1 s 静音 交替，LCG 固定种子
+        const int samples = 16000 * 6;
+        std::vector<int16_t> sig(samples);
+        unsigned x = 12345u;
+        for (int i = 0; i < samples; ++i) {
+            x = x * 1664525u + 1013904223u;
+            const double noise = (double)((x >> 8) & 0xFFFF) / 32768.0 - 1.0;
+            const double v = ((i / 16000) % 2 == 0) ? 0.6 * noise : 0.0;
+            sig[i] = (int16_t)(v * 32767.0);
+        }
+
+        auto runStream = [&](bool incEmb, bool incMel) {
+            LivekitWakeWord eng;
+            LivekitWakeWord::Params p;
+            p.melModel = Config::getDataPath(dir + "/" + melName).toStdString();
+            p.embeddingModel = Config::getDataPath(dir + "/" + embName).toStdString();
+            p.classifierModel = Config::getDataPath(dir + "/" + clfName).toStdString();
+            p.numThreads = 1;
+            p.windowSamples = 32000;
+            p.incremental = incEmb;
+            p.incrementalMel = incMel;
+            std::vector<float> scores;
+            if (!eng.init(p)) {
+                qWarning() << "livekit init 失败:" << eng.lastError().c_str();
+                return scores;
+            }
+            const size_t step = LivekitWakeWord::kStreamStep;
+            for (size_t s = 1; s * step <= sig.size(); ++s) {
+                float sc = -1.0f;
+                if (eng.pushInt16(sig.data() + (s - 1) * step, step, sc))
+                    scores.push_back(sc);
+            }
+            return scores;
+        };
+
+        // 参考路径：每步整窗重算 mel、且重算全部 16 个窗嵌入（逐位基准）
+        const std::vector<float> ref = runStream(false, false);
+        QVERIFY2(ref.size() >= 30, "参考路径步数不足（模型没加载成功？）");
+        // 只开增量 mel（嵌入仍逐位精确）—— 这才是本用例要验的东西；
+        // 「增量嵌入 + 增量 mel」还叠加了**早已在用**的增量嵌入误差，量级随分类头变，
+        // 不能拿来给增量 mel 定界（2026-10-14 换 conv_attention 后实测从 2e-3 涨到 3.2e-3）。
+        const std::vector<float> melOnly = runStream(false, true);
+        const std::vector<float> got = runStream(true, true);
+        QCOMPARE((int)melOnly.size(), (int)ref.size());
+        QCOMPARE((int)got.size(), (int)ref.size());
+
+        auto maxDeltaVsRef = [&](const std::vector<float> &a, int *flips) -> double {
+            double d = 0.0;
+            *flips = 0;
+            for (size_t i = 0; i < ref.size(); ++i) {
+                d = std::max(d, std::fabs((double)a[i] - (double)ref[i]));
+                if ((ref[i] >= 0.5f) != (a[i] >= 0.5f)) ++(*flips);
+            }
+            return d;
+        };
+        int flipsMel = 0, flipsAll = 0;
+        const double maxDeltaMel = maxDeltaVsRef(melOnly, &flipsMel);
+        const double maxDeltaAll = maxDeltaVsRef(got, &flipsAll);
+        printf("livekit 增量 mel: %d 步; 仅增量 mel max|delta|=%.3e 翻转=%d; "
+               "增量嵌入+增量 mel max|delta|=%.3e 翻转=%d\n",
+               (int)ref.size(), maxDeltaMel, flipsMel, maxDeltaAll, flipsAll);
+        // 纯增量 mel 与整窗参考**逐值等价**：本机实测 0.0（burst 6 s）/ 2.1e-4（burst 60 s），
+        // 是纯浮点噪声量级。留 25 倍余量给不同平台/编译器的浮点差异。
+        QVERIFY2(maxDeltaMel < 5e-3, "增量 mel 与整窗参考的偏差过大");
+        QVERIFY2(flipsMel == 0, "增量 mel 改变了唤醒判定");
+        // 叠加增量嵌入后只要求不跨阈值（偏差本身由增量嵌入贡献，见 doc §9.5）。
+        QVERIFY2(flipsAll == 0, "增量路径改变了唤醒判定");
     }
 #endif
 #if defined(ASR_FUN)

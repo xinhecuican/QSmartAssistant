@@ -244,15 +244,17 @@
 	},
 	"livekit_wakeup": {
 		"dir": "livekit",
-		"model": "size_small.onnx",
+		"model": "size_med_hnx3_ca_mw50.onnx",
 		"mel": "melspectrogram.onnx",
-		"emb": "embedding_model.onnx",
-		"threshold": 0.55,
+		"emb": "embedding_model_int8_pc.onnx",
+		"threshold": 0.48,
 		"trigger_level": 2,
 		"refractory": 25,
 		"chunk_bytes": 2560,
 		"window_samples": 32000,
 		"threads": 1,
-		"incremental": true
+		"incremental": true,
+		"incremental_mel": true,
+		"mel_top_db": 80
 	}
 }

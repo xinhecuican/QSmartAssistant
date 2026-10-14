@@ -1,0 +1,217 @@
+[
+ {
+  "tag": "size_hn_ca_mw60",
+  "clf": "output/g_medium_hn_mw60_ca_c1/g_medium_hn_mw60_ca_c1.onnx",
+  "n_pos": 1830,
+  "n_neg": 33204,
+  "hours": 18.4467,
+  "recall_05": 0.8153,
+  "fpph_05": 0.488,
+  "accuracy_05": 0.9075,
+  "aut": 0.00398,
+  "opt_threshold": 0.45,
+  "recall_at_fpph1": 0.8459,
+  "fpph_at_fpph1": 0.976,
+  "tp": 1492,
+  "fn": 338,
+  "fp": 9,
+  "tn": 33195,
+  "by_duration": {
+   "0.80": {
+    "n_clips": 59,
+    "recall_opt": 0.8927,
+    "recall_05": 0.8644,
+    "mean_score": 0.738
+   },
+   "0.96": {
+    "n_clips": 158,
+    "recall_opt": 0.9388,
+    "recall_05": 0.9177,
+    "mean_score": 0.76
+   },
+   "1.12": {
+    "n_clips": 172,
+    "recall_opt": 0.8643,
+    "recall_05": 0.8469,
+    "mean_score": 0.718
+   },
+   "1.28": {
+    "n_clips": 119,
+    "recall_opt": 0.8431,
+    "recall_05": 0.8067,
+    "mean_score": 0.669
+   },
+   "1.44": {
+    "n_clips": 102,
+    "recall_opt": 0.6471,
+    "recall_05": 0.585,
+    "mean_score": 0.53
+   }
+  },
+  "hardneg": {
+   "n_rows": 1332,
+   "n_clips": 444,
+   "fp_rate_05": 0.0128,
+   "fp_rate_opt": 0.0188,
+   "opt_threshold": 0.45,
+   "per_phrase": {
+    "尼好小智": {
+     "cat": "B",
+     "n_rows": 3,
+     "fp_rate_05": 0.667,
+     "fp_rate_opt": 1.0
+    },
+    "你好呀小智": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.083,
+     "fp_rate_opt": 0.1
+    },
+    "您好小智": {
+     "cat": "B",
+     "n_rows": 36,
+     "fp_rate_05": 0.056,
+     "fp_rate_opt": 0.083
+    },
+    "你好小智呀": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.05,
+     "fp_rate_opt": 0.05
+    },
+    "呼叫小智": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.033,
+     "fp_rate_opt": 0.033
+    },
+    "小智小智": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.017,
+     "fp_rate_opt": 0.033
+    },
+    "你好小智同学": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.017,
+     "fp_rate_opt": 0.033
+    },
+    "你好吗小智": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.017
+    },
+    "你好小智呢": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.017
+    },
+    "嘿小智": {
+     "cat": "B",
+     "n_rows": 60,
+     "fp_rate_05": 0.017,
+     "fp_rate_opt": 0.017
+    },
+    "你好小": {
+     "cat": "B",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.017
+    },
+    "你好小智吗": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "小智你好": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "小智你好吗": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "是小智吗": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "小智在吗": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "小智在不在": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你好小智机器人": {
+     "cat": "A",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你好小紫": {
+     "cat": "B",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你好小纸": {
+     "cat": "B",
+     "n_rows": 48,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你好小指": {
+     "cat": "B",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你好小芝": {
+     "cat": "B",
+     "n_rows": 18,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "小智": {
+     "cat": "B",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "小智呀": {
+     "cat": "B",
+     "n_rows": 60,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你好小之": {
+     "cat": "B",
+     "n_rows": 21,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    },
+    "你号小智": {
+     "cat": "B",
+     "n_rows": 6,
+     "fp_rate_05": 0.0,
+     "fp_rate_opt": 0.0
+    }
+   }
+  }
+ }
+]

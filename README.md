@@ -60,22 +60,24 @@ ONNX NLU 的权重由 `setup.py` 自动获取：
 
 | 环节 | 模型 / 文件 | 来源 |
 | ---- | ---------- | ---- |
-| 唤醒 | `Data/livekit/{size_small,melspectrogram,embedding_model}.onnx` | **随仓库提交** |
+| 唤醒 | `Data/livekit/{size_med_hnx3_ca_mw50,melspectrogram,embedding_model_int8_pc}.onnx` | **随仓库提交** |
 | VAD  | `Data/silero_vad.onnx` | **随仓库提交** |
 | ASR  | `paraformer-zh-q8`（FunASR 官方 ONNX 导出 / Paraformer-q8，**默认后端**） | `setup.py` 下载（~230 MB） |
 | NLU  | `Data/onnx_nlu/{vocab.txt,rules.json}` + `Data/nlu_schema.json` | **随仓库提交** |
 | NLU  | `Data/onnx_nlu/nlu_int8.onnx`（~57 MB，int8 权重） | **GitHub Release**，`setup.py` 下载 |
 | TTS  | `vits-zh-aishell3` | `setup.py` 下载（~140 MB） |
 
-> **livekit 唤醒词**的分类头（`Data/livekit/size_small.onnx`）是本项目**自训练**的
-> 产物，openWakeWord 官方 release 里没有，所以**连同 mel / emb 一起直接提交进了
-> 仓库**，clone 后不用再传 `--livekit-src` / `--livekit-head`。只有想换成别的自
-> 训练唤醒词时，才需要指定来源：
+> **livekit 唤醒词**的分类头（`Data/livekit/size_med_hnx3_ca_mw50.onnx`，medium 规模 +
+> conv_attention + 近音硬负样本×3）是本项目**自训练**的产物，openWakeWord 官方 release
+> 里没有，所以**连同 mel / emb 一起直接提交进了仓库**，clone 后不用再传
+> `--livekit-src` / `--livekit-head`。仓库里还带了一个 153 KB 的省算力备选
+> `size_small_hnx2_ca_mw50.onnx`，改 `livekit_wakeup.model` 一行即可切换
+> （阈值同步改成 0.46）。只有想换成别的自训练唤醒词时，才需要指定来源：
 >
 > ```bash
 > python3 scripts/setup.py --profile minimal --livekit-src /path/to/livekit-wakeword
 > # 或直接给文件
-> python3 scripts/setup.py --profile minimal --livekit-head /path/to/size_small.onnx
+> python3 scripts/setup.py --profile minimal --livekit-head /path/to/<head>.onnx
 > ```
 
 > **ONNX NLU 的 int8 权重**（`nlu_int8.onnx`，约 57 MB）体积偏大，不随仓库提交，

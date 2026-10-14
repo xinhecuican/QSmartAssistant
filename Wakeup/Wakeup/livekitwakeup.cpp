@@ -9,8 +9,8 @@ LivekitWakeup::LivekitWakeup(QObject *parent) : WakeupModel(parent) {
 
     const QString dir = cfg.value("dir").toString("livekit");
     const QString mel = cfg.value("mel").toString("melspectrogram.onnx");
-    const QString emb = cfg.value("emb").toString("embedding_model.onnx");
-    modelName = cfg.value("model").toString("nihao_xiaozhi.onnx");
+    const QString emb = cfg.value("emb").toString("embedding_model_int8_pc.onnx");
+    modelName = cfg.value("model").toString("size_med_hnx3_ca_mw50.onnx");
 
     threshold = static_cast<float>(cfg.value("threshold").toDouble(0.5));
     triggerLevel = qMax(1, cfg.value("trigger_level").toInt(2));
@@ -29,6 +29,12 @@ LivekitWakeup::LivekitWakeup(QObject *parent) : WakeupModel(parent) {
     // 空间换性能: 默认走增量缓存（每步只跑 1 次嵌入）。设为 false 则每步
     // 重算全部 16 个窗，与官方参考实现逐位一致，代价约 8 倍算力。
     params.incremental = cfg.value("incremental").toBool(true);
+    // 梅尔谱也走增量：每步只把新出现的 8 帧音频过 mel 模型，再对环形缓冲重贴
+    // 全局底（top_db 截底）。实测每步 0.99 -> 0.62 ms（约 1.7x）；**纯增量 mel**
+    // 相对整窗参考的 max|Δscore| ≤2.1e-4（6 s burst 为 0.0），比 incremental
+    // 自带的 2e-3 还小一个量级。见 doc/livekit_wakeup.md §9.5。
+    params.incrementalMel = cfg.value("incremental_mel").toBool(true);
+    params.melTopDb = static_cast<float>(cfg.value("mel_top_db").toDouble(80.0));
 
     if (!engine.init(params)) {
         qCritical() << "[LivekitWakeup] 模型加载失败:" << modelName
@@ -39,7 +45,7 @@ LivekitWakeup::LivekitWakeup(QObject *parent) : WakeupModel(parent) {
 
     qInfo() << "[LivekitWakeup] 已加载" << modelName << "threshold" << threshold
             << "trigger_level" << triggerLevel << "incremental"
-            << params.incremental;
+            << params.incremental << "incremental_mel" << params.incrementalMel;
     valid = true;
 }
 
